@@ -3,8 +3,8 @@ package gen
 import (
 	"errors"
 	"fmt"
-	. "generate/global"
-	"generate/model"
+	. "github.com/ellisez/inject-golang/generate/global"
+	"github.com/ellisez/inject-golang/generate/model"
 	"go/ast"
 	"go/token"
 	"os"

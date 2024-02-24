@@ -1,9 +1,9 @@
 package gen
 
 import (
-	"generate/global"
-	"generate/model"
-	"generate/utils"
+	"github.com/ellisez/inject-golang/generate/global"
+	"github.com/ellisez/inject-golang/generate/model"
+	"github.com/ellisez/inject-golang/generate/utils"
 	"go/ast"
 	"go/format"
 	"go/token"

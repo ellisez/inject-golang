@@ -1,9 +1,9 @@
 package main
 
 import (
-	"generate/gen"
-	. "generate/global"
-	"generate/scan"
+	"github.com/ellisez/inject-golang/generate/gen"
+	. "github.com/ellisez/inject-golang/generate/global"
+	"github.com/ellisez/inject-golang/generate/scan"
 	"os"
 )
 

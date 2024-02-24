@@ -1,9 +1,9 @@
 package scan
 
 import (
-	. "generate/global"
-	"generate/model"
-	"generate/parse"
+	. "github.com/ellisez/inject-golang/generate/global"
+	"github.com/ellisez/inject-golang/generate/model"
+	"github.com/ellisez/inject-golang/generate/parse"
 	"os"
 	"path/filepath"
 )
