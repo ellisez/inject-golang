@@ -1,68 +1,49 @@
 package gen
 
 import (
-	"errors"
 	"fmt"
-	. "github.com/ellisez/inject-golang/generate/global"
+	"github.com/ellisez/inject-golang/generate/global"
 	"github.com/ellisez/inject-golang/generate/model"
+	"github.com/ellisez/inject-golang/generate/utils"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 )
 
-func DoGen(annotateInfo *model.AnnotateInfo) error {
-	if len(annotateInfo.SingletonInstances) == 0 &&
-		len(annotateInfo.MultipleInstances) == 0 &&
-		len(annotateInfo.FuncInstances) == 0 &&
-		len(annotateInfo.MethodInstances) == 0 {
+func DoGen(moduleInfo *model.ModuleInfo) error {
+	if len(moduleInfo.SingletonInstances) == 0 &&
+		len(moduleInfo.MultipleInstances) == 0 &&
+		len(moduleInfo.FuncInstances) == 0 &&
+		len(moduleInfo.MethodInstances) == 0 {
 		return nil
 	}
-	genDir := filepath.Join(RootDirectory, GenPackage)
+	genDir := filepath.Join(moduleInfo.Dirname, global.GenPackage)
 
-	err := createGenRootDirectory(genDir)
+	err := utils.CreateDirectoryIfNotExists(genDir)
 	if err != nil {
 		return err
 	}
 
-	err = genContainerFile(annotateInfo, genDir)
+	err = genCtxFile(moduleInfo, genDir)
 	if err != nil {
 		return err
 	}
 
-	err = genConstructFile(annotateInfo, genDir)
+	err = genConstructorFile(moduleInfo, genDir)
 	if err != nil {
 		return err
 	}
 
-	err = genFuncFile(annotateInfo, genDir)
+	err = genFuncFile(moduleInfo, genDir)
 	if err != nil {
 		return err
 	}
 
-	err = genMethodFile(annotateInfo, genDir)
+	err = genMethodFile(moduleInfo, genDir)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func createGenRootDirectory(genDir string) error {
-	stat, err := os.Stat(genDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			_, err := os.Create(genDir)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-	if !stat.IsDir() {
-		return errors.New(fmt.Sprintf("%s is not Directory!\ncan not generate code.", genDir))
-	}
 	return nil
 }
 
@@ -136,10 +117,14 @@ func astAssignStmt(lhs ast.Expr, rhs ast.Expr) *ast.AssignStmt {
 
 func astFuncDecl(recv []*ast.Field, name string, params []*ast.Field, results []*ast.Field,
 	body []ast.Stmt) *ast.FuncDecl {
-	return &ast.FuncDecl{
-		Recv: &ast.FieldList{
+	var recvAst *ast.FieldList
+	if recv != nil {
+		recvAst = &ast.FieldList{
 			List: recv,
-		},
+		}
+	}
+	return &ast.FuncDecl{
+		Recv: recvAst,
 		Name: astIdent(name),
 		Body: &ast.BlockStmt{
 			List: body,
@@ -172,6 +157,7 @@ func astStructDecl(name string, fields []*ast.Field) *ast.GenDecl {
 }
 
 func astImport(astFile *ast.File, importName string, importPath string) *ast.ImportSpec {
+	importPath = fmt.Sprintf(`"%s"`, importPath)
 	var astImport *ast.ImportSpec
 	for _, aImport := range astFile.Imports {
 		if importPath == aImport.Path.Value {
@@ -187,22 +173,26 @@ func astImport(astFile *ast.File, importName string, importPath string) *ast.Imp
 			},
 		}
 
-		addImport(astFile, astImport)
+		addImportSpec(astFile, astImport)
 	}
 	return astImport
 }
 
-func addImport(astFile *ast.File, astImport *ast.ImportSpec) {
+func addImportSpec(astFile *ast.File, astImport *ast.ImportSpec) {
 	if astFile.Imports == nil {
 		astFile.Imports = make([]*ast.ImportSpec, 0)
 	}
 	astFile.Imports = append(astFile.Imports, astImport)
+}
 
+func addImportDecl(astFile *ast.File) {
+	specs := make([]ast.Spec, len(astFile.Imports))
+	for i, spec := range astFile.Imports {
+		specs[i] = spec
+	}
 	genDecl := &ast.GenDecl{
-		Tok: token.IMPORT,
-		Specs: []ast.Spec{
-			astImport,
-		},
+		Tok:   token.IMPORT,
+		Specs: specs,
 	}
 
 	addDecl(astFile, genDecl)

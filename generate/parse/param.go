@@ -14,18 +14,9 @@ func ParamParse(param *ast.Field, funcInfo *model.FuncInfo) {
 		paramName = param.Names[0].String()
 	}
 
-	paramInfo := findParam(funcInfo, paramName)
-	if paramInfo == nil {
-		paramInfo = &model.ParamInfo{
-			Name: paramName,
-		}
-		if funcInfo.Params == nil {
-			funcInfo.Params = make([]*model.ParamInfo, 0)
-		}
-		funcInfo.Params = append(funcInfo.Params, paramInfo)
-	}
+	paramInfo := utils.FindParamInfo(funcInfo, paramName)
 
-	paramInfo.Type = utils.TypeToString(param.Type)
+	paramInfo.Type = param.Type
 
 	if param.Doc != nil {
 		for _, comment := range param.Doc.List {
@@ -36,10 +27,14 @@ func ParamParse(param *ast.Field, funcInfo *model.FuncInfo) {
 			}
 			annotateName := annotateArgs[0]
 			if annotateName == "@inject" {
-				if argsLen >= 1 {
-					paramInfo.Instance = annotateArgs[1]
-					paramInfo.IsInject = true
+				if argsLen >= 2 {
+					paramInstance := annotateArgs[1]
+					if paramInstance != "" && paramInstance != "_" {
+						paramInfo.Instance = paramInstance
+					}
 				}
+				paramInfo.Comment = comment.Text
+				paramInfo.IsInject = true
 			}
 		}
 	}
@@ -50,27 +45,16 @@ func ParamParse(param *ast.Field, funcInfo *model.FuncInfo) {
 		addNormalParam(funcInfo, paramInfo)
 	}
 }
-
-func findParam(funcInfo *model.FuncInfo, paramName string) *model.ParamInfo {
-	var paramInfo *model.ParamInfo
-	for _, funcParam := range funcInfo.Params {
-		if funcParam.Name == paramName {
-			paramInfo = funcParam
-			break
-		}
-	}
-	return paramInfo
-}
-func addInjectParam(funcInfo *model.FuncInfo, paramInfo *model.ParamInfo) {
+func addInjectParam(funcInfo *model.FuncInfo, paramInfo *model.FieldInfo) {
 	if funcInfo.InjectParams == nil {
-		funcInfo.InjectParams = make([]*model.ParamInfo, 0)
+		funcInfo.InjectParams = make([]*model.FieldInfo, 0)
 	}
 	funcInfo.InjectParams = append(funcInfo.InjectParams, paramInfo)
 }
 
-func addNormalParam(funcInfo *model.FuncInfo, paramInfo *model.ParamInfo) {
+func addNormalParam(funcInfo *model.FuncInfo, paramInfo *model.FieldInfo) {
 	if funcInfo.NormalParams == nil {
-		funcInfo.NormalParams = make([]*model.ParamInfo, 0)
+		funcInfo.NormalParams = make([]*model.FieldInfo, 0)
 	}
 	funcInfo.NormalParams = append(funcInfo.NormalParams, paramInfo)
 }

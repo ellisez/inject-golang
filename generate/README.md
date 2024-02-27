@@ -1,8 +1,12 @@
 ### 2.1 结构体上的注解：
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
-// @constructor <构造函数名，默认New+类名>
+// @import <模块加载路径> <模块名>
+// @injectField <字段名> <实例名，默认同类名>
+// @preConstruct <构造前调用函数>
+// @postConstruct <构造后调用函数>
 ```
+
 ### 2.2 结构体的属性注解：
 ```
 // @inject <实例名，默认同类名>
@@ -10,24 +14,29 @@
 ### 2.3 方法上的注解:
 ```
 // @proxy <代理方法名，默认同方法名>
+// @import <模块加载路径> <模块名>
+// @injectParam <参数名> <实例名，默认同类名>
 ```
 ### 2.4 路由方法上的注解（参照swag注解）：
 ```
 // @route <path> <httpMethod: get|post>
-// @param <参数名> <参数类型:query|path|header|body|formData|inject> <接收类型> <必填与否> <参数说明>
+// @import <模块加载路径> <模块名>
+// @paramInject <参数名> <实例名，默认同类名>
+// @param <参数名> <参数类型:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
+
 ### 2.5 方法参数上的注解:
 ```
 // @inject <实例名，默认同类名>
 ```
-
+`@inject @injectParam @injectField 预留实例名"ctx"时表示注入上下文容器本身`
 ```
 /provide
-    |- __gen_container.go
+    |- gen_ctx.go
         --------------------------------
         # gen segment: Struct #
         --------------------------------
-        type ProvideContainer struct {
+        type Ctx struct {
             {{range SingletonInstances}}
             Instance Name
             {{end}}
@@ -36,47 +45,77 @@
         -----------------------------------
         # gen segment: Singleton instance #
         -----------------------------------
-        func New() Container {
-            container := &ProvideContainer{}
+        func New() *Ctx {
+            ctx := &Ctx{}
             {{range SingletonInstances}}
-            container.{{Instance}} = &{{Name}}{}
+                {{if PreConstruct}}
+                    ctx.{{Instance}} := {{PreConstruct}}()
+                {{else}}
+                    ctx.{{Instance}} = &{{Package}}.{{Name}}{}
+                {{end}}
             {{end}}
             
             {{range SingletonInstances}}
                 {{range InjectFields}}
-                container.{{Instance}}.{{FieldInstance}} = container.{{StructInstance}}
+                    {{if FieldInstance == "Ctx"}}
+                    ctx.{{Instance}}.{{FieldInstance}} = ctx
+                    {{else}}
+                    ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+                    {{end}}
                 {{end}}
             {{end}}
-            return container
+            
+            {{range SingletonInstances}}
+                {{if PostConstruct}}
+                    {{PostConstruct}}(
+                        ctx.{{Instance}},
+                    )
+                {{end}}
+            {{end}}
+            return ctx
         }
-    |- __gen_constructor.go
+    |- gen_constructor.go
         ------------------------------------
         # gen segment: Multiple instance #
         ------------------------------------
         {{range MultipleInstances}}
-            func (container *Container) {{Constructor}}(
+            func (ctx *Ctx) New{{Instance}}(
                 {{range NormalFields}}
                 {{FieldInstance}} {{FieldType}},
                 {{end}}
             ) *{{Type}} {
-                {{Instance}} := &{{Type}}{}
+                {{if PreConstruct}}
+                    {{Instance}} := {{PreConstruct}}()
+                {{else}}
+                    {{Instance}} := &{{Package}}.{{Name}}{}
+                {{end}}
                 {{range Fields}}
                     {{if IsInject}}
-                        {{Instance}}.{{FieldName}} = container.{{FieldInstance}}
+                        {{if FieldInstance == "Ctx"}}
+                        {{Instance}}.{{FieldName}} = ctx
+                        {{else}}
+                        {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+                        {{end}}
                     {{else}}
                         {{Instance}}.{{FieldName}} = {{FieldInstance}}
                     {{end}}
+                {{end}}
+                
+                {{if PostConstruct}}
+                    {{PostConstruct}}(
+                        {{Instance}},
+                    )
                 {{end}}
                 return {{Instance}}
             }
         {{end}}
         
-    |- __gen_func.go
+    |- gen_func.go
         ------------------------------------
         # gen segment: Func inject #
         ------------------------------------
         {{range FuncInstances}}
-            func (container *Container) {{Proxy}}(
+            func (ctx *Ctx) {{Proxy}}(
                 {{range NormalParams}}
                 {{ParamInstance}} {{ParamType}},
                 {{end}}
@@ -88,7 +127,11 @@
                 return {{Package}}.{{FuncName}}(
                     {{range Params}}
                         {{if IsInject}}
-                            container.{{ParamInstance}},
+                            {{if ParamInstance == "Ctx"}}
+                            ctx,
+                            {{else}}
+                            ctx.{{ParamInstance}},
+                            {{end}}
                         {{else}}
                             {{ParamInstance}},
                         {{end}}
@@ -97,11 +140,11 @@
             }
         {{end}}
         
-    |- __gen_method.go
+    |- gen_method.go
         ------------------------------------
         # gen segment: Method inject #
         ------------------------------------
-        func (container *Containe) {{Proxy}}(
+        func (ctx *Containe) {{Proxy}}(
             {{Recv.Name}} {{Recv.Type}},
             {{range NormalParams}}
             {{ParamInstance}} {{ParamType}},
@@ -111,11 +154,15 @@
             {{ResultName}} {{ResultType}},
             {{end}}
         ) {
-            return {{Package}}.{{FuncName}}(
+            return {{Recv.Name}}.{{FuncName}}(
                 {{Recv.Name}},
                 {{range Params}}
                     {{if IsInject}}
-                        container.{{ParamInstance}},
+                        {{if ParamInstance == "Ctx"}}
+                        ctx,
+                        {{else}}
+                        ctx.{{ParamInstance}},
+                        {{end}}
                     {{else}}
                         {{ParamInstance}},
                     {{end}}

@@ -1,8 +1,10 @@
 package global
 
-var RootDirectory string
-var RootPackage string
+var GenPackage = "ctx"
 
-var GenPackage = "provide"
+var StructName = "Ctx"
 
-var StructName = "ProvideContainer"
+var GenCtxFilename = "gen_ctx.go"
+var GenConstructorFilename = "gen_constructor.go"
+var GenFuncFilename = "gen_func.go"
+var GenMethodFilename = "gen_method.go"

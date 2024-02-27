@@ -1,16 +1,20 @@
 package scan
 
 import (
-	. "github.com/ellisez/inject-golang/generate/global"
 	"github.com/ellisez/inject-golang/generate/model"
 	"github.com/ellisez/inject-golang/generate/parse"
 	"os"
 	"path/filepath"
 )
 
-func DoScan() (*model.AnnotateInfo, error) {
+func DoScan(dirname string) (*model.ModuleInfo, error) {
 	p := parse.New()
-	err := recurDirectory(RootDirectory, p.DoParse)
+	p.Result.Dirname = dirname
+	err := p.ModParse()
+	if err != nil {
+		return nil, err
+	}
+	err = recurDirectory(dirname, p.DoParse)
 	if err != nil {
 		return nil, err
 	}

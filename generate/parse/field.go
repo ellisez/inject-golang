@@ -9,24 +9,10 @@ import (
 // FieldParse
 // 解析属性 -> 注解 -> 生成代码: 当前代码
 func FieldParse(field *ast.Field, structInfo *model.StructInfo) {
-	var fieldName string
-	if field.Names != nil {
-		fieldName = field.Names[0].String()
-	}
+	fieldName := utils.FieldName(field)
 
-	fieldInfo := findField(structInfo, fieldName)
-	if fieldInfo == nil {
-		fieldInfo = &model.FieldInfo{
-			Name: fieldName,
-		}
-		if structInfo.Fields == nil {
-			structInfo.Fields = make([]*model.FieldInfo, 0)
-		}
-		structInfo.Fields = append(structInfo.Fields, fieldInfo)
-	}
-	fieldInfo.Type = utils.TypeToString(field.Type)
+	fieldInfo := utils.FindFieldInfo(structInfo, fieldName)
 
-	hasAnnotate := false
 	if field.Doc != nil {
 		for _, comment := range field.Doc.List {
 			annotateArgs := annotateParse(comment.Text)
@@ -37,17 +23,16 @@ func FieldParse(field *ast.Field, structInfo *model.StructInfo) {
 
 			annotateName := annotateArgs[0]
 			if annotateName == "@inject" {
-				if argsLen >= 1 {
-					fieldInfo.Instance = annotateArgs[1]
+				if argsLen >= 2 {
+					fieldInstance := annotateArgs[1]
+					if fieldInstance != "" && fieldInstance != "_" {
+						fieldInfo.Instance = fieldInstance
+					}
 				}
-				hasAnnotate = true
+				fieldInfo.Comment = comment.Text
+				fieldInfo.IsInject = true
 			}
 		}
-	}
-
-	fieldInfo.IsInject = false
-	if hasAnnotate || structInfo.Mode == "singleton" {
-		fieldInfo.IsInject = true
 	}
 
 	if fieldInfo.IsInject {
@@ -55,16 +40,6 @@ func FieldParse(field *ast.Field, structInfo *model.StructInfo) {
 	} else {
 		addNormalField(structInfo, fieldInfo)
 	}
-}
-func findField(structInfo *model.StructInfo, fieldName string) *model.FieldInfo {
-	var fieldInfo *model.FieldInfo
-	for _, structField := range structInfo.Fields {
-		if structField.Name == fieldName {
-			fieldInfo = structField
-			break
-		}
-	}
-	return fieldInfo
 }
 func addInjectField(structInfo *model.StructInfo, fieldInfo *model.FieldInfo) {
 	if structInfo.NormalFields == nil {

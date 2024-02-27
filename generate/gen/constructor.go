@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/generate/global"
 	"github.com/ellisez/inject-golang/generate/model"
 	"github.com/ellisez/inject-golang/generate/utils"
@@ -9,12 +10,14 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// __gen_constructor.go
-func genConstructFile(annotateInfo *model.AnnotateInfo, dir string) error {
-	filename := filepath.Join(dir, "__gen_container.go")
-	file, err := os.Open(filename)
+// gen_constructor.go
+func genConstructorFile(moduleInfo *model.ModuleInfo, dir string) error {
+	filename := filepath.Join(dir, global.GenConstructorFilename)
+
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
@@ -25,9 +28,9 @@ func genConstructFile(annotateInfo *model.AnnotateInfo, dir string) error {
 		Scope: ast.NewScope(nil),
 	}
 
-	genInjectImportsAst(annotateInfo, astFile)
+	genConstructorImportsAst(moduleInfo, astFile)
 
-	genInjectAst(annotateInfo, astFile)
+	genConstructorAst(moduleInfo, astFile)
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -36,33 +39,47 @@ func genConstructFile(annotateInfo *model.AnnotateInfo, dir string) error {
 	return nil
 }
 
-func genInjectImportsAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
+func genConstructorImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
-	for _, instance := range annotateInfo.MultipleInstances {
-		astImport(astFile, "", instance.Dirname)
+	for _, instance := range moduleInfo.MultipleInstances {
+		astImport(astFile, "", instance.Import)
+		if instance.Imports != nil {
+			for _, importInfo := range instance.Imports {
+				importName := importInfo.Name
+				if importName == "_" {
+					importName = ""
+				}
+				astImport(astFile, importName, importInfo.Path)
+			}
+		}
 	}
+	addImportDecl(astFile)
 }
 
 // # gen segment: Multiple instance #
-func genInjectAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
+func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
-	for _, instance := range annotateInfo.MultipleInstances {
+	for _, instance := range moduleInfo.MultipleInstances {
 		recvVar := utils.FirstToLower(global.StructName)
-		param := make([]*ast.Field, 0)
+		params := make([]*ast.Field, 0)
 		for _, field := range instance.NormalFields {
 			// [code] {{FieldInstance}} {{FieldType}},
 			fieldInstance := field.Instance
-			if fieldInstance == "" {
-				fieldInstance = field.Name
-				if field.Name == "" {
-					fieldInstance = utils.ShortType(field.Type)
-				}
-			}
-			param = append(param, astField(fieldInstance, utils.TypeToAst(field.Type)))
+
+			params = append(params,
+				astField(
+					fieldInstance,
+					utils.AccessType(
+						field.Type,
+						instance.Package,
+						global.GenPackage,
+					),
+				),
+			)
 		}
 
 		provideInstance := instance.Instance
-		if provideInstance == "" {
+		if provideInstance == "" || provideInstance == "_" {
 			provideInstance = instance.Name
 		}
 
@@ -70,26 +87,51 @@ func genInjectAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
 		instanceType := astSelectorExpr(instance.Package, instance.Name)
 
 		stmts := make([]ast.Stmt, 0)
-		// [code] {{Name}} := &{{Type}}{}
-		stmts = append(stmts, astDefineStmt(
-			astIdent(instanceVar),
-			astDeclareExpr(instanceType),
-		))
+		if instance.PreConstruct != "" {
+			// [code] {{Instance}} := {{PreConstruct}}()
+			var caller ast.Expr
+			if !strings.Contains(instance.PreConstruct, ".") {
+				if moduleInfo.HasFunc(instance.PreConstruct) {
+					caller = astSelectorExpr(recvVar, instance.PreConstruct)
+				} else {
+					panic(fmt.Errorf("@preConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+				}
+			} else {
+				caller = utils.TypeToAst(instance.PreConstruct)
+			}
+			stmts = append(stmts, astDefineStmt(
+				astIdent(instanceVar),
+				&ast.CallExpr{
+					Fun: caller,
+				},
+			))
+		} else {
+			// [code] {{Instance}} := &{{Package}}.{{Name}}{}
+			stmts = append(stmts, astDefineStmt(
+				astIdent(instanceVar),
+				astDeclareExpr(instanceType),
+			))
+		}
 		for _, field := range instance.Fields {
 			fieldInstance := field.Instance
-			if fieldInstance == "" {
-				fieldInstance = field.Name
-				if field.Name == "" {
-					fieldInstance = utils.ShortType(field.Type)
-				}
-			}
 
 			if field.IsInject {
-				// [code] {{Instance}}.{{FieldName}} = container.{{FieldInstance}}
-				stmts = append(stmts, astAssignStmt(
-					astSelectorExpr(instanceVar, fieldInstance),
-					astSelectorExpr(recvVar, field.Name),
-				))
+				if fieldInstance == "Ctx" {
+					// [code] {{Instance}}.{{FieldName}} = ctx
+					stmts = append(stmts, astAssignStmt(
+						astSelectorExpr(instanceVar, fieldInstance),
+						astIdent(recvVar),
+					))
+				} else {
+					// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+					if !moduleInfo.HasStruct(fieldInstance) {
+						panic(fmt.Errorf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
+					}
+					stmts = append(stmts, astAssignStmt(
+						astSelectorExpr(instanceVar, fieldInstance),
+						astSelectorExpr(recvVar, field.Name),
+					))
+				}
 			} else {
 				// [code] {{Instance}}.{{FieldName}} = {{FieldInstance}}
 				stmts = append(stmts, astAssignStmt(
@@ -98,6 +140,28 @@ func genInjectAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
 				))
 			}
 		}
+
+		if instance.PostConstruct != "" {
+			// [code] {{PostConstruct}}({{Instance}})
+			var caller ast.Expr
+			if !strings.Contains(instance.PostConstruct, ".") {
+				if moduleInfo.HasFunc(instance.PostConstruct) {
+					caller = astSelectorExpr(recvVar, instance.PostConstruct)
+				} else {
+					panic(fmt.Errorf("@postConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+				}
+			} else {
+				caller = utils.TypeToAst(instance.PostConstruct)
+			}
+			stmts = append(stmts, &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: caller,
+					Args: []ast.Expr{
+						astIdent(instanceVar),
+					},
+				},
+			})
+		}
 		// [code] return {{Instance}}
 		stmts = append(stmts, &ast.ReturnStmt{
 			Results: []ast.Expr{
@@ -105,17 +169,15 @@ func genInjectAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
 			},
 		})
 
-		// [code] func (container *Container) {{Constructor}}(
-		constructor := instance.Constructor
-		if constructor == "" {
-			constructor = "New" + provideInstance
-		}
+		// [code] func (ctx *Ctx) New{{Instance}}(
+		constructor := "New" + provideInstance
+
 		funcDecl := astFuncDecl(
 			[]*ast.Field{
 				astField(recvVar, astStarExpr(astIdent(global.StructName))),
 			},
 			constructor,
-			param,
+			params,
 			[]*ast.Field{
 				{
 					Type: astStarExpr(instanceType),

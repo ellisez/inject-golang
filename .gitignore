@@ -27,3 +27,4 @@ dist-ssr
 /core/config/config.ini
 /core/config/config.ini.tmp
 /build
+gen_*.go

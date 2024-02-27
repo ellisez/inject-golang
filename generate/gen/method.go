@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/generate/global"
 	"github.com/ellisez/inject-golang/generate/model"
 	"github.com/ellisez/inject-golang/generate/utils"
@@ -11,10 +12,10 @@ import (
 	"path/filepath"
 )
 
-// __gen_method.go
-func genMethodFile(annotateInfo *model.AnnotateInfo, dir string) error {
-	filename := filepath.Join(dir, "__gen_container.go")
-	file, err := os.Open(filename)
+// gen_method.go
+func genMethodFile(moduleInfo *model.ModuleInfo, dir string) error {
+	filename := filepath.Join(dir, global.GenMethodFilename)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
@@ -25,9 +26,9 @@ func genMethodFile(annotateInfo *model.AnnotateInfo, dir string) error {
 		Scope: ast.NewScope(nil),
 	}
 
-	genMethodImportsAst(annotateInfo, astFile)
+	genMethodImportsAst(moduleInfo, astFile)
 
-	genMethodAst(annotateInfo, astFile)
+	genMethodAst(moduleInfo, astFile)
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -36,64 +37,94 @@ func genMethodFile(annotateInfo *model.AnnotateInfo, dir string) error {
 	return nil
 }
 
-func genMethodImportsAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
+func genMethodImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
-	for _, instance := range annotateInfo.MethodInstances {
-		astImport(astFile, "", instance.Dirname)
+	for _, instance := range moduleInfo.MethodInstances {
+		astImport(astFile, "", instance.Import)
+		if instance.Imports != nil {
+			for _, importInfo := range instance.Imports {
+				importName := importInfo.Name
+				if importName == "_" {
+					importName = ""
+				}
+				astImport(astFile, importName, importInfo.Path)
+			}
+		}
 	}
+	addImportDecl(astFile)
 }
 
 // # gen segment: Method inject #
-func genMethodAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
-	for _, instance := range annotateInfo.MethodInstances {
+func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
+	for _, instance := range moduleInfo.MethodInstances {
 		recvVar := utils.FirstToLower(global.StructName)
-		param := make([]*ast.Field, 0)
+		params := make([]*ast.Field, 0)
 		callerVar := instance.Recv.Name
-		param = append(param, astField(callerVar, astIdent(instance.Recv.Type)))
+		params = append(params,
+			astField(callerVar,
+				utils.AccessType(
+					instance.Recv.Type,
+					instance.Package,
+					global.GenPackage,
+				),
+			),
+		)
 		for _, paramInfo := range instance.NormalParams {
 			// [code] {{ParamInstance}} {{ParamType}},
 			paramInstance := paramInfo.Instance
-			if paramInstance == "" {
-				paramInstance = paramInfo.Name
-				if paramInfo.Name == "" {
-					paramInstance = utils.ShortType(paramInfo.Type)
-				}
-			}
-			param = append(param, astField(paramInstance, utils.TypeToAst(paramInfo.Type)))
+			params = append(params,
+				astField(paramInstance,
+					utils.AccessType(
+						paramInfo.Type,
+						instance.Package,
+						global.GenPackage,
+					),
+				),
+			)
 		}
 
 		stmts := make([]ast.Stmt, 0)
 		args := make([]ast.Expr, 0)
-		args = append(args, astIdent(callerVar))
 		for _, paramInfo := range instance.Params {
 			paramInstance := paramInfo.Instance
-			if paramInstance == "" {
-				paramInstance = paramInfo.Name
-				if paramInfo.Name == "" {
-					paramInstance = utils.ShortType(paramInfo.Type)
-				}
-			}
 
 			if paramInfo.IsInject {
-				// [code] container.{{ParamInstance}},
-				args = append(args, astSelectorExpr(recvVar, paramInstance))
+				if paramInstance == "Ctx" {
+					// [code] ctx,
+					args = append(args, astIdent(recvVar))
+				} else {
+					// [code] ctx.{{ParamInstance}},
+					if !moduleInfo.HasStruct(paramInstance) {
+						panic(fmt.Errorf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
+					}
+					args = append(args, astSelectorExpr(recvVar, paramInstance))
+				}
 			} else {
 				// [code] {{ParamInstance}},
 				args = append(args, astIdent(paramInstance))
 			}
 		}
-		stmts = append(stmts, &ast.ReturnStmt{
-			Results: []ast.Expr{
-				&ast.CallExpr{
-					Fun:  astSelectorExpr(instance.Package, instance.FuncName),
+		if instance.Results == nil {
+			stmts = append(stmts, &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun:  astSelectorExpr(callerVar, instance.FuncName),
 					Args: args,
 				},
-			},
-		})
+			})
+		} else {
+			stmts = append(stmts, &ast.ReturnStmt{
+				Results: []ast.Expr{
+					&ast.CallExpr{
+						Fun:  astSelectorExpr(callerVar, instance.FuncName),
+						Args: args,
+					},
+				},
+			})
+		}
 
 		results := make([]*ast.Field, 0)
 		for _, result := range instance.Results {
-			results = append(results, astField(result.Name, astIdent(result.Type)))
+			results = append(results, astField(result.Name, result.Type))
 		}
 
 		funcDecl := astFuncDecl(
@@ -101,7 +132,7 @@ func genMethodAst(annotateInfo *model.AnnotateInfo, astFile *ast.File) {
 				astField(recvVar, astStarExpr(astIdent(global.StructName))),
 			},
 			instance.Proxy,
-			param,
+			params,
 			results,
 			stmts,
 		)
