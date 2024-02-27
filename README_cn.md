@@ -1,12 +1,32 @@
 # inject-golang
 提供golang版依赖注入容器
 
-### 1. 安装使用
-```shell
-go install 
-```
+### 1. 安装与运行
 
-### 2.1 结构体上的注解：
+```shell
+go install github.com/ellisez/inject-golang
+```
+### 1.1. 配置生成器
+```go
+package main
+
+import (
+	"github.com/ellisez/inject-golang/examples/ctx"
+)
+
+//go:generate -x inject-golang
+func main() {
+	ctx.New()
+}
+```
+> //go:generate -x inject-golang
+
+### 1.2. 运行生成器
+```shell
+go generate inject-golang
+```
+## 2. 注解
+### 2.1. 结构体上的注解：
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
 // @import <模块加载路径> <模块名>
@@ -15,17 +35,17 @@ go install
 // @postConstruct <构造后调用函数>
 ```
 
-### 2.2 结构体的属性注解：
+### 2.2. 结构体的属性注解：
 ```
 // @inject <实例名，默认同类名>
 ```
-### 2.3 方法上的注解:
+### 2.3. 方法上的注解:
 ```
 // @proxy <代理方法名，默认同方法名>
 // @import <模块加载路径> <模块名>
 // @injectParam <参数名> <实例名，默认同类名>
 ```
-### 2.4 路由方法上的注解（参照swag注解）：
+### 2.4. 路由方法上的注解（参照swag注解）：
 ```
 // @route <path> <httpMethod: get|post>
 // @import <模块加载路径> <模块名>
@@ -33,13 +53,84 @@ go install
 // @param <参数名> <参数类型:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-### 2.5 方法参数上的注解:
+### 2.5. 方法参数上的注解:
 ```
 // @inject <实例名，默认同类名>
 ```
-`@inject @injectParam @injectField 预留实例名"ctx"时表示注入上下文容器本身`
+
+> 
+> `@preConstruct`主要用于给定结构体的初始值, 不可获取ctx上下文, 也无法注入依赖, 因为还未就绪;
+> 
+> `@proxy`注解用于标记函数的参数进行依赖注入, 它最终会生成一个与原函数名一样的ctx容器内部方法;
+> 使用时通过ctx访问同名函数即可;
+> 
+> `@preConstruct`与`@postConstruct`指定方法名, 带包名着依据`@import`关联如`@postConstruct model.Database`
+> 不带包名则表示使用`@proxy`生成的代理函数;
+> 
+> 推荐使用`@postConstruct`注解指向一个`@proxy`代理函数, 而不是直接指向原始函数, 这样能让原始函数得到参数注入;
+> 
+> `ctx`是系统预留实例, 它表示上下文容器本身, 适用于@inject @injectParam @injectField等注解;
+
+
+## 3. 生成模板
+
+### 3.1. PreConstruct & PostConstruct
+原结构体
+```go
+// WebApp
+// @provide WebCtxAlias
+// @injectField Database
+// @preConstruct model.PrepareWebCtxAlias
+// @postConstruct model.WebCtxAliasLoaded
+type WebApp struct {
+	// @inject
+	*Config
+	*Database
+	MiddleWares []*MiddleWare
+	Routers     []*Router
+}
 ```
-/provide
+preConstruct函数, 要求必须是无参并且返回类型必须和结构体类型一样
+```go
+func PrepareWebCtxAlias() *WebApp {
+    return &WebApp{}
+}
+```
+postConstruct函数, 要求参数必须是结构体类型
+```go
+func WebCtxAliasLoaded(webApp *WebApp) {
+	
+}
+```
+
+### 3.2. 方法代理
+
+原函数
+```go
+// WebCtxAliasLoaded
+// @proxy
+// @injectParam database Database
+// @injectParam ctx
+func WebCtxAliasLoaded(ctx *ctx.Ctx/*特殊注入*/, webApp *WebApp/*未注入*/, database *Database/*属性注入*/) {
+	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
+	ctx.TestLogin(webApp)
+}
+```
+生成的目标函数
+```go
+func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.WebApp/*保留未注入*/) {
+	model.WebCtxAliasLoaded(ctx/*特殊注入*/, WebApp, ctx.Database/*属性注入*/)
+}
+```
+
+> 由于postConstruct函数必须接收一个与注解的结构体一样的参数，而proxy代理函数对未注入的参数会保留到生成的函数中，
+> 
+> 所以我们推荐，postConstruct直接proxy生成的函数，而不是直接指向原函数。
+> 利用原函数保留未注入结构体参数，来促成生成的函数满足postConstruct的要求。
+
+### 3.3. 目录结构
+```
+/ctx
     |- gen_ctx.go
         --------------------------------
         # gen segment: Struct #
