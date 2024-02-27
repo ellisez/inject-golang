@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/generate/model"
+	"github.com/ellisez/inject-golang/model"
 	"go/ast"
 	"regexp"
 )

@@ -1,3 +1,11 @@
+# inject-golang
+提供golang版依赖注入容器
+
+### 1. 安装使用
+```shell
+go install 
+```
+
 ### 2.1 结构体上的注解：
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>

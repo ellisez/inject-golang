@@ -2,9 +2,9 @@ package gen
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/generate/global"
-	"github.com/ellisez/inject-golang/generate/model"
-	"github.com/ellisez/inject-golang/generate/utils"
+	"github.com/ellisez/inject-golang/global"
+	"github.com/ellisez/inject-golang/model"
+	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 	"go/token"
 	"path/filepath"

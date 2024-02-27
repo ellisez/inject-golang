@@ -1,8 +1,8 @@
 package scan
 
 import (
-	"github.com/ellisez/inject-golang/generate/model"
-	"github.com/ellisez/inject-golang/generate/parse"
+	"github.com/ellisez/inject-golang/model"
+	"github.com/ellisez/inject-golang/parse"
 	"os"
 	"path/filepath"
 )

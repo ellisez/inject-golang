@@ -1,11 +1,25 @@
-package inject
+package main
 
-var Container = make(map[string]any)
+import (
+	"github.com/ellisez/inject-golang/gen"
+	"github.com/ellisez/inject-golang/scan"
+	"os"
+)
 
-func Get[T any](name string) T {
-	value := Container[name]
-	return value.(T)
-}
-func Set[T any](name string, value T) {
-	Container[name] = value
+func main() {
+	modulePath, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	moduleInfo, err := scan.DoScan(modulePath)
+	if err != nil {
+		panic(err)
+	}
+
+	err = gen.DoGen(moduleInfo)
+	if err != nil {
+		panic(err)
+	}
+
 }

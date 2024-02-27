@@ -1,8 +1,8 @@
 package parse
 
 import (
-	. "github.com/ellisez/inject-golang/generate/global"
-	"github.com/ellisez/inject-golang/generate/model"
+	. "github.com/ellisez/inject-golang/global"
+	"github.com/ellisez/inject-golang/model"
 	"go/ast"
 	"go/parser"
 	"go/token"

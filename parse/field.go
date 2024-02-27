@@ -1,8 +1,8 @@
 package parse
 
 import (
-	"github.com/ellisez/inject-golang/generate/model"
-	"github.com/ellisez/inject-golang/generate/utils"
+	"github.com/ellisez/inject-golang/model"
+	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 )
 
