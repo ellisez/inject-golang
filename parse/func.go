@@ -47,13 +47,13 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				}
 
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, Path must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
 				}
 				importInfo.Path = annotateArgs[1]
 				if argsLen >= 3 {
 					importName := annotateArgs[2]
 					if importName == "." {
-						panic(fmt.Errorf("%s, Cannot support DotImport", comment.Text))
+						utils.Failure(fmt.Sprintf("%s, Cannot support DotImport", comment.Text))
 					}
 					if importName != "" {
 						importInfo.Name = importName
@@ -61,12 +61,12 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				}
 			} else if annotateName == "@injectParam" {
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, ParamName must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
 				}
 				paramName := annotateArgs[1]
 				paramInfo := utils.FindParamInfo(funcInfo, paramName)
 				if paramInfo == nil {
-					panic(fmt.Errorf("%s, ParamName not found", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, ParamName not found", comment.Text))
 				}
 
 				if argsLen >= 3 {

@@ -3,6 +3,7 @@ package parse
 import (
 	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
+	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -58,7 +59,7 @@ func (p *Parser) DoParse(filename string) error {
 	if ext == ".go" {
 		astFile, err := parser.ParseFile(p.FileSet, filename, nil, parser.ParseComments)
 		if err != nil {
-			panic(err)
+			utils.Failure(err.Error())
 		}
 
 		importPackage := p.Result.Mod

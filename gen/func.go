@@ -90,7 +90,7 @@ func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				} else {
 					// [code] ctx.{{ParamInstance}},
 					if !moduleInfo.HasStruct(paramInstance) {
-						panic(fmt.Errorf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
+						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
 					}
 					args = append(args, astSelectorExpr(recvVar, paramInstance))
 				}

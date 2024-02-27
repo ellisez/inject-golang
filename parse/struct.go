@@ -53,14 +53,14 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				}
 
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, Path must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
 				}
 				importInfo.Path = annotateArgs[1]
 
 				if argsLen >= 3 {
 					importName := annotateArgs[2]
 					if importName == "." {
-						panic(fmt.Errorf("%s, Cannot support DotImport", comment.Text))
+						utils.Failure(fmt.Sprintf("%s, Cannot support DotImport", comment.Text))
 					}
 					if importName != "" {
 						importInfo.Name = importName
@@ -68,12 +68,12 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				}
 			} else if annotateName == "@injectField" {
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, FieldName must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, FieldName must be specified", comment.Text))
 				}
 				fieldName := annotateArgs[1]
 				fieldInfo := utils.FindFieldInfo(structInfo, fieldName)
 				if fieldInfo == nil {
-					panic(fmt.Errorf("%s, FieldName name not found", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, FieldName name not found", comment.Text))
 				}
 				fieldInfo.Comment = comment.Text
 
@@ -86,13 +86,13 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				fieldInfo.IsInject = true
 			} else if annotateName == "@preConstruct" {
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, FuncName must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, FuncName must be specified", comment.Text))
 				}
 				structInfo.PreConstructComment = comment.Text
 				structInfo.PreConstruct = annotateArgs[1]
 			} else if annotateName == "@postConstruct" {
 				if argsLen < 2 {
-					panic(fmt.Errorf("%s, FuncName must be specified", comment.Text))
+					utils.Failure(fmt.Sprintf("%s, FuncName must be specified", comment.Text))
 				}
 				structInfo.PostConstructComment = comment.Text
 				structInfo.PostConstruct = annotateArgs[1]

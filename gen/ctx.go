@@ -107,7 +107,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				if moduleInfo.HasFunc(instance.PreConstruct) {
 					caller = astSelectorExpr(varName, instance.PreConstruct)
 				} else {
-					panic(fmt.Errorf("@preConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+					utils.Failure(fmt.Sprintf("@preConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
 				}
 			} else {
 				caller = utils.TypeToAst(instance.PreConstruct)
@@ -149,7 +149,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				} else {
 					// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
 					if !moduleInfo.HasStruct(fieldInstance) {
-						panic(fmt.Errorf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
+						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
 					}
 					assignStmts = append(assignStmts, astAssignStmt(
 						astSelectorExpr1(astSelectorExpr(varName, provideInstance), fieldInstance),
@@ -166,7 +166,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				if moduleInfo.HasFunc(instance.PostConstruct) {
 					caller = astSelectorExpr(varName, instance.PostConstruct)
 				} else {
-					panic(fmt.Errorf("@postConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+					utils.Failure(fmt.Sprintf("@postConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
 				}
 			} else {
 				caller = utils.TypeToAst(instance.PostConstruct)
