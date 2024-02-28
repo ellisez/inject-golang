@@ -16,16 +16,16 @@ import (
 	"github.com/ellisez/inject-golang/examples/ctx"
 )
 
-//go:generate -x inject-golang
+//go:generate inject-golang
 func main() {
 	ctx.New()
 }
 ```
-> //go:generate -x inject-golang
+> //go:generate inject-golang
 
 ### 1.2. 运行生成器
 ```shell
-go generate inject-golang
+go generate -run inject-golang
 ```
 ## 2. 注解
 ### 2.1. 结构体上的注解：

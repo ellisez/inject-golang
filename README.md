@@ -21,11 +21,11 @@ func main() {
 	ctx.New()
 }
 ```
-> //go:generate -x inject-golang
+> //go:generate inject-golang
 
 ### 1.2. Run
 ```shell
-go generate inject-golang
+go generate -run inject-golang
 ```
 ## 2. Annotates
 ### 2.1. Struct Annotate

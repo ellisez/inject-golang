@@ -4,7 +4,7 @@ import (
 	"github.com/ellisez/inject-golang/examples/ctx"
 )
 
-//go:generate -x inject-golang
+//go:generate inject-golang
 func main() {
 	ctx.New()
 }
