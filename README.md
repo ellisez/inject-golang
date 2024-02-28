@@ -1,6 +1,8 @@
 # inject-golang
 Provide container of DI(Dependency Injection) for golang.
 
+Language: English [中文](README_cn.md) 
+
 ### 1. Install and Run
 
 ```shell

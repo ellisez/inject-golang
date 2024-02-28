@@ -1,6 +1,8 @@
 # inject-golang
 提供golang版依赖注入容器
 
+语言: [English](README.md) 中文
+
 ### 1. 安装与运行
 
 ```shell
