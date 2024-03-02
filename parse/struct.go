@@ -13,11 +13,11 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 	typeSpec := structDecl.Specs[0].(*ast.TypeSpec)
 	structType := typeSpec.Type.(*ast.StructType)
 	structName := typeSpec.Name.String()
-	structInfo := &model.StructInfo{
-		PackageInfo: packageInfo,
-		Name:        structName,
-		Instance:    structName,
-	}
+
+	structInfo := model.NewStructInfo()
+	structInfo.PackageInfo = packageInfo
+	structInfo.Name = structName
+	structInfo.Instance = structName
 
 	fillEmptyField(structType, structInfo)
 	hasAnnotate := false
@@ -44,13 +44,7 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				hasAnnotate = true
 			} else if annotateName == "@import" {
 				importInfo := &model.ImportInfo{}
-				if structInfo.Imports == nil {
-					structInfo.Imports = []*model.ImportInfo{
-						importInfo,
-					}
-				} else {
-					structInfo.Imports = append(structInfo.Imports, importInfo)
-				}
+				structInfo.Imports = append(structInfo.Imports, importInfo)
 
 				if argsLen < 2 {
 					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
@@ -83,7 +77,7 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 						fieldInfo.Instance = fieldInstance
 					}
 				}
-				fieldInfo.IsInject = true
+				fieldInfo.Source = "inject"
 			} else if annotateName == "@preConstruct" {
 				if argsLen < 2 {
 					utils.Failure(fmt.Sprintf("%s, FuncName must be specified", comment.Text))
@@ -112,34 +106,15 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 }
 
 func fillEmptyField(structType *ast.StructType, structInfo *model.StructInfo) {
-	fl := 0
-	if structType.Fields != nil {
-		fl = len(structType.Fields.List)
-	}
-	structInfo.Fields = make([]*model.FieldInfo, fl)
-	for i, field := range structType.Fields.List {
-		structInfo.Fields[i] = utils.ToFileInfo(field)
+	for _, field := range structType.Fields.List {
+		structInfo.Fields = append(structInfo.Fields, utils.ToFileInfo(field))
 	}
 }
 
 func addStructInstances(result *model.ModuleInfo, structInfo *model.StructInfo) {
 	if structInfo.Mode == "multiple" {
-		addMultipleInstances(result, structInfo)
+		result.SingletonInstances = append(result.SingletonInstances, structInfo)
 	} else {
-		addSingletonInstances(result, structInfo)
+		result.MultipleInstances = append(result.MultipleInstances, structInfo)
 	}
-}
-
-func addSingletonInstances(result *model.ModuleInfo, structInfo *model.StructInfo) {
-	if result.SingletonInstances == nil {
-		result.SingletonInstances = make([]*model.StructInfo, 0)
-	}
-	result.SingletonInstances = append(result.SingletonInstances, structInfo)
-}
-
-func addMultipleInstances(result *model.ModuleInfo, structInfo *model.StructInfo) {
-	if result.MultipleInstances == nil {
-		result.MultipleInstances = make([]*model.StructInfo, 0)
-	}
-	result.MultipleInstances = append(result.MultipleInstances, structInfo)
 }

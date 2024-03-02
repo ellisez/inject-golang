@@ -6,5 +6,14 @@ import (
 
 //go:generate inject-golang
 func main() {
-	ctx.New()
+	c := ctx.New()
+	err := c.WebAppStartup()
+	if err != nil {
+		return
+	}
+
+	err = c.WebAppStartupByAddr("", 3000)
+	if err != nil {
+		return
+	}
 }

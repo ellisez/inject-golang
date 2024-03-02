@@ -16,7 +16,7 @@ import (
 	"github.com/ellisez/inject-golang/examples/ctx"
 )
 
-//go:generate -x inject-golang
+//go:generate inject-golang
 func main() {
 	ctx.New()
 }
@@ -31,33 +31,40 @@ go generate -run inject-golang
 ### 2.1. Struct Annotate
 ```
 // @provide <Instance，default structName> <singleton default|multiple>
-// @import <Path> <Alias>
-// @injectField <FieldName> <Instance，default structName>
-// @preConstruct <brefore create call func>
-// @postConstruct <after created call func>
+// @import *<Path, required> <Alias>
+// @injectField *<FieldName, required> <Instance，default structName>
+// @preConstruct *<before create call func, required>
+// @postConstruct *<after created call func, required>
 ```
 
 ### 2.2. Field Annotate in struct
 ```
 // @inject <Instance，default fieldName>
 ```
-### 2.3. Func Annotate
+### 2.3. Func Annotate (use for all func)
 ```
 // @proxy <Instance，default funcName>
-// @import <Path> <Alias>
-// @injectParam <ParamName> <Instance，default paramName>
-```
-### 2.4. Router Annotate (like swag)
-```
-// @route <path> <httpMethod: get|post>
-// @import <Path> <Alias>
-// @paramInject <ParamName> <Instance，default paramName>
-// @param <ParamName> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
+// @import *<Path, required> <Alias>
+// @injectParam *<ParamName, required> <Instance，default paramName>
+// @injectRecv *<ParamName, required> <Instance，default paramName>
 ```
 
-### 2.5. Param Annotate in func:
+### 2.4. WebApp Annotate (web server provided)
 ```
-// @inject <Instance，default paramName>
+// @webApp <WebApp，default WebApp>
+// @static *<Path, required> *<Dirname, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
+```
+
+### 2.5. Router Annotate (like swag)
+```
+// @route *<Path, required> [Method: get|post]
+// @param *<ParamName, required> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
+```
+
+### 2.6. Middleware Annotate
+```
+// @middleware <Path>
+// @param *<ParamName, required> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
 ```
 
 >
@@ -248,7 +255,9 @@ func (ctx *Ctx/*Same name function in Ctx*/) WebCtxAliasLoaded(WebApp *model.Web
         # gen segment: Method inject #
         ------------------------------------
         func (ctx *Containe) {{Proxy}}(
+            {{if !Recv.IsInject}}
             {{Recv.Name}} {{Recv.Type}},
+            {{end}}
             {{range NormalParams}}
             {{ParamInstance}} {{ParamType}},
             {{end}}
@@ -258,7 +267,9 @@ func (ctx *Ctx/*Same name function in Ctx*/) WebCtxAliasLoaded(WebApp *model.Web
             {{end}}
         ) {
             return {{Recv.Name}}.{{FuncName}}(
+                {{if !Recv.IsInject}}
                 {{Recv.Name}},
+                {{end}}
                 {{range Params}}
                     {{if IsInject}}
                         {{if ParamInstance == "Ctx"}}

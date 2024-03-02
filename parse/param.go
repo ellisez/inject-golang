@@ -34,27 +34,8 @@ func ParamParse(param *ast.Field, funcInfo *model.FuncInfo) {
 					}
 				}
 				paramInfo.Comment = comment.Text
-				paramInfo.IsInject = true
+				paramInfo.Source = "inject"
 			}
 		}
 	}
-
-	if paramInfo.IsInject {
-		addInjectParam(funcInfo, paramInfo)
-	} else {
-		addNormalParam(funcInfo, paramInfo)
-	}
-}
-func addInjectParam(funcInfo *model.FuncInfo, paramInfo *model.FieldInfo) {
-	if funcInfo.InjectParams == nil {
-		funcInfo.InjectParams = make([]*model.FieldInfo, 0)
-	}
-	funcInfo.InjectParams = append(funcInfo.InjectParams, paramInfo)
-}
-
-func addNormalParam(funcInfo *model.FuncInfo, paramInfo *model.FieldInfo) {
-	if funcInfo.NormalParams == nil {
-		funcInfo.NormalParams = make([]*model.FieldInfo, 0)
-	}
-	funcInfo.NormalParams = append(funcInfo.NormalParams, paramInfo)
 }

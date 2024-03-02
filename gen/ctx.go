@@ -55,6 +55,9 @@ func genCtxImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			}
 		}
 	}
+	if moduleInfo.WebAppInstances != nil {
+		astImport(astFile, "", "github.com/gofiber/fiber/v2")
+	}
 	addImportDecl(astFile)
 
 }
@@ -75,6 +78,19 @@ func genCtxStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			),
 		))
 	}
+	if moduleInfo.WebAppInstances != nil {
+		for _, instance := range moduleInfo.WebAppInstances {
+			fields = append(fields, astField(
+				instance.WebApp,
+				astStarExpr(
+					astSelectorExpr(
+						"fiber",
+						"App",
+					),
+				),
+			))
+		}
+	}
 
 	genDecl := astStructDecl(
 		global.StructName,
@@ -92,7 +108,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	// [code] ctx := &ProvideContainer{}
 	stmts = append(stmts, astDefineStmt(
 		astIdent(varName),
-		astDeclareExpr(astIdent(global.StructName)),
+		astDeclareRef(astIdent(global.StructName), nil),
 	))
 
 	assignStmts := make([]ast.Stmt, 0)
@@ -122,39 +138,41 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			// [code] ctx.{{Instance}} = &{{Package}}.{{Name}}{}
 			stmts = append(stmts, astAssignStmt(
 				astSelectorExpr(varName, provideInstance),
-				astDeclareExpr(
+				astDeclareRef(
 					astSelectorExpr(
 						instance.Package,
 						instance.Name,
 					),
+					nil,
 				),
 			))
 		}
 
-		for _, field := range instance.InjectFields {
-
-			fieldInstance := field.Instance
-			if fieldInstance == "Ctx" {
-				// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx
-				assignStmts = append(assignStmts, astAssignStmt(
-					astSelectorExpr1(astSelectorExpr(varName, provideInstance), fieldInstance),
-					astIdent(varName),
-				))
-			} else {
+		for _, field := range instance.Fields {
+			if field.Source == "inject" {
+				fieldInstance := field.Instance
 				if fieldInstance == "Ctx" {
+					// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx
 					assignStmts = append(assignStmts, astAssignStmt(
-						astSelectorExpr1(astSelectorExpr(varName, provideInstance), fieldInstance),
+						astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
 						astIdent(varName),
 					))
 				} else {
-					// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
-					if !moduleInfo.HasStruct(fieldInstance) {
-						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
+					if fieldInstance == "Ctx" {
+						assignStmts = append(assignStmts, astAssignStmt(
+							astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
+							astIdent(varName),
+						))
+					} else {
+						// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+						if !moduleInfo.HasInstance(fieldInstance) {
+							utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
+						}
+						assignStmts = append(assignStmts, astAssignStmt(
+							astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
+							astSelectorExpr(varName, fieldInstance),
+						))
 					}
-					assignStmts = append(assignStmts, astAssignStmt(
-						astSelectorExpr1(astSelectorExpr(varName, provideInstance), fieldInstance),
-						astSelectorExpr(varName, fieldInstance),
-					))
 				}
 			}
 		}
@@ -180,6 +198,20 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				},
 			})
 		}
+	}
+
+	for _, instance := range moduleInfo.WebAppInstances {
+		// [code] ctx.{{WebApp}} = fiber.New()
+		stmts = append(stmts, astAssignStmt(
+			astSelectorExpr(varName, instance.WebApp),
+			astDeclareRef(
+				astSelectorExpr(
+					"fiber",
+					"New",
+				),
+				nil,
+			),
+		))
 	}
 
 	stmts = append(stmts, assignStmts...)

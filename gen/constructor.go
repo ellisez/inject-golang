@@ -62,20 +62,22 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	for _, instance := range moduleInfo.MultipleInstances {
 		recvVar := utils.FirstToLower(global.StructName)
 		params := make([]*ast.Field, 0)
-		for _, field := range instance.NormalFields {
-			// [code] {{FieldInstance}} {{FieldType}},
-			fieldInstance := field.Instance
+		for _, field := range instance.Fields {
+			if field.Source == "" {
+				// [code] {{FieldInstance}} {{FieldType}},
+				fieldInstance := field.Instance
 
-			params = append(params,
-				astField(
-					fieldInstance,
-					utils.AccessType(
-						field.Type,
-						instance.Package,
-						global.GenPackage,
+				params = append(params,
+					astField(
+						fieldInstance,
+						utils.AccessType(
+							field.Type,
+							instance.Package,
+							global.GenPackage,
+						),
 					),
-				),
-			)
+				)
+			}
 		}
 
 		provideInstance := instance.Instance
@@ -109,13 +111,13 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			// [code] {{Instance}} := &{{Package}}.{{Name}}{}
 			stmts = append(stmts, astDefineStmt(
 				astIdent(instanceVar),
-				astDeclareExpr(instanceType),
+				astDeclareRef(instanceType, nil),
 			))
 		}
 		for _, field := range instance.Fields {
 			fieldInstance := field.Instance
 
-			if field.IsInject {
+			if field.Source == "inject" {
 				if fieldInstance == "Ctx" {
 					// [code] {{Instance}}.{{FieldName}} = ctx
 					stmts = append(stmts, astAssignStmt(
@@ -124,7 +126,7 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					))
 				} else {
 					// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
-					if !moduleInfo.HasStruct(fieldInstance) {
+					if !moduleInfo.HasInstance(fieldInstance) {
 						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
 					}
 					stmts = append(stmts, astAssignStmt(

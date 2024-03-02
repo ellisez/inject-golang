@@ -44,6 +44,10 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 		return err
 	}
 
+	err = genWebFile(moduleInfo, genDir)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -60,7 +64,7 @@ func astSelectorExpr(x string, sel string) *ast.SelectorExpr {
 	return selectorExpr
 }
 
-func astSelectorExpr1(x ast.Expr, sel string) *ast.SelectorExpr {
+func astSelectorExprRecur(x ast.Expr, sel string) *ast.SelectorExpr {
 	selectorExpr := new(ast.SelectorExpr)
 	selectorExpr.X = x
 	selectorExpr.Sel = astIdent(sel)
@@ -73,12 +77,31 @@ func astStarExpr(x ast.Expr) *ast.StarExpr {
 	return starExpr
 }
 
-func astDeclareExpr(typeExpr ast.Expr) *ast.UnaryExpr {
+func astDeclareRef(typeExpr ast.Expr, elts []ast.Expr) *ast.UnaryExpr {
 	return &ast.UnaryExpr{
 		Op: token.AND,
-		X: &ast.CompositeLit{
-			Type: typeExpr,
-		},
+		X:  astDeclareExpr(typeExpr, elts),
+	}
+}
+
+func astDeclareExpr(typeExpr ast.Expr, elts []ast.Expr) *ast.CompositeLit {
+	return &ast.CompositeLit{
+		Type: typeExpr,
+		Elts: elts,
+	}
+}
+
+func astIntExpr(number string) *ast.BasicLit {
+	return &ast.BasicLit{
+		Kind:  token.INT,
+		Value: number,
+	}
+}
+
+func astStringExpr(text string) *ast.BasicLit {
+	return &ast.BasicLit{
+		Kind:  token.STRING,
+		Value: fmt.Sprintf(`"%s"`, text),
 	}
 }
 
@@ -88,6 +111,16 @@ func astDefineStmt(lhs ast.Expr, rhs ast.Expr) *ast.AssignStmt {
 		Lhs: []ast.Expr{
 			lhs,
 		},
+		Rhs: []ast.Expr{
+			rhs,
+		},
+	}
+}
+
+func astDefineStmtMany(lhs []ast.Expr, rhs ast.Expr) *ast.AssignStmt {
+	return &ast.AssignStmt{
+		Tok: token.DEFINE,
+		Lhs: lhs,
 		Rhs: []ast.Expr{
 			rhs,
 		},
@@ -109,6 +142,16 @@ func astAssignStmt(lhs ast.Expr, rhs ast.Expr) *ast.AssignStmt {
 		Lhs: []ast.Expr{
 			lhs,
 		},
+		Rhs: []ast.Expr{
+			rhs,
+		},
+	}
+}
+
+func astAssignStmtMany(lhs []ast.Expr, rhs ast.Expr) *ast.AssignStmt {
+	return &ast.AssignStmt{
+		Tok: token.ASSIGN,
+		Lhs: lhs,
 		Rhs: []ast.Expr{
 			rhs,
 		},

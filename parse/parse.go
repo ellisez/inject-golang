@@ -27,7 +27,7 @@ type Parser struct {
 
 func New() *Parser {
 	return &Parser{
-		Result:  &model.ModuleInfo{},
+		Result:  model.NewModuleInfo(),
 		FileSet: token.NewFileSet(),
 	}
 }

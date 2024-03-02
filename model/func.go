@@ -1,9 +1,10 @@
 package model
 
-// FuncInfo
-// @proxy <代理方法名，默认同方法名>
-// @import <模块加载路径> <模块名>
-// @injectParam <参数名> <实例名，默认同类名>
+// FuncInfo (use for all func)
+// @proxy <Instance，default funcName>
+// @import *<Path, required> <Alias>
+// @injectParam *<ParamName, required> <Instance，default paramName>
+// @injectRecv *<ParamName, required> <Instance，default paramName>
 type FuncInfo struct {
 	*PackageInfo
 
@@ -14,11 +15,17 @@ type FuncInfo struct {
 
 	Recv *FieldInfo // 函数接收
 
-	InjectParams []*FieldInfo // 注入字段
-	NormalParams []*FieldInfo // 非注入字段
-	Params       []*FieldInfo // 所有字段
+	Params []*FieldInfo // 所有字段
 
 	Results []*FieldInfo // 返回值
 
 	ProxyComment string // @proxy注解
+}
+
+func NewFuncInfo() *FuncInfo {
+	return &FuncInfo{
+		Imports: make([]*ImportInfo, 0),
+		Params:  make([]*FieldInfo, 0),
+		Results: make([]*FieldInfo, 0),
+	}
 }

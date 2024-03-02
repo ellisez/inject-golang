@@ -30,27 +30,9 @@ func FieldParse(field *ast.Field, structInfo *model.StructInfo) {
 					}
 				}
 				fieldInfo.Comment = comment.Text
-				fieldInfo.IsInject = true
+				fieldInfo.Source = "inject"
 			}
 		}
 	}
 
-	if fieldInfo.IsInject {
-		addInjectField(structInfo, fieldInfo)
-	} else {
-		addNormalField(structInfo, fieldInfo)
-	}
-}
-func addInjectField(structInfo *model.StructInfo, fieldInfo *model.FieldInfo) {
-	if structInfo.NormalFields == nil {
-		structInfo.InjectFields = make([]*model.FieldInfo, 0)
-	}
-	structInfo.InjectFields = append(structInfo.InjectFields, fieldInfo)
-}
-
-func addNormalField(structAnnotate *model.StructInfo, field *model.FieldInfo) {
-	if structAnnotate.NormalFields == nil {
-		structAnnotate.NormalFields = make([]*model.FieldInfo, 0)
-	}
-	structAnnotate.NormalFields = append(structAnnotate.NormalFields, field)
 }

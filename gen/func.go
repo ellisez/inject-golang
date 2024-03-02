@@ -55,27 +55,30 @@ func genFuncImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 // # gen segment: Func inject #
 func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
+	recvVar := utils.FirstToLower(global.StructName)
+
 	for _, instance := range moduleInfo.FuncInstances {
-		recvVar := utils.FirstToLower(global.StructName)
 		params := make([]*ast.Field, 0)
-		for _, paramInfo := range instance.NormalParams {
-			// [code] {{ParamInstance}} {{ParamType}},
-			paramInstance := paramInfo.Instance
-			if paramInstance == "" {
-				paramInstance = paramInfo.Name
-				if paramInfo.Name == "" {
-					paramInstance = utils.TypeShortName(paramInfo.Type)
+		for _, paramInfo := range instance.Params {
+			if paramInfo.Source == "" {
+				// [code] {{ParamInstance}} {{ParamType}},
+				paramInstance := paramInfo.Instance
+				if paramInstance == "" {
+					paramInstance = paramInfo.Name
+					if paramInfo.Name == "" {
+						paramInstance = utils.TypeShortName(paramInfo.Type)
+					}
 				}
-			}
-			params = append(params,
-				astField(paramInstance,
-					utils.AccessType(
-						paramInfo.Type,
-						instance.Package,
-						global.GenPackage,
+				params = append(params,
+					astField(paramInstance,
+						utils.AccessType(
+							paramInfo.Type,
+							instance.Package,
+							global.GenPackage,
+						),
 					),
-				),
-			)
+				)
+			}
 		}
 
 		stmts := make([]ast.Stmt, 0)
@@ -83,13 +86,13 @@ func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		for _, paramInfo := range instance.Params {
 			paramInstance := paramInfo.Instance
 
-			if paramInfo.IsInject {
+			if paramInfo.Source == "inject" {
 				if paramInstance == "Ctx" {
 					// [code] ctx,
 					args = append(args, astIdent(recvVar))
 				} else {
 					// [code] ctx.{{ParamInstance}},
-					if !moduleInfo.HasStruct(paramInstance) {
+					if !moduleInfo.HasInstance(paramInstance) {
 						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
 					}
 					args = append(args, astSelectorExpr(recvVar, paramInstance))
