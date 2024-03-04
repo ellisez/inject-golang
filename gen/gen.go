@@ -132,11 +132,15 @@ func astDefineStmtMany(lhs []ast.Expr, rhs ast.Expr) *ast.AssignStmt {
 }
 
 func astField(name string, typeExpr ast.Expr) *ast.Field {
-	return &ast.Field{
-		Names: []*ast.Ident{
+	var astName []*ast.Ident
+	if name != "" {
+		astName = []*ast.Ident{
 			astIdent(name),
-		},
-		Type: typeExpr,
+		}
+	}
+	return &ast.Field{
+		Names: astName,
+		Type:  typeExpr,
 	}
 }
 
