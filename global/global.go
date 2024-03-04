@@ -9,4 +9,5 @@ var GenConstructorFilename = "gen_constructor.go"
 var GenFuncFilename = "gen_func.go"
 var GenMethodFilename = "gen_method.go"
 
+var GenWebPackage = "web"
 var GenWebFilename = "gen_web.go"

@@ -8,15 +8,15 @@ import (
 // WebCtxAliasLoaded
 // @proxy
 // @injectParam database Database
-// @injectParam ctx
-func WebCtxAliasLoaded(ctx *ctx.Ctx, webApp *WebApp, database *Database) {
+// @injectParam appCtx Ctx
+func WebCtxAliasLoaded(appCtx *ctx.Ctx, webApp *WebApp, database *Database) {
 	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
-	ctx.TestLogin(webApp)
+	appCtx.TestLogin(webApp)
 }
 
 // TestLogin
 // @proxy
 // @injectParam database Database
 func (webApp *WebApp) TestLogin(database *Database) {
-	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
+	fmt.Printf("TestLogin: %v\n%v\n", webApp, database)
 }

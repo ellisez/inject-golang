@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -60,7 +59,6 @@ func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 	for _, instance := range moduleInfo.MethodInstances {
 		params := make([]*ast.Field, 0)
-		callerVar := instance.Recv.Name
 		for _, paramInfo := range instance.Params {
 			if paramInfo.Source == "" {
 				// [code] {{ParamInstance}} {{ParamType}},
@@ -89,7 +87,7 @@ func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				} else {
 					// [code] ctx.{{ParamInstance}},
 					if !moduleInfo.HasInstance(paramInstance) {
-						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
+						utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
 					}
 					args = append(args, astSelectorExpr(recvVar, paramInstance))
 				}
@@ -98,10 +96,19 @@ func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				args = append(args, astIdent(paramInstance))
 			}
 		}
+		var fun ast.Expr
+		if instance.Recv.Source == "inject" {
+			fun = astSelectorExprRecur(
+				astSelectorExpr("ctx", instance.Recv.Instance),
+				instance.FuncName,
+			)
+		} else {
+			fun = astSelectorExpr(instance.Recv.Instance, instance.FuncName)
+		}
 		if instance.Results == nil {
 			stmts = append(stmts, &ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun:  astSelectorExpr(callerVar, instance.FuncName),
+					Fun:  fun,
 					Args: args,
 				},
 			})
@@ -109,7 +116,7 @@ func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			stmts = append(stmts, &ast.ReturnStmt{
 				Results: []ast.Expr{
 					&ast.CallExpr{
-						Fun:  astSelectorExpr(callerVar, instance.FuncName),
+						Fun:  fun,
 						Args: args,
 					},
 				},

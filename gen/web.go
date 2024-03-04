@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -703,154 +702,165 @@ func genWebFuncAst(astFile *ast.File) {
 			&ast.RangeStmt{
 				Key:   astIdent("key"),
 				Value: astIdent("strArr"),
+				Tok:   token.DEFINE,
 				X:     astSelectorExpr("form", "Value"),
 				Body: &ast.BlockStmt{
 					List: []ast.Stmt{
-						astDefineStmt(
-							astIdent("field"),
-							&ast.CallExpr{
-								Fun: astSelectorExpr("elem", "FieldByName"),
-								Args: []ast.Expr{
-									astIdent("key"),
-								},
-							},
-						),
-						&ast.IfStmt{
-							Cond: &ast.BinaryExpr{
-								Op: token.LAND,
-								X: &ast.CallExpr{
-									Fun: astSelectorExpr("field", "IsValid"),
-								},
-								Y: &ast.CallExpr{
-									Fun: astSelectorExpr("field", "CanSet"),
-								},
-							},
+						&ast.RangeStmt{
+							Key:   astIdent("_"),
+							Value: astIdent("value"),
+							Tok:   token.DEFINE,
+							X:     astIdent("strArr"),
 							Body: &ast.BlockStmt{
 								List: []ast.Stmt{
-									&ast.SwitchStmt{
-										Tag: &ast.CallExpr{
-											Fun: astSelectorExpr("field", "Kind"),
+									astDefineStmt(
+										astIdent("field"),
+										&ast.CallExpr{
+											Fun: astSelectorExpr("elem", "FieldByName"),
+											Args: []ast.Expr{
+												astIdent("key"),
+											},
+										},
+									),
+									&ast.IfStmt{
+										Cond: &ast.BinaryExpr{
+											Op: token.LAND,
+											X: &ast.CallExpr{
+												Fun: astSelectorExpr("field", "IsValid"),
+											},
+											Y: &ast.CallExpr{
+												Fun: astSelectorExpr("field", "CanSet"),
+											},
 										},
 										Body: &ast.BlockStmt{
 											List: []ast.Stmt{
-												&ast.CaseClause{
-													List: []ast.Expr{
-														astSelectorExpr("reflect", "String"),
+												&ast.SwitchStmt{
+													Tag: &ast.CallExpr{
+														Fun: astSelectorExpr("field", "Kind"),
 													},
-													Body: []ast.Stmt{
-														&ast.ExprStmt{
-															X: &ast.CallExpr{
-																Fun: astSelectorExpr("field", "SetString"),
-																Args: []ast.Expr{
-																	astIdent("value"),
+													Body: &ast.BlockStmt{
+														List: []ast.Stmt{
+															&ast.CaseClause{
+																List: []ast.Expr{
+																	astSelectorExpr("reflect", "String"),
 																},
-															},
-														},
-														&ast.BranchStmt{},
-													},
-												},
-												&ast.CaseClause{
-													List: []ast.Expr{
-														astSelectorExpr("reflect", "Int"),
-													},
-													Body: []ast.Stmt{
-														astDefineStmtMany(
-															[]ast.Expr{
-																astIdent("intValue"),
-																astIdent("error"),
-															},
-															&ast.CallExpr{
-																Fun: astSelectorExpr("strconv", "Atoi"),
-																Args: []ast.Expr{
-																	astIdent("value"),
-																},
-															},
-														),
-														errorReturnStmts(),
-														&ast.ExprStmt{
-															X: &ast.CallExpr{
-																Fun: astSelectorExpr("field", "SetInt"),
-																Args: []ast.Expr{
-																	&ast.CallExpr{
-																		Fun: astIdent("int64"),
-																		Args: []ast.Expr{
-																			astIdent("value"),
+																Body: []ast.Stmt{
+																	&ast.ExprStmt{
+																		X: &ast.CallExpr{
+																			Fun: astSelectorExpr("field", "SetString"),
+																			Args: []ast.Expr{
+																				astIdent("value"),
+																			},
 																		},
 																	},
+																	&ast.BranchStmt{Tok: token.BREAK},
 																},
 															},
-														},
-														&ast.BranchStmt{},
-													},
-												},
-												&ast.CaseClause{
-													List: []ast.Expr{
-														astSelectorExpr("reflect", "Bool"),
-													},
-													Body: []ast.Stmt{
-														astDefineStmtMany(
-															[]ast.Expr{
-																astIdent("boolValue"),
-																astIdent("error"),
-															},
-															&ast.CallExpr{
-																Fun: astSelectorExpr("strconv", "ParseBool"),
-																Args: []ast.Expr{
-																	astIdent("value"),
+															&ast.CaseClause{
+																List: []ast.Expr{
+																	astSelectorExpr("reflect", "Int"),
+																},
+																Body: []ast.Stmt{
+																	astDefineStmtMany(
+																		[]ast.Expr{
+																			astIdent("intValue"),
+																			astIdent("err"),
+																		},
+																		&ast.CallExpr{
+																			Fun: astSelectorExpr("strconv", "Atoi"),
+																			Args: []ast.Expr{
+																				astIdent("value"),
+																			},
+																		},
+																	),
+																	errorReturnStmts(),
+																	&ast.ExprStmt{
+																		X: &ast.CallExpr{
+																			Fun: astSelectorExpr("field", "SetInt"),
+																			Args: []ast.Expr{
+																				&ast.CallExpr{
+																					Fun: astIdent("int64"),
+																					Args: []ast.Expr{
+																						astIdent("intValue"),
+																					},
+																				},
+																			},
+																		},
+																	},
+																	&ast.BranchStmt{Tok: token.BREAK},
 																},
 															},
-														),
-														errorReturnStmts(),
-														&ast.ExprStmt{
-															X: &ast.CallExpr{
-																Fun: astSelectorExpr("field", "SetBool"),
-																Args: []ast.Expr{
-																	astIdent("boolValue"),
+															&ast.CaseClause{
+																List: []ast.Expr{
+																	astSelectorExpr("reflect", "Bool"),
+																},
+																Body: []ast.Stmt{
+																	astDefineStmtMany(
+																		[]ast.Expr{
+																			astIdent("boolValue"),
+																			astIdent("err"),
+																		},
+																		&ast.CallExpr{
+																			Fun: astSelectorExpr("strconv", "ParseBool"),
+																			Args: []ast.Expr{
+																				astIdent("value"),
+																			},
+																		},
+																	),
+																	errorReturnStmts(),
+																	&ast.ExprStmt{
+																		X: &ast.CallExpr{
+																			Fun: astSelectorExpr("field", "SetBool"),
+																			Args: []ast.Expr{
+																				astIdent("boolValue"),
+																			},
+																		},
+																	},
+																	&ast.BranchStmt{Tok: token.BREAK},
 																},
 															},
-														},
-														&ast.BranchStmt{},
-													},
-												},
-												&ast.CaseClause{
-													List: []ast.Expr{
-														astSelectorExpr("reflect", "Float64"),
-													},
-													Body: []ast.Stmt{
-														astDefineStmtMany(
-															[]ast.Expr{
-																astIdent("floatValue"),
-																astIdent("error"),
-															},
-															&ast.CallExpr{
-																Fun: astSelectorExpr("strconv", "ParseFloat"),
-																Args: []ast.Expr{
-																	astIdent("value"),
-																	astIntExpr("64"),
+															&ast.CaseClause{
+																List: []ast.Expr{
+																	astSelectorExpr("reflect", "Float64"),
+																},
+																Body: []ast.Stmt{
+																	astDefineStmtMany(
+																		[]ast.Expr{
+																			astIdent("floatValue"),
+																			astIdent("err"),
+																		},
+																		&ast.CallExpr{
+																			Fun: astSelectorExpr("strconv", "ParseFloat"),
+																			Args: []ast.Expr{
+																				astIdent("value"),
+																				astIntExpr("64"),
+																			},
+																		},
+																	),
+																	errorReturnStmts(),
+																	&ast.ExprStmt{
+																		X: &ast.CallExpr{
+																			Fun: astSelectorExpr("field", "SetFloat"),
+																			Args: []ast.Expr{
+																				astIdent("floatValue"),
+																			},
+																		},
+																	},
+																	&ast.BranchStmt{Tok: token.BREAK},
 																},
 															},
-														),
-														errorReturnStmts(),
-														&ast.ExprStmt{
-															X: &ast.CallExpr{
-																Fun: astSelectorExpr("field", "SetFloat"),
-																Args: []ast.Expr{
-																	astIdent("floatValue"),
-																},
-															},
-														},
-														&ast.BranchStmt{},
-													},
-												},
-												&ast.CaseClause{
-													Body: []ast.Stmt{
-														&ast.ReturnStmt{
-															Results: []ast.Expr{
-																&ast.CallExpr{
-																	Fun: astSelectorExpr("fmt", "Errorf"),
-																	Args: []ast.Expr{
-																		astStringExpr("unsupported type %T"),
-																		astIdent("value"),
+															&ast.CaseClause{
+																Body: []ast.Stmt{
+																	&ast.ReturnStmt{
+																		Results: []ast.Expr{
+																			&ast.CallExpr{
+																				Fun: astSelectorExpr("fmt", "Errorf"),
+																				Args: []ast.Expr{
+																					astStringExpr("unsupported type %T"),
+																					astIdent("value"),
+																				},
+																			},
+																		},
 																	},
 																},
 															},
@@ -859,14 +869,15 @@ func genWebFuncAst(astFile *ast.File) {
 												},
 											},
 										},
-									},
-								},
-							},
-							Else: &ast.IfStmt{
-								Cond: &ast.UnaryExpr{
-									Op: token.NOT,
-									X: &ast.CallExpr{
-										Fun: astSelectorExpr("field", "IsValid"),
+										Else: &ast.IfStmt{
+											Cond: &ast.UnaryExpr{
+												Op: token.NOT,
+												X: &ast.CallExpr{
+													Fun: astSelectorExpr("field", "IsValid"),
+												},
+											},
+											Body: &ast.BlockStmt{},
+										},
 									},
 								},
 							},
@@ -877,12 +888,14 @@ func genWebFuncAst(astFile *ast.File) {
 			&ast.RangeStmt{
 				Key:   astIdent("key"),
 				Value: astIdent("fileArr"),
+				Tok:   token.DEFINE,
 				X:     astSelectorExpr("form", "File"),
 				Body: &ast.BlockStmt{
 					List: []ast.Stmt{
 						&ast.RangeStmt{
 							Key:   astIdent("_"),
 							Value: astIdent("file"),
+							Tok:   token.DEFINE,
 							X:     astIdent("fileArr"),
 							Body: &ast.BlockStmt{
 								List: []ast.Stmt{
@@ -929,6 +942,7 @@ func genWebFuncAst(astFile *ast.File) {
 													Fun: astSelectorExpr("field", "IsValid"),
 												},
 											},
+											Body: &ast.BlockStmt{},
 										},
 									},
 								},
@@ -1038,7 +1052,7 @@ func paramConvStmts(strCall *ast.CallExpr, convCall *ast.CallExpr) []ast.Stmt {
 				},
 				Y: &ast.BinaryExpr{
 					Op: token.NEQ,
-					X:  astIdent("str"),
+					X:  astIdent("defaultValue"),
 					Y:  astIdent("nil"),
 				},
 			},
@@ -1116,7 +1130,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				astStringExpr(staticResource.Path),
 				astStringExpr(staticResource.Dirname),
 			}
-			if staticResource.Features != nil ||
+			if len(staticResource.Features) > 0 ||
 				staticResource.Index != "" ||
 				staticResource.MaxAge != 0 {
 				elts := make([]ast.Expr, 0)
@@ -1157,7 +1171,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		}
 
 		for _, middleware := range instance.Middlewares {
-			// [code] ctx.{{WebApp}}.Group({{Path}}, ctx.{{Proxy}})
+			// [code] ctx.{{WebApp}}.Group({{Path}}, {{Proxy}})
 			stmts = append(stmts, &ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun: astSelectorExprRecur(
@@ -1166,7 +1180,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					),
 					Args: []ast.Expr{
 						astStringExpr(middleware.Path),
-						astSelectorExpr(recvVar, instance.Proxy),
+						astSelectorExpr(recvVar, middleware.Proxy),
 					},
 				},
 			})
@@ -1174,7 +1188,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 		for _, router := range instance.Routers {
 			for _, method := range router.Methods {
-				// [code] ctx.{{WebApp}}.{{Method}}({{Path}}, ctx.{{Proxy}})
+				// [code] ctx.{{WebApp}}.{{Method}}({{Path}}, {{Proxy}})
 				stmts = append(stmts, &ast.ExprStmt{
 					X: &ast.CallExpr{
 						Fun: astSelectorExprRecur(
@@ -1183,7 +1197,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 						),
 						Args: []ast.Expr{
 							astStringExpr(router.Path),
-							astSelectorExpr(recvVar, instance.Proxy),
+							astSelectorExpr(recvVar, router.Proxy),
 						},
 					},
 				})
@@ -1203,7 +1217,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					} else {
 						// [code] ctx.{{ParamInstance}},
 						if !moduleInfo.HasInstance(paramInstance) {
-							utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
+							utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
 						}
 						args = append(args, astSelectorExpr(recvVar, paramInstance))
 					}
@@ -1216,7 +1230,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			stmts = append(stmts, astDefineStmtMany(
 				[]ast.Expr{
 					astIdent("host"),
-					astIdent("post"),
+					astIdent("port"),
 					astIdent("err"),
 				},
 				&ast.CallExpr{
@@ -1225,22 +1239,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				},
 			))
 
-			stmts = append(stmts, &ast.IfStmt{
-				Cond: &ast.BinaryExpr{
-					Op: token.NEQ,
-					X:  astIdent("err"),
-					Y:  astIdent("nil"),
-				},
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						&ast.ReturnStmt{
-							Results: []ast.Expr{
-								astIdent("error"),
-							},
-						},
-					},
-				},
-			})
+			stmts = append(stmts, errorReturnStmts())
 		}
 
 		stmts = append(stmts, &ast.ReturnStmt{
@@ -1280,9 +1279,172 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 }
 
 func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
+	recvVar := utils.FirstToLower(global.StructName)
+	for _, webApp := range moduleInfo.WebAppInstances {
+		for _, instance := range webApp.Middlewares {
+			params := []*ast.Field{
+				astField("webCtx",
+					astStarExpr(astSelectorExpr("fiber", "Ctx"))),
+			}
 
+			for _, paramInfo := range instance.Params {
+				if paramInfo.Source == "" {
+					// [code] {{ParamInstance}} {{ParamType}},
+					paramInstance := paramInfo.Instance
+					params = append(params,
+						astField(paramInstance,
+							utils.AccessType(
+								paramInfo.Type,
+								instance.Package,
+								global.GenPackage,
+							),
+						),
+					)
+				}
+			}
+
+			stmts := make([]ast.Stmt, 0)
+			stmts = append(stmts, genWebBodyParam(
+				instance.BodyParam, instance.PackageInfo, instance.FuncName)...)
+			stmts = append(stmts, genWebHeaderParams(
+				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
+			stmts = append(stmts, genWebQueryParams(
+				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
+			stmts = append(stmts, genWebFormParams(
+				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
+
+			args := make([]ast.Expr, 0)
+			for _, paramInfo := range instance.Params {
+				switch paramInfo.Source {
+				case "ctx":
+					args = append(args, astIdent("ctx"))
+					break
+				case "webCtx":
+					args = append(args, astIdent("webCtx"))
+					break
+				case "inject":
+					args = append(args, astSelectorExpr("ctx", paramInfo.Instance))
+					break
+				default:
+					args = append(args, astIdent(paramInfo.Instance))
+				}
+
+			}
+
+			var fun ast.Expr
+			if instance.Recv == nil {
+				fun = astSelectorExpr(instance.Package, instance.FuncName)
+			} else {
+				if instance.Recv.Source == "inject" {
+					fun = astSelectorExprRecur(
+						astSelectorExpr("ctx", instance.Recv.Instance),
+						instance.FuncName,
+					)
+				} else {
+					fun = astSelectorExpr(instance.Recv.Instance, instance.FuncName)
+				}
+			}
+			stmts = append(stmts, &ast.ReturnStmt{
+				Results: []ast.Expr{
+					&ast.CallExpr{
+						Fun:  fun,
+						Args: args,
+					},
+				},
+			})
+
+			addDecl(astFile, astFuncDecl(
+				[]*ast.Field{
+					astField(recvVar, astStarExpr(astIdent(global.StructName))),
+				},
+				instance.Proxy,
+				params,
+				[]*ast.Field{
+					astField("err", astIdent("error")),
+				},
+				stmts,
+			))
+		}
+	}
 }
 
+func genWebBodyParam(bodyParam *model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
+	if bodyParam != nil {
+		bodyAstType := bodyParam.Type
+		switch bodyAstType.(type) {
+		case *ast.ArrayType:
+			byteArr := bodyAstType.(*ast.ArrayType)
+			if byteArr.Elt.(*ast.Ident).String() == "byte" {
+				return []ast.Stmt{
+					astDefineStmt(
+						astIdent(bodyParam.Instance),
+						&ast.CallExpr{
+							Fun: astIdent("Body"),
+							Args: []ast.Expr{
+								astIdent("webCtx"),
+							},
+						},
+					),
+				}
+			}
+			break
+		case *ast.Ident:
+			typeIdent := bodyAstType.(*ast.Ident).String()
+			if typeIdent == "string" {
+				return []ast.Stmt{
+					astDefineStmt(
+						astIdent(bodyParam.Instance),
+						&ast.CallExpr{
+							Fun: astIdent("BodyString"),
+							Args: []ast.Expr{
+								astIdent("webCtx"),
+							},
+						},
+					),
+				}
+			} else if utils.IsFirstLower(typeIdent) {
+				utils.Failuref("%s, unsupport type %s, at %s()", bodyParam.Comment, utils.TypeToString(bodyAstType), funcName)
+			}
+		}
+		return []ast.Stmt{
+			// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
+			astDefineStmt(
+				astIdent(bodyParam.Instance),
+				astDeclareRef(
+					utils.AccessType(
+						bodyAstType,
+						packageInfo.Package,
+						global.GenPackage,
+					),
+					nil,
+				),
+			),
+			// [code] err := BodyParser(webCtx, {{ParamInstance}})
+			astAssignStmt(
+				astIdent("err"),
+				&ast.CallExpr{
+					Fun: astIdent("BodyParser"),
+					Args: []ast.Expr{
+						astIdent("webCtx"),
+						astIdent(bodyParam.Instance),
+					},
+				},
+			),
+			errorReturnStmts(),
+		}
+	}
+	return nil
+}
+
+func genWebHeaderParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
+	return nil
+}
+func genWebQueryParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
+	return nil
+}
+func genWebFormParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
+	return nil
+}
 func genRouterAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 }

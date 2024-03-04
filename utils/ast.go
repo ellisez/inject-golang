@@ -5,6 +5,7 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
 	"regexp"
+	"strings"
 )
 
 func TypeToString(astType ast.Expr) string {
@@ -159,7 +160,7 @@ func TypeWithPackage(astType ast.Expr, packageName string) ast.Expr {
 		return astType
 	case *ast.Ident:
 		ident := astType.(*ast.Ident)
-		if isFirstUpper(ident.String()) {
+		if IsFirstUpper(ident.String()) {
 			return &ast.SelectorExpr{
 				X:   &ast.Ident{Name: packageName},
 				Sel: ident,
@@ -227,4 +228,28 @@ func ToFileInfo(field *ast.Field) *model.FieldInfo {
 		Type:     field.Type,
 		IsEmbed:  isEmbed,
 	}
+}
+
+func IsBasicType(typeStr string) bool {
+	if strings.HasPrefix(typeStr, "*") {
+		return false
+	}
+	if strings.Contains(typeStr, ".") {
+		return false
+	}
+	if IsFirstUpper(typeStr) {
+		return false
+	}
+	return true
+}
+
+func IsBasicAstType(typeExpr ast.Expr) bool {
+	ident, ok := typeExpr.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	if IsFirstUpper(ident.String()) {
+		return false
+	}
+	return true
 }

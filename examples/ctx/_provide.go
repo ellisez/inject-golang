@@ -234,9 +234,9 @@ func (ctx *Ctx) WebAppStartup() error {
 
 }
 
-func (ctx *Ctx) CorsMiddleware(webCtx *fiber.Ctx) error {
+func (ctx *Ctx) CorsMiddleware(webCtx *fiber.Ctx) (err error) {
 	config := &model.Config{}
-	err := BodyParser(webCtx, config)
+	err = BodyParser(webCtx, config)
 	if err != nil {
 		return err
 	}

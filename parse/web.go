@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -29,16 +28,21 @@ func (p *Parser) WebAppParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 				webInfo.Statics = append(webInfo.Statics, staticResource)
 
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
+					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				staticResource.Path = annotateArgs[1]
 				if argsLen < 3 {
-					utils.Failure(fmt.Sprintf("%s, Dirname must be specified", comment.Text))
+					utils.Failuref("%s, Dirname must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				staticResource.Path = annotateArgs[2]
 
 				if argsLen >= 4 {
-					splitStr := strings.Split(annotateArgs[3], ",")
+					features := annotateArgs[3]
+					if !strings.HasPrefix(features, "[") || !strings.HasSuffix(features, "]") {
+						utils.Failuref("%s, Features must be wrapped in [], at %s()", comment.Text, funcInfo.FuncName)
+					}
+					features = features[1 : len(features)-1]
+					splitStr := strings.Split(features, ",")
 					for _, feature := range splitStr {
 						staticResource.Features = append(staticResource.Features, strings.TrimSpace(feature))
 					}
@@ -49,7 +53,7 @@ func (p *Parser) WebAppParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 				if argsLen >= 6 {
 					maxAge, err := strconv.Atoi(annotateArgs[5])
 					if err != nil {
-						utils.Failure(fmt.Sprintf("%s, MaxAge must be a number", comment.Text))
+						utils.Failuref("%s, MaxAge must be a number, at %s()", comment.Text, funcInfo.FuncName)
 					}
 					staticResource.MaxAge = maxAge
 				}
@@ -76,7 +80,7 @@ func (p *Parser) WebAppParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 	}
 }
 
-func addRouterParam(routerParam *model.RouterParam, paramInfo *model.FieldInfo) {
+func addRouterParam(routerParam *model.RouterParam, paramInfo *model.FieldInfo, funcInfo *model.FuncInfo) {
 	switch paramInfo.Source {
 	case "query":
 		routerParam.QueryParams = append(routerParam.QueryParams, paramInfo)
@@ -89,7 +93,7 @@ func addRouterParam(routerParam *model.RouterParam, paramInfo *model.FieldInfo) 
 		break
 	case "body":
 		if routerParam.BodyParam != nil {
-			utils.Failure(fmt.Sprintf("%s, body cannot define multiple", paramInfo.Comment))
+			utils.Failuref("%s, body cannot define multiple, at %s()", paramInfo.Comment, funcInfo.FuncName)
 		}
 		routerParam.BodyParam = paramInfo
 		break
@@ -97,7 +101,7 @@ func addRouterParam(routerParam *model.RouterParam, paramInfo *model.FieldInfo) 
 		routerParam.FormParams = append(routerParam.FormParams, paramInfo)
 		break
 	default:
-		utils.Failure(fmt.Sprintf("%s, %s can not support", paramInfo.Comment, paramInfo.Source))
+		utils.Failuref("%s, %s can not support, at %s()", paramInfo.Comment, paramInfo.Source, funcInfo.FuncName)
 	}
 }
 func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
@@ -113,28 +117,40 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInf
 			annotateName := annotateArgs[0]
 			if annotateName == "@middleware" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
+					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				middlewareInfo.Path = annotateArgs[1]
 
 				middlewareInfo.MiddlewareComment = comment.Text
 			} else if annotateName == "@param" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramName := annotateArgs[1]
 				paramInfo := utils.FindParamInfo(funcInfo, paramName)
 				if paramInfo == nil {
-					utils.Failure(fmt.Sprintf("%s, ParamName not found", comment.Text))
+					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
 				}
 
 				if argsLen < 3 {
-					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramSource := annotateArgs[2]
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = paramSource
-				addRouterParam(middlewareInfo.RouterParam, paramInfo)
+				addRouterParam(middlewareInfo.RouterParam, paramInfo, funcInfo)
+			} else if annotateName == "@injectWebCtx" {
+				if argsLen < 2 {
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
+				}
+				paramName := annotateArgs[1]
+				paramInfo := utils.FindParamInfo(funcInfo, paramName)
+				if paramInfo == nil {
+					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
+				}
+
+				paramInfo.Comment = comment.Text
+				paramInfo.Source = "webCtx"
 			} else if annotateName == "@webApp" {
 				if argsLen >= 2 {
 					middlewareInfo.WebApp = annotateArgs[1]
@@ -168,7 +184,7 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInf
 }
 
 func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
-	routerInfo := &model.RouterInfo{FuncInfo: funcInfo, WebApp: "WebApp"}
+	routerInfo := model.NewRouterInfoFromFuncInfo(funcInfo)
 
 	if funcDecl.Doc != nil {
 		for _, comment := range funcDecl.Doc.List {
@@ -178,33 +194,45 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 				continue
 			}
 			annotateName := annotateArgs[0]
-			if annotateName == "@middleware" {
+			if annotateName == "@router" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
+					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				routerInfo.Path = annotateArgs[1]
+
+				if argsLen < 3 {
+					utils.Failuref("%s, Methods must be specified, at %s()", comment.Text, funcInfo.FuncName)
+				}
+				methods := annotateArgs[2]
+				if !strings.HasPrefix(methods, "[") || !strings.HasSuffix(methods, "]") {
+					utils.Failuref("%s, Methods must be wrapped in [], at %s()", comment.Text, funcInfo.FuncName)
+				}
+				methods = methods[1 : len(methods)-1]
+				for _, method := range strings.Split(methods, ",") {
+					routerInfo.Methods = append(routerInfo.Methods, utils.FirstToUpper(method))
+				}
 
 				routerInfo.RouterComment = comment.Text
 			} else if annotateName == "@param" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramName := annotateArgs[1]
 				paramInfo := utils.FindParamInfo(funcInfo, paramName)
 				if paramInfo == nil {
-					utils.Failure(fmt.Sprintf("%s, ParamName not found", comment.Text))
+					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
 				}
 
 				if argsLen < 3 {
-					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramSource := annotateArgs[2]
 				paramInfo.Comment = comment.Text
 				if paramInfo.Source != "" {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, paramInfo.Source))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, paramInfo.Source, funcInfo.FuncName)
 				}
 				paramInfo.Source = paramSource
-				addRouterParam(routerInfo.RouterParam, paramInfo)
+				addRouterParam(routerInfo.RouterParam, paramInfo, funcInfo)
 			} else if annotateName == "@webApp" {
 				if argsLen >= 2 {
 					routerInfo.WebApp = annotateArgs[1]

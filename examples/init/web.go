@@ -6,7 +6,7 @@ import (
 )
 
 // ConfigureWebApp
-// @webApp WebApp
+// @webAppProvide WebApp
 // @proxy WebAppStartup1
 // @injectParam config Config
 // @static /images /images

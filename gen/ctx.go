@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -123,7 +122,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				if moduleInfo.HasFunc(instance.PreConstruct) {
 					caller = astSelectorExpr(varName, instance.PreConstruct)
 				} else {
-					utils.Failure(fmt.Sprintf("@preConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+					utils.Failuref("@preConstruct %s, No matching function, try to specify Package Name, at %s{}", instance.PreConstruct, instance.Name)
 				}
 			} else {
 				caller = utils.TypeToAst(instance.PreConstruct)
@@ -166,7 +165,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					} else {
 						// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
 						if !moduleInfo.HasInstance(fieldInstance) {
-							utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", field.Comment, fieldInstance))
+							utils.Failuref("%s, \"%s\" No matching Instance, at %s{}", field.Comment, fieldInstance, instance.Name)
 						}
 						assignStmts = append(assignStmts, astAssignStmt(
 							astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
@@ -184,7 +183,7 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				if moduleInfo.HasFunc(instance.PostConstruct) {
 					caller = astSelectorExpr(varName, instance.PostConstruct)
 				} else {
-					utils.Failure(fmt.Sprintf("@postConstruct %s, No matching function, must be to specify Package Name", instance.PreConstruct))
+					utils.Failuref("@postConstruct %s, No matching function, try to specify Package Name, at %s{}", instance.PreConstruct, instance.Name)
 				}
 			} else {
 				caller = utils.TypeToAst(instance.PostConstruct)
@@ -204,13 +203,12 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		// [code] ctx.{{WebApp}} = fiber.New()
 		stmts = append(stmts, astAssignStmt(
 			astSelectorExpr(varName, instance.WebApp),
-			astDeclareRef(
-				astSelectorExpr(
+			&ast.CallExpr{
+				Fun: astSelectorExpr(
 					"fiber",
 					"New",
 				),
-				nil,
-			),
+			},
 		))
 	}
 

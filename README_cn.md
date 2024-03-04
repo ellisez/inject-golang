@@ -47,6 +47,7 @@ go generate -run inject-golang
 // @import *<模块加载路径，必填> <模块名>
 // @injectParam *<参数名，必填> <实例名，默认同类名>
 // @injectRecv *<参数名，必填> <实例名，默认同类名>
+// @injectCtx *<参数名, 必填>
 ```
 
 ### 2.4. WebApp注解 (提供了web服务器)
@@ -57,8 +58,9 @@ go generate -run inject-golang
 
 ### 2.5. 路由方法上的注解（参照swag注解）：
 ```
-// @route *<Path必填> [Method: get|post]
+// @router *<Path必填> [Method: get|post]
 // @webApp <WebApp，默认名为WebApp>
+// @injectWebCtx *<参数名, 必填>
 // @produce <返回格式: json | x-www-form-urlencoded | xml | plain | html | mpfd | json-api | json-stream | octet-stream | png | jpeg | gif>
 // @param *<参数名，必填> *<取值类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
@@ -67,6 +69,7 @@ go generate -run inject-golang
 ```
 // @middleware *<Path必填>
 // @webApp <WebApp，默认名为WebApp>
+// @injectWebCtx *<参数名, 必填>
 // @param *<参数名，必填> *<参数类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
@@ -81,7 +84,7 @@ go generate -run inject-golang
 > 
 > 推荐使用`@postConstruct`注解指向一个`@proxy`代理函数, 而不是直接指向原始函数, 这样能让原始函数得到参数注入;
 > 
-> `ctx`是系统预留实例, 它表示上下文容器本身, 适用于@inject @injectParam @injectField @param等注解;
+> `@injectCtx`它表示注入上下文容器本身;`@injectWebCtx`表示当前请求的webCtx, 只有`@middleware`和`@router`有效;
 > 
 > 当`@param`默认只匹配与参数同名的取值类型(query|path|header|body|formData), 需要通过`@injectParam`改写取值的参数名
 
@@ -379,7 +382,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                     {{else if Type == "string"}}
                         {{ParamInstance}} := BodyString(webCtx)
                     {{else}}
-                        {{ParamInstance}} := &model.Config{}
+                        {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
                         err := BodyParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
@@ -475,10 +478,12 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                 
                 return {{Package}}.{{FuncName}}(
                     {{range _, param := Params}}
-                        {{if param.Type == "ctx.Ctx"}}
+                        {{if param.Source == "ctx"}}
                             ctx,
-                        {{else if param.Type == "*fiber.Ctx"}}
+                        {{else if param.Source == "webCtx"}}
                             webCtx,
+                        {{else if param.Source == "inject"}}
+                            ctx.{{ParamInstance}},
                         {{else}}
                             {{param.Instance}},
                         {{end}}
@@ -508,7 +513,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                     {{else if Type == "string"}}
                         {{ParamInstance}} := BodyString(webCtx)
                     {{else}}
-                        {{ParamInstance}} := &model.Config{}
+                        {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
                         err := BodyParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
@@ -604,10 +609,13 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                 
                 return {{Package}}.{{FuncName}}(
                     {{range _, param := Params}}
-                        {{if param.Type == "ctx.Ctx"}}
+                       {{range _, param := Params}}
+                        {{if param.Source == "ctx"}}
                             ctx,
-                        {{else if param.Type == "*fiber.Ctx"}}
+                        {{else if param.Source == "webCtx"}}
                             webCtx,
+                        {{else if param.Source == "inject"}}
+                            ctx.{{ParamInstance}},
                         {{else}}
                             {{param.Instance}},
                         {{end}}

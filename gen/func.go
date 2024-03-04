@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -93,7 +92,7 @@ func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				} else {
 					// [code] ctx.{{ParamInstance}},
 					if !moduleInfo.HasInstance(paramInstance) {
-						utils.Failure(fmt.Sprintf("%s, \"%s\" No matching Instance", paramInfo.Comment, paramInstance))
+						utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
 					}
 					args = append(args, astSelectorExpr(recvVar, paramInstance))
 				}

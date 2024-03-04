@@ -23,6 +23,14 @@ func Failure(text string) {
 	os.Exit(1)
 }
 
+func Failuref(format string, a ...any) {
+	Failure(fmt.Sprintf(format, a...))
+}
+
 func Success(text string) {
 	fmt.Println(green + text + reset)
+}
+
+func Successf(format string, a ...any) {
+	Success(fmt.Sprintf(format, a...))
 }

@@ -78,6 +78,10 @@ func astStarExpr(x ast.Expr) *ast.StarExpr {
 }
 
 func astDeclareRef(typeExpr ast.Expr, elts []ast.Expr) *ast.UnaryExpr {
+	starExpr, ok := typeExpr.(*ast.StarExpr)
+	if ok {
+		typeExpr = starExpr.X
+	}
 	return &ast.UnaryExpr{
 		Op: token.AND,
 		X:  astDeclareExpr(typeExpr, elts),
@@ -219,6 +223,18 @@ func astImport(astFile *ast.File, importName string, importPath string) *ast.Imp
 		addImportSpec(astFile, astImport)
 	}
 	return astImport
+}
+
+func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
+	switch typeExpr.(type) {
+	case *ast.StarExpr:
+		return astDeclareRef(typeExpr.(*ast.StarExpr).X, nil)
+	case *ast.Ident:
+		if utils.IsFirstLower(typeExpr.(*ast.Ident).String()) {
+			return nil
+		}
+	}
+	return typeExpr
 }
 
 func addImportSpec(astFile *ast.File, astImport *ast.ImportSpec) {

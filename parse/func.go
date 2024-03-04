@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -23,7 +22,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 		fieldRec := astRec.List[0]
 		paramInfo := utils.ToFileInfo(fieldRec)
 		funcInfo.Recv = paramInfo
-		addParam(funcInfo, funcInfo.Recv)
+		funcInfo.Params = append(funcInfo.Params, funcInfo.Recv)
 	}
 
 	fillEmptyParam(funcDecl.Type, funcInfo)
@@ -54,13 +53,13 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				funcInfo.Imports = append(funcInfo.Imports, importInfo)
 
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
+					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				importInfo.Path = annotateArgs[1]
 				if argsLen >= 3 {
 					importName := annotateArgs[2]
 					if importName == "." {
-						utils.Failure(fmt.Sprintf("%s, Cannot support DotImport", comment.Text))
+						utils.Failuref("%s, Cannot support DotImport, at %s()", comment.Text, funcInfo.FuncName)
 					}
 					if importName != "" {
 						importInfo.Name = importName
@@ -68,12 +67,12 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				}
 			} else if annotateName == "@injectParam" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, ParamName must be specified", comment.Text))
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramName := annotateArgs[1]
 				paramInfo := utils.FindParamInfo(funcInfo, paramName)
 				if paramInfo == nil {
-					utils.Failure(fmt.Sprintf("%s, ParamName not found", comment.Text))
+					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
 				}
 
 				if argsLen >= 3 {
@@ -86,11 +85,11 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				paramInfo.Source = "inject"
 			} else if annotateName == "@injectRecv" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, RecvName must be specified", comment.Text))
+					utils.Failuref("%s, RecvName must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				paramName := annotateArgs[1]
 				if funcInfo.Recv.Name != paramName {
-					utils.Failure(fmt.Sprintf("%s, RecvName not found", comment.Text))
+					utils.Failuref("%s, RecvName not found, at %s()", comment.Text, funcInfo.FuncName)
 				}
 
 				paramInfo := funcInfo.Recv
@@ -102,29 +101,41 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				}
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "inject"
+			} else if annotateName == "@injectCtx" {
+				if argsLen < 2 {
+					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
+				}
+				paramName := annotateArgs[1]
+				paramInfo := utils.FindParamInfo(funcInfo, paramName)
+				if paramInfo == nil {
+					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
+				}
+
+				paramInfo.Comment = comment.Text
+				paramInfo.Source = "ctx"
 			} else if annotateName == "@webAppProvide" {
 				isWebApp = true
 				hasAnnotate = true
 				if isMiddleware {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@middleware"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
 				} else if isRouter {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@router"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
 				}
 			} else if annotateName == "@middleware" {
 				isMiddleware = true
 				hasAnnotate = true
 				if isWebApp {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@webAppProvide"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
 				} else if isRouter {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@router"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
 				}
 			} else if annotateName == "@router" {
 				isRouter = true
 				hasAnnotate = true
 				if isWebApp {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@webAppProvide"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
 				} else if isMiddleware {
-					utils.Failure(fmt.Sprintf("%s, conflict with %s", comment.Text, "@middleware"))
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
 				}
 			}
 		}
@@ -155,15 +166,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 		addFuncOrMethodInstances(p.Result, funcInfo)
 	}
 }
-func addParam(funcInfo *model.FuncInfo, paramInfo *model.FieldInfo) {
-	if funcInfo.Params != nil {
-		funcInfo.Params = make([]*model.FieldInfo, 0)
-	}
-	funcInfo.Params = append(funcInfo.Params, paramInfo)
-}
 func fillEmptyParam(funcType *ast.FuncType, funcInfo *model.FuncInfo) {
 	for _, field := range funcType.Params.List {
-		addParam(funcInfo, utils.ToFileInfo(field))
+		funcInfo.Params = append(funcInfo.Params, utils.ToFileInfo(field))
 	}
 }
 

@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -47,14 +46,14 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				structInfo.Imports = append(structInfo.Imports, importInfo)
 
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, Path must be specified", comment.Text))
+					utils.Failuref("%s, Path must be specified, at %s{}", comment.Text, structInfo.Name)
 				}
 				importInfo.Path = annotateArgs[1]
 
 				if argsLen >= 3 {
 					importName := annotateArgs[2]
 					if importName == "." {
-						utils.Failure(fmt.Sprintf("%s, Cannot support DotImport", comment.Text))
+						utils.Failuref("%s, Cannot support DotImport, at %s{}", comment.Text, structInfo.Name)
 					}
 					if importName != "" {
 						importInfo.Name = importName
@@ -62,12 +61,12 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				}
 			} else if annotateName == "@injectField" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, FieldName must be specified", comment.Text))
+					utils.Failuref("%s, FieldName must be specified, at %s{}", comment.Text, structInfo.Name)
 				}
 				fieldName := annotateArgs[1]
 				fieldInfo := utils.FindFieldInfo(structInfo, fieldName)
 				if fieldInfo == nil {
-					utils.Failure(fmt.Sprintf("%s, FieldName name not found", comment.Text))
+					utils.Failuref("%s, FieldName name not found, at %s{}", comment.Text, structInfo.Name)
 				}
 				fieldInfo.Comment = comment.Text
 
@@ -80,13 +79,13 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				fieldInfo.Source = "inject"
 			} else if annotateName == "@preConstruct" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, FuncName must be specified", comment.Text))
+					utils.Failuref("%s, FuncName must be specified, at %s{}", comment.Text, structInfo.Name)
 				}
 				structInfo.PreConstructComment = comment.Text
 				structInfo.PreConstruct = annotateArgs[1]
 			} else if annotateName == "@postConstruct" {
 				if argsLen < 2 {
-					utils.Failure(fmt.Sprintf("%s, FuncName must be specified", comment.Text))
+					utils.Failuref("%s, FuncName must be specified, at %s{}", comment.Text, structInfo.Name)
 				}
 				structInfo.PostConstructComment = comment.Text
 				structInfo.PostConstruct = annotateArgs[1]
@@ -113,8 +112,8 @@ func fillEmptyField(structType *ast.StructType, structInfo *model.StructInfo) {
 
 func addStructInstances(result *model.ModuleInfo, structInfo *model.StructInfo) {
 	if structInfo.Mode == "multiple" {
-		result.SingletonInstances = append(result.SingletonInstances, structInfo)
-	} else {
 		result.MultipleInstances = append(result.MultipleInstances, structInfo)
+	} else {
+		result.SingletonInstances = append(result.SingletonInstances, structInfo)
 	}
 }

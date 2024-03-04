@@ -19,7 +19,7 @@ func FirstToLower(text string) string {
 	return strings.ToLower(text[:1]) + text[1:]
 }
 
-func isFirstUpper(str string) bool {
+func IsFirstUpper(str string) bool {
 	if len(str) == 0 {
 		return false
 	}
@@ -27,6 +27,6 @@ func isFirstUpper(str string) bool {
 	return unicode.IsUpper(rune(first))
 }
 
-func isFirstLower(str string) bool {
-	return !isFirstUpper(str)
+func IsFirstLower(str string) bool {
+	return !IsFirstUpper(str)
 }
