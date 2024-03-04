@@ -224,7 +224,7 @@ func ToFileInfo(field *ast.Field) *model.FieldInfo {
 	}
 	return &model.FieldInfo{
 		Name:     fieldName,
-		Instance: FirstToUpper(fieldName),
+		Instance: fieldName,
 		Type:     field.Type,
 		IsEmbed:  isEmbed,
 	}

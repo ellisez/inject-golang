@@ -85,23 +85,24 @@ func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		for _, paramInfo := range instance.Params {
 			paramInstance := paramInfo.Instance
 
-			if paramInfo.Source == "inject" {
-				if paramInstance == "Ctx" {
-					// [code] ctx,
-					args = append(args, astIdent(recvVar))
-				} else {
-					// [code] ctx.{{ParamInstance}},
-					if !moduleInfo.HasInstance(paramInstance) {
-						utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
-					}
-					args = append(args, astSelectorExpr(recvVar, paramInstance))
+			switch paramInfo.Source {
+			case "ctx":
+				// [code] ctx,
+				args = append(args, astIdent(recvVar))
+				break
+			case "inject":
+				// [code] ctx.{{ParamInstance}},
+				if !moduleInfo.HasInstance(paramInstance) {
+					utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
 				}
-			} else {
+				args = append(args, astSelectorExpr(recvVar, paramInstance))
+
+			default:
 				// [code] {{ParamInstance}},
 				args = append(args, astIdent(paramInstance))
 			}
 		}
-		if instance.Results == nil {
+		if len(instance.Results) == 0 {
 			stmts = append(stmts, &ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun:  astSelectorExpr(instance.Package, instance.FuncName),

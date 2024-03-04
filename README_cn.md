@@ -343,12 +343,10 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
             {{if FuncName != ""}}
             host, port, err := {{Package}}.{{FuncName}}(
                 {{range Params}}
-                    {{if IsInject}}
-                        {{if ParamInstance == "Ctx"}}
+                    {{if param.Source == "ctx"}}
                         ctx,
-                        {{else}}
+                    {{else if param.Source == "inject"}}
                         ctx.{{ParamInstance}},
-                        {{end}}
                     {{else}}
                         {{ParamInstance}},
                     {{end}}
@@ -410,7 +408,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := BodyParser(webCtx, {{ParamInstance}})
+                        err := HeaderParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -469,7 +467,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := QueryParser(webCtx, {{ParamInstance}})
+                        err := FormParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -541,7 +539,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := BodyParser(webCtx, {{ParamInstance}})
+                        err := HeaderParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -600,7 +598,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := QueryParser(webCtx, {{ParamInstance}})
+                        err := FormParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -609,7 +607,6 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
                 
                 return {{Package}}.{{FuncName}}(
                     {{range _, param := Params}}
-                       {{range _, param := Params}}
                         {{if param.Source == "ctx"}}
                             ctx,
                         {{else if param.Source == "webCtx"}}

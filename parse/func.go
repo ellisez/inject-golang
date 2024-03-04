@@ -22,7 +22,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 		fieldRec := astRec.List[0]
 		paramInfo := utils.ToFileInfo(fieldRec)
 		funcInfo.Recv = paramInfo
-		funcInfo.Params = append(funcInfo.Params, funcInfo.Recv)
 	}
 
 	fillEmptyParam(funcDecl.Type, funcInfo)
@@ -80,6 +79,8 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 					if paramInstance != "" && paramInstance != "_" {
 						paramInfo.Instance = paramInstance
 					}
+				} else {
+					paramInfo.Instance = utils.FirstToUpper(paramName)
 				}
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "inject"
@@ -98,6 +99,8 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 					if paramInstance != "" && paramInstance != "_" {
 						paramInfo.Instance = paramInstance
 					}
+				} else {
+					paramInfo.Instance = utils.FirstToUpper(paramName)
 				}
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "inject"

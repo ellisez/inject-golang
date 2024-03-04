@@ -1278,96 +1278,66 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 }
 
-func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
-	recvVar := utils.FirstToLower(global.StructName)
-	for _, webApp := range moduleInfo.WebAppInstances {
-		for _, instance := range webApp.Middlewares {
-			params := []*ast.Field{
-				astField("webCtx",
-					astStarExpr(astSelectorExpr("fiber", "Ctx"))),
-			}
+func defineParamStmt(convFunc string, param *model.FieldInfo) ast.Stmt {
+	return astDefineStmt(
+		astIdent(param.Instance),
+		&ast.CallExpr{
+			Fun: astIdent(convFunc),
+			Args: []ast.Expr{
+				astIdent("webCtx"),
+				astStringExpr(param.Instance),
+			},
+		},
+	)
+}
 
-			for _, paramInfo := range instance.Params {
-				if paramInfo.Source == "" {
-					// [code] {{ParamInstance}} {{ParamType}},
-					paramInstance := paramInfo.Instance
-					params = append(params,
-						astField(paramInstance,
-							utils.AccessType(
-								paramInfo.Type,
-								instance.Package,
-								global.GenPackage,
-							),
-						),
-					)
-				}
-			}
-
-			stmts := make([]ast.Stmt, 0)
-			stmts = append(stmts, genWebBodyParam(
-				instance.BodyParam, instance.PackageInfo, instance.FuncName)...)
-			stmts = append(stmts, genWebHeaderParams(
-				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
-			stmts = append(stmts, genWebQueryParams(
-				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
-			stmts = append(stmts, genWebFormParams(
-				instance.HeaderParams, instance.PackageInfo, instance.FuncName)...)
-
-			args := make([]ast.Expr, 0)
-			for _, paramInfo := range instance.Params {
-				switch paramInfo.Source {
-				case "ctx":
-					args = append(args, astIdent("ctx"))
-					break
-				case "webCtx":
-					args = append(args, astIdent("webCtx"))
-					break
-				case "inject":
-					args = append(args, astSelectorExpr("ctx", paramInfo.Instance))
-					break
-				default:
-					args = append(args, astIdent(paramInfo.Instance))
-				}
-
-			}
-
-			var fun ast.Expr
-			if instance.Recv == nil {
-				fun = astSelectorExpr(instance.Package, instance.FuncName)
-			} else {
-				if instance.Recv.Source == "inject" {
-					fun = astSelectorExprRecur(
-						astSelectorExpr("ctx", instance.Recv.Instance),
-						instance.FuncName,
-					)
-				} else {
-					fun = astSelectorExpr(instance.Recv.Instance, instance.FuncName)
-				}
-			}
-			stmts = append(stmts, &ast.ReturnStmt{
-				Results: []ast.Expr{
-					&ast.CallExpr{
-						Fun:  fun,
-						Args: args,
-					},
+func defineParamWithError(convFunc string, param *model.FieldInfo) []ast.Stmt {
+	return []ast.Stmt{
+		astDefineStmtMany(
+			[]ast.Expr{
+				astIdent(param.Instance),
+				astIdent("err"),
+			},
+			&ast.CallExpr{
+				Fun: astIdent(convFunc),
+				Args: []ast.Expr{
+					astIdent("webCtx"),
+					astStringExpr(param.Instance),
 				},
-			})
-
-			addDecl(astFile, astFuncDecl(
-				[]*ast.Field{
-					astField(recvVar, astStarExpr(astIdent(global.StructName))),
-				},
-				instance.Proxy,
-				params,
-				[]*ast.Field{
-					astField("err", astIdent("error")),
-				},
-				stmts,
-			))
-		}
+			},
+		),
+		errorReturnStmts(),
 	}
 }
 
+func defineParamByParser(convFunc string, param *model.FieldInfo, packageInfo *model.PackageInfo) []ast.Stmt {
+	return []ast.Stmt{
+		// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
+		astDefineStmt(
+			astIdent(param.Instance),
+			astDeclareRef(
+				utils.AccessType(
+					param.Type,
+					packageInfo.Package,
+					global.GenPackage,
+				),
+				nil,
+			),
+		),
+		// [code] err := {{ParamSource}}Parser(webCtx, {{ParamInstance}})
+		astAssignStmt(
+			astIdent("err"),
+			&ast.CallExpr{
+				Fun: astIdent(convFunc),
+				Args: []ast.Expr{
+					astIdent("webCtx"),
+					astIdent(param.Instance),
+				},
+			},
+		),
+		errorReturnStmts(),
+	}
+}
 func genWebBodyParam(bodyParam *model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
 	if bodyParam != nil {
 		bodyAstType := bodyParam.Type
@@ -1405,46 +1375,161 @@ func genWebBodyParam(bodyParam *model.FieldInfo, packageInfo *model.PackageInfo,
 			} else if utils.IsFirstLower(typeIdent) {
 				utils.Failuref("%s, unsupport type %s, at %s()", bodyParam.Comment, utils.TypeToString(bodyAstType), funcName)
 			}
+			break
 		}
-		return []ast.Stmt{
-			// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
-			astDefineStmt(
-				astIdent(bodyParam.Instance),
-				astDeclareRef(
-					utils.AccessType(
-						bodyAstType,
-						packageInfo.Package,
-						global.GenPackage,
-					),
-					nil,
-				),
-			),
-			// [code] err := BodyParser(webCtx, {{ParamInstance}})
-			astAssignStmt(
-				astIdent("err"),
-				&ast.CallExpr{
-					Fun: astIdent("BodyParser"),
-					Args: []ast.Expr{
-						astIdent("webCtx"),
-						astIdent(bodyParam.Instance),
-					},
-				},
-			),
-			errorReturnStmts(),
-		}
+		return defineParamByParser("BodyParser", bodyParam, packageInfo)
 	}
 	return nil
 }
 
-func genWebHeaderParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
+func genWebHeaderParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
+	if len(headerParams) > 0 {
+		stmts := make([]ast.Stmt, 0)
+		for _, param := range headerParams {
+			paramType := param.Type
+			switch paramType.(type) {
+			case *ast.Ident:
+				typeStr := paramType.(*ast.Ident).String()
+				switch typeStr {
+				case "string":
+					stmts = append(stmts, defineParamStmt("Header", param))
+					continue
+				case "int":
+					stmts = append(stmts, defineParamWithError("HeaderInt", param)...)
+					continue
+				case "bool":
+					stmts = append(stmts, defineParamWithError("HeaderBool", param)...)
+					continue
+				case "float64":
+					stmts = append(stmts, defineParamWithError("HeaderFloat", param)...)
+					continue
+				default:
+					if utils.IsFirstLower(typeStr) {
+						utils.Failuref("%s, unsupport type %s, at %s()", param.Comment, utils.TypeToString(paramType), funcName)
+					}
+				}
+				break
+			}
+			stmts = append(stmts, defineParamByParser("HeaderParser", param, packageInfo)...)
+		}
+		return stmts
+	}
 	return nil
 }
-func genWebQueryParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
+func genWebQueryParams(queryParams []*model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
+	if len(queryParams) > 0 {
+		stmts := make([]ast.Stmt, 0)
+		for _, param := range queryParams {
+			paramType := param.Type
+			switch paramType.(type) {
+			case *ast.Ident:
+				typeStr := paramType.(*ast.Ident).String()
+				switch typeStr {
+				case "string":
+					stmts = append(stmts, defineParamStmt("Query", param))
+					continue
+				case "int":
+					stmts = append(stmts, defineParamWithError("QueryInt", param)...)
+					continue
+				case "bool":
+					stmts = append(stmts, defineParamWithError("QueryBool", param)...)
+					continue
+				case "float64":
+					stmts = append(stmts, defineParamWithError("QueryFloat", param)...)
+					continue
+				default:
+					if utils.IsFirstLower(typeStr) {
+						utils.Failuref("%s, unsupport type %s, at %s()", param.Comment, utils.TypeToString(paramType), funcName)
+					}
+				}
+				break
+			}
+			stmts = append(stmts, defineParamByParser("QueryParser", param, packageInfo)...)
+		}
+		return stmts
+	}
 	return nil
 }
-func genWebFormParams(headerParams []*model.FieldInfo, packageInfo *model.PackageInfo, name string) []ast.Stmt {
-	return nil
-}
-func genRouterAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
+func genWebPathParams(pathParams []*model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
+	if len(pathParams) > 0 {
+		stmts := make([]ast.Stmt, 0)
+		for _, param := range pathParams {
+			paramType := param.Type
+			switch paramType.(type) {
+			case *ast.Ident:
+				typeStr := paramType.(*ast.Ident).String()
+				switch typeStr {
+				case "string":
+					stmts = append(stmts, defineParamStmt("Params", param))
+					continue
+				case "int":
+					stmts = append(stmts, defineParamWithError("ParamsInt", param)...)
+					continue
+				case "bool":
+					stmts = append(stmts, defineParamWithError("ParamsBool", param)...)
+					continue
+				case "float64":
+					stmts = append(stmts, defineParamWithError("ParamsFloat", param)...)
+					continue
+				default:
+					if utils.IsFirstLower(typeStr) {
+						utils.Failuref("%s, unsupport type %s, at %s()", param.Comment, utils.TypeToString(paramType), funcName)
+					}
+				}
+				break
+			}
+			stmts = append(stmts, defineParamByParser("ParamsParser", param, packageInfo)...)
+		}
+		return stmts
+	}
+	return nil
+}
+func genWebFormParams(formParams []*model.FieldInfo, packageInfo *model.PackageInfo, funcName string) []ast.Stmt {
+	if len(formParams) > 0 {
+		stmts := make([]ast.Stmt, 0)
+		for _, param := range formParams {
+			paramType := param.Type
+			switch paramType.(type) {
+			case *ast.Ident:
+				typeStr := paramType.(*ast.Ident).String()
+				switch typeStr {
+				case "string":
+					stmts = append(stmts, defineParamStmt("FormString", param))
+					continue
+				case "int":
+					stmts = append(stmts, defineParamWithError("FormInt", param)...)
+					continue
+				case "bool":
+					stmts = append(stmts, defineParamWithError("FormBool", param)...)
+					continue
+				case "float64":
+					stmts = append(stmts, defineParamWithError("FormFloat", param)...)
+					continue
+				default:
+					if utils.IsFirstLower(typeStr) {
+						utils.Failuref("%s, unsupport type %s, at %s()", param.Comment, utils.TypeToString(paramType), funcName)
+					}
+				}
+				break
+			case *ast.StarExpr:
+				// [code] *multipart.FileHeader
+				starX := paramType.(*ast.StarExpr).X
+				selectorExpr, ok := starX.(*ast.SelectorExpr)
+				if ok {
+					selectorX, ok := selectorExpr.X.(*ast.Ident)
+					if ok {
+						if selectorX.String() == "multipart" && selectorExpr.Sel.String() == "FileHeader" {
+							stmts = append(stmts, defineParamStmt("FormFile", param))
+							continue
+						}
+					}
+				}
+				break
+			}
+			stmts = append(stmts, defineParamByParser("FormParser", param, packageInfo)...)
+		}
+		return stmts
+	}
+	return nil
 }

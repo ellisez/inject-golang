@@ -8,7 +8,7 @@ import (
 // WebCtxAliasLoaded
 // @proxy
 // @injectParam database Database
-// @injectParam appCtx Ctx
+// @injectCtx appCtx
 func WebCtxAliasLoaded(appCtx *ctx.Ctx, webApp *WebApp, database *Database) {
 	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
 	appCtx.TestLogin(webApp)
