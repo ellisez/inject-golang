@@ -37,6 +37,19 @@ go generate -run inject-golang
 // @postConstruct *<构造后调用函数，必填>
 ```
 
+> 系统默认会加载容器包以及注解所在代码的包, 但如果有额外的包, 则需要使用`@import`声明.
+> 
+> `@preConstruct`是一个无参但返回结构体类型的函数, 主要用于创建前给定结构体的初始值, 不支持注入依赖;
+> 
+> `@postConstruct`是一个唯一参数为结构体类型的函数, 主要用于获取已经创建完成的结构体实例;
+> 
+> `@preConstruct`与`@postConstruct`可携带包名, 但需要`@import`来引入, 如"*model.Database".
+> 
+> 但一般我们不推荐直接使用唯一参数的函数, 而是使用代理函数, 帮我们扩充依赖注入的参数; 
+> 代理函数用法, 请参照[方法上注解](#23-方法上的注解-适用于所有方法)
+>
+>
+
 ### 2.2. 结构体的属性注解：
 ```
 // @inject <实例名，默认同类名>
@@ -50,11 +63,25 @@ go generate -run inject-golang
 // @injectCtx *<参数名, 必填>
 ```
 
+> `@proxy`注解用于标记该函数支持依赖注入, 最终系统会自动生成一个与函数名同名代理函数, 可通过容器对象获得代理函数.
+> 
+> `@injectParam`用于参数的依赖注入;
+> 
+> `@injectRecv`用于从属结构体类型的依赖注入;
+> 
+> `@injectCtx`把容器本身注入到指定参数中;
+
 ### 2.4. WebApp注解 (提供了web服务器)
 ```
 // @webAppProvide <WebApp，默认名为WebApp>
 // @static *<访问路径，必填> *<匹配目录，必填> [特征: Compress|Download|Browse] <目录的Index文件> <过期时间MaxAge>
 ```
+
+> `@webAppProvide`配置webApp, 不进行配置时系统默认会生成一个名为WebApp的实例. 
+> 
+> 如果webApp未被代码中使用, 则系统不会生成WebApp实例, 这也是为了使用与非web项目.
+> 
+> `@static`用于配置静态资源文件, 如png,css,js,html等
 
 ### 2.5. 路由方法上的注解（参照swag注解）：
 ```
@@ -65,6 +92,23 @@ go generate -run inject-golang
 // @param *<参数名，必填> *<取值类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
+> `@router`系统会生成一个与函数同名的代理函数, 以完成参数的解析和注入.
+> 
+> `@webApp`用于指明路由注册在哪个webApp实例上, webApp由`@webAppProvide`进行配置, 默认会有一个名为WebApp实例, 当然名字也是可以更改的.
+> 
+> `@injectWebCtx`用于指定某个参数来接收当前请求的webCtx.
+> 
+> `@injectWebCtx`只有`@middleware`和`@router`才可以使用, 因为只有它们能够处理请求.
+> 
+> `@produce`用于定义返回数据类型
+> 
+> `@param`用于路由参数的解析, 支持下列格式:
+> * query: Get参数, 如/index.html?a=1;
+> * path: 路由参数, 如/article/:id;
+> * header: 头部信息参数;
+> * body: 请求body二进制流, 注意只能由一个body参数;
+> * formData: multipart/form方式提交的数据;
+
 ### 2.6. 路由中间件上的注解:
 ```
 // @middleware *<Path必填>
@@ -73,21 +117,8 @@ go generate -run inject-golang
 // @param *<参数名，必填> *<参数类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-> 
-> `@preConstruct`主要用于给定结构体的初始值, 不可获取ctx上下文, 也无法注入依赖, 因为还未就绪;
-> 
-> `@proxy`注解用于标记函数的参数进行依赖注入, 它最终会生成一个与原函数名一样的ctx容器内部方法;
-> 使用时通过ctx访问同名函数即可;
-> 
-> `@preConstruct`与`@postConstruct`指定方法名, 带包名着依据`@import`关联如`@postConstruct model.Database`
-> 不带包名则表示使用`@proxy`生成的代理函数;
-> 
-> 推荐使用`@postConstruct`注解指向一个`@proxy`代理函数, 而不是直接指向原始函数, 这样能让原始函数得到参数注入;
-> 
-> `@injectCtx`它表示注入上下文容器本身;`@injectWebCtx`表示当前请求的webCtx, 只有`@middleware`和`@router`有效;
-> 
-> 当`@param`默认只匹配与参数同名的取值类型(query|path|header|body|formData), 需要通过`@injectParam`改写取值的参数名
-
+> `@middleware`系统会生成一个与函数同名的代理函数, 以完成参数的解析和注入.
+>
 
 ## 3. 生成模板
 

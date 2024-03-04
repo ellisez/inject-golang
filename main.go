@@ -27,5 +27,5 @@ func main() {
 	}
 
 	utils.Success("Successful!")
-	fmt.Println("See", filepath.Join(modulePath, global.GenPackage))
+	fmt.Println("at", filepath.Join(modulePath, global.GenPackage))
 }
