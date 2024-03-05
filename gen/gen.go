@@ -249,10 +249,12 @@ func addImportSpec(astFile *ast.File, astImport *ast.ImportSpec) {
 }
 
 func addImportDecl(astFile *ast.File) {
+	utils.SortImports(astFile.Imports)
 	specs := make([]ast.Spec, len(astFile.Imports))
 	for i, spec := range astFile.Imports {
 		specs[i] = spec
 	}
+
 	genDecl := &ast.GenDecl{
 		Tok:   token.IMPORT,
 		Specs: specs,

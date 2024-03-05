@@ -7,12 +7,7 @@ import (
 //go:generate inject-golang
 func main() {
 	c := ctx.New()
-	err := c.WebAppStartup()
-	if err != nil {
-		return
-	}
-
-	err = c.WebAppStartupByAddr("", 3000)
+	err := c.WebAppStartup1(3001)
 	if err != nil {
 		return
 	}

@@ -67,9 +67,11 @@ go generate -run inject-golang
 > 
 > `@injectParam`用于参数的依赖注入;
 > 
-> `@injectRecv`用于从属结构体类型的依赖注入;
+> `@injectRecv`用于从属结构体的依赖注入;
 > 
 > `@injectCtx`把容器本身注入到指定参数中;
+> 
+> 未被依赖注入的参数则会保留到生成代理函数中;
 
 ### 2.4. WebApp注解 (提供了web服务器)
 ```
@@ -108,6 +110,8 @@ go generate -run inject-golang
 > * header: 头部信息参数;
 > * body: 请求body二进制流, 注意只能由一个body参数;
 > * formData: multipart/form方式提交的数据;
+> 
+> <b>注意: 路由函数要求每个参数必须都被配置依赖注入</b>
 
 ### 2.6. 路由中间件上的注解:
 ```
@@ -119,6 +123,7 @@ go generate -run inject-golang
 
 > `@middleware`系统会生成一个与函数同名的代理函数, 以完成参数的解析和注入.
 >
+> <b>注意: 路由函数要求每个参数必须都被配置依赖注入</b>
 
 ## 3. 生成模板
 
@@ -176,6 +181,119 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
 > 所以我们推荐，postConstruct直接proxy生成的函数，而不是直接指向原函数。
 > 利用原函数保留未注入结构体参数，来促成生成的函数满足postConstruct的要求。
 
+
+### 3.3. web生成代码
+注解配置
+```go
+// ConfigureWebApp
+// @webAppProvide WebApp
+// @proxy WebAppStartup1
+// @injectParam config Config
+// @static /images /images
+// @static /css /css [Compress,Browse]
+// @static /js /js [Compress,Download,Browse] index.html 86400
+func ConfigureWebApp(config *model.Config, extraParam int) (string, uint, error) {
+	return config.Host, config.Port, nil
+}
+
+// CorsMiddleware
+// @middleware /api
+// @injectWebCtx c
+// @injectCtx appCtx
+// @param body body
+// @param header header
+// @param paramsInt path
+// @param queryBool query
+// @param formFloat formData
+func CorsMiddleware(appCtx *ctx.Ctx, c *fiber.Ctx,
+    body *model.Config,
+    header string,
+    paramsInt int,
+    queryBool bool,
+    formFloat float64) error {
+        return cors.New(cors.Config{
+            AllowOrigins:     "*",
+            AllowCredentials: true,
+        })(c)
+}
+
+// LoginController
+// @router /api/login [post]
+// @param username query string true 用户名
+// @param password query string true 密码
+func LoginController(username string, password string) error {
+return nil
+}
+```
+生成代码
+```go
+func (ctx *Ctx) WebAppStartup1(extraParam int) error {
+    ctx.WebApp.Static("/images", "")
+    ctx.WebApp.Static("/css", "", fiber.Static{Compress: true, Browse: true})
+    ctx.WebApp.Static("/js", "", fiber.Static{Compress: true, Download: true, Browse: true, Index: "index.html", MaxAge: 86400})
+    /// middleware register
+	ctx.WebApp.Group("/api", ctx.CorsMiddleware)
+    /// router register
+    ctx.WebApp.Post("/api/login", ctx.LoginController)
+    host, port, err := init.ConfigureWebApp(webApp, ctx.Config, extraParam)
+    if err != nil {
+        return err
+    }
+    return ctx.WebApp.Listen(fmt.Sprintf("%s:%d", host, port))
+}
+
+func (ctx *Ctx) CorsMiddleware(webCtx *fiber.Ctx) (err error) {
+    body := &model.Config{}
+    err = BodyParser(webCtx, body)
+    if err != nil {
+        return err
+    }
+    header := Header(webCtx, "header")
+    queryBool, err := QueryBool(webCtx, "queryBool")
+    if err != nil {
+        return err
+    }
+    paramsInt, err := ParamsInt(webCtx, "paramsInt")
+    if err != nil {
+        return err
+    }
+    formFloat, err := FormFloat(webCtx, "formFloat")
+    if err != nil {
+        return err
+    }
+    return middleware.CorsMiddleware(ctx, webCtx, body, header, paramsInt, queryBool, formFloat)
+}
+
+func (ctx *Ctx) LoginController(webCtx *fiber.Ctx) (err error) {
+    username := Query(webCtx, "username")
+    password := Query(webCtx, "password")
+    return router.LoginController(username, password)
+}
+```
+外部启动web
+```go
+func main() {
+    err := ctx.New().WebAppStartup1(100)
+    if err != nil {
+        return
+    }
+}
+```
+
+> `@webAppProvide`如果不定义时，默认系统会创建名为`WebApp`的实例，以及默认WebAppStartup的启动函数
+> 
+> `@webAppProvide <实例名>`通过给定名字来修改webApp的实例名, 通过`@proxy`来修改启动函数名
+> 
+> 相应的`@router`与`@middleware`通过`@webApp`指定所注册的webApp实例, 不配置`@webApp`或未给出实例名时, 
+> 默认关联的也是名为`WebApp`的实例.
+> 
+> 所以`@webAppProvide`与`@webApp`配置的实例名必须保持一致, 才能确保关联关系.
+
+> <b>由于原始middleware与router要求必须是`func(webCtx *fiber.Ctx) error`函数类型, 而系统生成的代理函数自动会补全webCtx参数, 所以原函数的每个参数都必须都要配置依赖注入.</b>
+> <br/>一旦出现未依注入参数, 就会被保留到生成的代理函数中, 就会造成无法满足`func(webCtx *fiber.Ctx) error`函数类型.
+
+> 如范例中启动函ConfigureWebApp由于未对extraParam配置任何依赖注入, 所以代理函数中仍然保留了extraParam参数.
+> 而main函数调用时则可以传递100整数值给与extraParam.
 ### 3.3. 目录结构
 ```
 /ctx

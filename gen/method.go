@@ -40,14 +40,12 @@ func genMethodImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 	for _, instance := range moduleInfo.MethodInstances {
 		astImport(astFile, "", instance.Import)
-		if instance.Imports != nil {
-			for _, importInfo := range instance.Imports {
-				importName := importInfo.Name
-				if importName == "_" {
-					importName = ""
-				}
-				astImport(astFile, importName, importInfo.Path)
+		for _, importInfo := range instance.Imports {
+			importName := importInfo.Name
+			if importName == "_" {
+				importName = ""
 			}
+			astImport(astFile, importName, importInfo.Path)
 		}
 	}
 	addImportDecl(astFile)

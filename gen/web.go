@@ -52,10 +52,30 @@ func genWebImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	astImport(astFile, "", "strconv")
 	astImport(astFile, "", "github.com/gofiber/fiber/v2")
 	astImport(astFile, "", "fmt")
-	for _, instance := range moduleInfo.MethodInstances {
+	for _, instance := range moduleInfo.WebAppInstances {
 		astImport(astFile, "", instance.Import)
-		if instance.Imports != nil {
-			for _, importInfo := range instance.Imports {
+		for _, importInfo := range instance.Imports {
+			importName := importInfo.Name
+			if importName == "_" {
+				importName = ""
+			}
+			astImport(astFile, importName, importInfo.Path)
+		}
+
+		for _, middleware := range instance.Middlewares {
+			astImport(astFile, "", middleware.Import)
+			for _, importInfo := range middleware.Imports {
+				importName := importInfo.Name
+				if importName == "_" {
+					importName = ""
+				}
+				astImport(astFile, importName, importInfo.Path)
+			}
+		}
+
+		for _, router := range instance.Routers {
+			astImport(astFile, "", router.Import)
+			for _, importInfo := range router.Imports {
 				importName := importInfo.Name
 				if importName == "_" {
 					importName = ""
@@ -1103,17 +1123,19 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		params := make([]*ast.Field, 0)
 		if instance.FuncName != "" {
 			for _, paramInfo := range instance.Params {
-				// [code] {{ParamInstance}} {{ParamType}},
-				paramInstance := paramInfo.Instance
-				params = append(params,
-					astField(paramInstance,
-						utils.AccessType(
-							paramInfo.Type,
-							instance.Package,
-							global.GenPackage,
+				if paramInfo.Source == "" {
+					// [code] {{ParamInstance}} {{ParamType}},
+					paramInstance := paramInfo.Instance
+					params = append(params,
+						astField(paramInstance,
+							utils.AccessType(
+								paramInfo.Type,
+								instance.Package,
+								global.GenPackage,
+							),
 						),
-					),
-				)
+					)
+				}
 			}
 
 		} else {

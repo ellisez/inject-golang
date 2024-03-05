@@ -104,6 +104,7 @@ func addRouterParam(routerParam *model.RouterParam, paramInfo *model.FieldInfo, 
 		utils.Failuref("%s, %s can not support, at %s()", paramInfo.Comment, paramInfo.Source, funcInfo.FuncName)
 	}
 }
+
 func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 	middlewareInfo := model.NewMiddlewareInfoFromFuncInfo(funcInfo)
 
@@ -156,6 +157,12 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInf
 					middlewareInfo.WebApp = annotateArgs[1]
 				}
 			}
+		}
+	}
+
+	for _, param := range middlewareInfo.Params {
+		if param.Source == "" {
+			utils.Failuref("%s, The ParamName \"%s\" does not allow non injection, at %s()", middlewareInfo.MiddlewareComment, param.Name, funcInfo.FuncName)
 		}
 	}
 
@@ -238,6 +245,12 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 					routerInfo.WebApp = annotateArgs[1]
 				}
 			}
+		}
+	}
+
+	for _, param := range routerInfo.Params {
+		if param.Source == "" {
+			utils.Failuref("%s, The ParamName \"%s\" does not allow non injection, at %s()", routerInfo.RouterComment, param.Name, funcInfo.FuncName)
 		}
 	}
 
