@@ -7,7 +7,6 @@ import (
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 )
 
@@ -18,33 +17,28 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 		len(moduleInfo.MethodInstances) == 0 {
 		return nil
 	}
-	genDir := filepath.Join(moduleInfo.Dirname, global.GenPackage)
+	genDir := filepath.Join(global.CurrentDirectory, global.GenPackage)
 
 	err := utils.CreateDirectoryIfNotExists(genDir)
 	if err != nil {
 		return err
 	}
 
-	target := "all"
-	if len(os.Args) > 2 {
-		target = os.Args[1]
-	}
-
-	if target == "all" || target == "singleton" {
+	if global.FlagAll || global.FlagSingleton {
 		err = genCtxFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	if target == "all" || target == "multiple" {
+	if global.FlagAll || global.FlagMultiple {
 		err = genConstructorFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	if target == "all" || target == "func" {
+	if global.FlagAll || global.FlagFunc {
 		err = genFuncFile(moduleInfo, genDir)
 		if err != nil {
 			return err
@@ -56,7 +50,7 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 		}
 	}
 
-	if target == "all" || target == "web" {
+	if global.FlagAll || global.FlagWeb {
 		err = genWebFile(moduleInfo, genDir)
 		if err != nil {
 			return err

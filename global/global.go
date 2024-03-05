@@ -1,13 +1,22 @@
 package global
 
-var GenPackage = "ctx"
+var (
+	GenPackage = "ctx"
+	StructName = "Ctx"
 
-var StructName = "Ctx"
+	CurrentDirectory string
 
-var GenCtxFilename = "gen_ctx.go"
-var GenConstructorFilename = "gen_constructor.go"
-var GenFuncFilename = "gen_func.go"
-var GenMethodFilename = "gen_method.go"
+	FlagAll       = true
+	FlagSingleton = false
+	FlagMultiple  = false
+	FlagFunc      = false
+	FlagWeb       = false
 
-var GenWebPackage = "web"
-var GenWebFilename = "gen_web.go"
+	GenCtxFilename         = "gen_ctx.go"
+	GenConstructorFilename = "gen_constructor.go"
+	GenFuncFilename        = "gen_func.go"
+	GenMethodFilename      = "gen_method.go"
+	GenWebFilename         = "gen_web.go"
+
+	ScanDirectories []string
+)

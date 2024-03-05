@@ -20,8 +20,6 @@ type FieldInfo struct {
 }
 
 type ModuleInfo struct {
-	Dirname            string // 根目录, 用于写文件路径
-	Mod                string // golang模块名, 用于import
 	SingletonInstances []*StructInfo
 	MultipleInstances  []*StructInfo
 	FuncInstances      []*FuncInfo

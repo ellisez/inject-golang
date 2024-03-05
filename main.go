@@ -6,17 +6,19 @@ import (
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/scan"
 	"github.com/ellisez/inject-golang/utils"
-	"os"
 	"path/filepath"
 )
 
-func main() {
-	modulePath, err := os.Getwd()
+func init() {
+	err := utils.CommandParse()
 	if err != nil {
 		utils.Failure(err.Error())
 	}
+}
 
-	moduleInfo, err := scan.DoScan(modulePath)
+func main() {
+
+	moduleInfo, err := scan.DoScan()
 	if err != nil {
 		utils.Failure(err.Error())
 	}
@@ -27,5 +29,5 @@ func main() {
 	}
 
 	utils.Success("Successful!")
-	fmt.Println("at", filepath.Join(modulePath, global.GenPackage))
+	fmt.Println("at", filepath.Join(global.CurrentDirectory, global.GenPackage))
 }

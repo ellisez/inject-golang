@@ -1,24 +1,34 @@
 package scan
 
 import (
+	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/parse"
+	"go/token"
 	"os"
 	"path/filepath"
 )
 
-func DoScan(dirname string) (*model.ModuleInfo, error) {
-	p := parse.New()
-	p.Result.Dirname = dirname
-	err := p.ModParse()
-	if err != nil {
-		return nil, err
+func DoScan() (*model.ModuleInfo, error) {
+	moduleInfo := model.NewModuleInfo()
+	fileSet := token.NewFileSet()
+	for _, directory := range global.ScanDirectories {
+		p := &parse.Parser{
+			Dirname: directory,
+			Result:  moduleInfo,
+			FileSet: fileSet,
+		}
+
+		err := p.ModParse()
+		if err != nil {
+			return nil, err
+		}
+		err = recurDirectory(directory, p.DoParse)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = recurDirectory(dirname, p.DoParse)
-	if err != nil {
-		return nil, err
-	}
-	return p.Result, nil
+	return moduleInfo, nil
 }
 func recurDirectory(filename string, handle func(filename string) error) error {
 	list, err := os.ReadDir(filename)

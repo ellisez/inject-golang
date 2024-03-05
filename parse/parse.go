@@ -21,19 +21,22 @@ func annotateParse(text string) []string {
 }
 
 type Parser struct {
+	Dirname string // 根目录, 用于写文件路径
+	Mod     string // golang模块名, 用于import
 	Result  *model.ModuleInfo
 	FileSet *token.FileSet
 }
 
-func New() *Parser {
+func New(dirname string) *Parser {
 	return &Parser{
+		Dirname: dirname,
 		Result:  model.NewModuleInfo(),
 		FileSet: token.NewFileSet(),
 	}
 }
 
 func (p *Parser) ModParse() error {
-	filename := filepath.Join(p.Result.Dirname, "go.mod")
+	filename := filepath.Join(p.Dirname, "go.mod")
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -42,7 +45,7 @@ func (p *Parser) ModParse() error {
 	if err != nil {
 		return err
 	}
-	p.Result.Mod = goDotMod.Module.Mod.Path
+	p.Mod = goDotMod.Module.Mod.Path
 	return nil
 }
 
@@ -51,7 +54,7 @@ func (p *Parser) ModParse() error {
 func (p *Parser) DoParse(filename string) error {
 	// exclude gen dir
 	dirname := filepath.Dir(filename)
-	if dirname == filepath.Join(p.Result.Dirname, GenPackage) {
+	if dirname == filepath.Join(p.Dirname, GenPackage) {
 		return nil
 	}
 
@@ -62,9 +65,9 @@ func (p *Parser) DoParse(filename string) error {
 			utils.Failure(err.Error())
 		}
 
-		importPackage := p.Result.Mod
-		if p.Result.Dirname != dirname {
-			rel, err := filepath.Rel(p.Result.Dirname, dirname)
+		importPackage := p.Mod
+		if p.Dirname != dirname {
+			rel, err := filepath.Rel(p.Dirname, dirname)
 			if err != nil {
 				return err
 			}
