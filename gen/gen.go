@@ -7,6 +7,7 @@ import (
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 	"go/token"
+	"os"
 	"path/filepath"
 )
 
@@ -24,29 +25,42 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 		return err
 	}
 
-	err = genCtxFile(moduleInfo, genDir)
-	if err != nil {
-		return err
+	target := "all"
+	if len(os.Args) > 2 {
+		target = os.Args[1]
 	}
 
-	err = genConstructorFile(moduleInfo, genDir)
-	if err != nil {
-		return err
+	if target == "all" || target == "singleton" {
+		err = genCtxFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = genFuncFile(moduleInfo, genDir)
-	if err != nil {
-		return err
+	if target == "all" || target == "multiple" {
+		err = genConstructorFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = genMethodFile(moduleInfo, genDir)
-	if err != nil {
-		return err
+	if target == "all" || target == "func" {
+		err = genFuncFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
+
+		err = genMethodFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = genWebFile(moduleInfo, genDir)
-	if err != nil {
-		return err
+	if target == "all" || target == "web" {
+		err = genWebFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -268,4 +282,27 @@ func addDecl(astFile *ast.File, genDecl ast.Decl) {
 		astFile.Decls = make([]ast.Decl, 0)
 	}
 	astFile.Decls = append(astFile.Decls, genDecl)
+}
+
+func addFileDoc(astFile *ast.File, doc string) {
+	firstDecl := astFile.Decls[0]
+	switch firstDecl.(type) {
+	case *ast.GenDecl:
+		firstDecl.(*ast.GenDecl).Doc = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{
+					Text: doc,
+				},
+			},
+		}
+		break
+	case *ast.FuncDecl:
+		firstDecl.(*ast.FuncDecl).Doc = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{
+					Text: doc,
+				},
+			},
+		}
+	}
 }

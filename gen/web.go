@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -38,6 +39,8 @@ func genWebFile(moduleInfo *model.ModuleInfo, dir string) error {
 	genMiddlewareAst(moduleInfo, astFile)
 
 	genRouterAst(moduleInfo, astFile)
+
+	addFileDoc(astFile, "\n// Code generate by \"inject-golang web\"; DO NOT EDIT.")
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -89,7 +92,7 @@ func genWebImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 func genWebFuncAst(astFile *ast.File) {
 	// [code] func Params(webCtx *fiber.Ctx, key string, defaultValue ...string) string
-	addDecl(astFile, astFuncDecl(
+	funcDecl := astFuncDecl(
 		nil,
 		"Params",
 		[]*ast.Field{
@@ -115,10 +118,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "Params"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func ParamsInt(webCtx *fiber.Ctx, key string, defaultValue ...int) (int, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"ParamsInt",
 		[]*ast.Field{
@@ -145,10 +157,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "ParamsInt"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func ParamsBool(webCtx *fiber.Ctx, key string, defaultValue ...bool) (bool, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"ParamsBool",
 		[]*ast.Field{
@@ -176,10 +197,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "ParamsBool"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func ParamsFloat(webCtx *fiber.Ctx, key string, defaultValue ...float64) (float64, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"ParamsFloat",
 		[]*ast.Field{
@@ -208,10 +238,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "ParamsFloat"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func ParamsParser(webCtx *fiber.Ctx, out any) error
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"ParamsParser",
 		[]*ast.Field{
@@ -235,10 +274,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "ParamsParser"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func Query(webCtx *fiber.Ctx, key string, defaultValue ...string) string
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"Query",
 		[]*ast.Field{
@@ -264,9 +312,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "Query"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func QueryInt(webCtx *fiber.Ctx, key string, defaultValue ...int) (int, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"QueryInt",
 		[]*ast.Field{
@@ -294,9 +351,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "QueryInt"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func QueryBool(webCtx *fiber.Ctx, key string, defaultValue ...bool) (bool, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"QueryBool",
 		[]*ast.Field{
@@ -324,9 +390,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "QueryBool"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func QueryFloat(webCtx *fiber.Ctx, key string, defaultValue ...float64) (float64, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"QueryFloat",
 		[]*ast.Field{
@@ -355,10 +430,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "QueryFloat"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func QueryParser(webCtx *fiber.Ctx, out any) error
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"QueryParser",
 		[]*ast.Field{
@@ -382,10 +466,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "QueryParser"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func Header(webCtx *fiber.Ctx, key string, defaultValue ...string) string
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"Header",
 		[]*ast.Field{
@@ -411,9 +504,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "Header"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func HeaderInt(webCtx *fiber.Ctx, key string, defaultValue ...int) (int, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"HeaderInt",
 		[]*ast.Field{
@@ -441,9 +543,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "HeaderInt"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func HeaderBool(webCtx *fiber.Ctx, key string, defaultValue ...bool) (bool, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"HeaderBool",
 		[]*ast.Field{
@@ -471,9 +582,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "HeaderBool"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func HeaderFloat(webCtx *fiber.Ctx, key string, defaultValue ...float64) (float64, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"HeaderFloat",
 		[]*ast.Field{
@@ -502,9 +622,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "HeaderFloat"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func HeaderParser(webCtx *fiber.Ctx, out any) error
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"HeaderParser",
 		[]*ast.Field{
@@ -528,10 +657,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "HeaderParser"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func FormString(webCtx *fiber.Ctx, key string, defaultValue ...string) string
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormString",
 		[]*ast.Field{
@@ -557,9 +695,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormString"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func FormFile(webCtx *fiber.Ctx, key string) (*multipart.FileHeader, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormFile",
 		[]*ast.Field{
@@ -583,9 +730,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormFile"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func FormInt(webCtx *fiber.Ctx, key string, defaultValue ...int) (int, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormInt",
 		[]*ast.Field{
@@ -613,9 +769,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormInt"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func FormBool(webCtx *fiber.Ctx, key string, defaultValue ...bool) (bool, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormBool",
 		[]*ast.Field{
@@ -643,9 +808,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormBool"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func FormFloat(webCtx *fiber.Ctx, key string, defaultValue ...float64) (float64, error)
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormFloat",
 		[]*ast.Field{
@@ -674,9 +848,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		),
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormFloat"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func FormParser(webCtx *fiber.Ctx, out any) error
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"FormParser",
 		[]*ast.Field{
@@ -977,10 +1160,19 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "FormParser"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 
 	// [code] func Body(webCtx *fiber.Ctx) []byte
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"Body",
 		[]*ast.Field{
@@ -1001,9 +1193,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "Body"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func BodyString(webCtx *fiber.Ctx) string
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"BodyString",
 		[]*ast.Field{
@@ -1030,9 +1231,18 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "BodyString"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 	// [code] func BodyParser(webCtx *fiber.Ctx, out any) error
-	addDecl(astFile, astFuncDecl(
+	funcDecl = astFuncDecl(
 		nil,
 		"BodyParser",
 		[]*ast.Field{
@@ -1055,7 +1265,16 @@ func genWebFuncAst(astFile *ast.File) {
 				},
 			},
 		},
-	))
+	)
+	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: fmt.Sprintf("\n// %s", "BodyParser"),
+		},
+		{
+			Text: "// Generate by system",
+		},
+	}}
+	addDecl(astFile, funcDecl)
 }
 
 func paramConvStmts(strCall *ast.CallExpr, convCall *ast.CallExpr) []ast.Stmt {
@@ -1285,7 +1504,7 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			},
 		})
 
-		addDecl(astFile, astFuncDecl(
+		funcDecl := astFuncDecl(
 			[]*ast.Field{
 				astField(recvVar, astStarExpr(astIdent(global.StructName))),
 			},
@@ -1295,7 +1514,16 @@ func genWebAppStartupAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				astField("", astIdent("error")),
 			},
 			stmts,
-		))
+		)
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+			{
+				Text: fmt.Sprintf("\n// %s", instance.Proxy),
+			},
+			{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+			},
+		}}
+		addDecl(astFile, funcDecl)
 	}
 
 }

@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -28,6 +29,8 @@ func genFuncFile(moduleInfo *model.ModuleInfo, dir string) error {
 	genFuncImportsAst(moduleInfo, astFile)
 
 	genFuncAst(moduleInfo, astFile)
+
+	addFileDoc(astFile, "\n// Code generate by \"inject-golang func\"; DO NOT EDIT.")
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -133,6 +136,14 @@ func genFuncAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			results,
 			stmts,
 		)
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+			{
+				Text: fmt.Sprintf("\n// %s", instance.Proxy),
+			},
+			{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+			},
+		}}
 
 		addDecl(astFile, funcDecl)
 	}

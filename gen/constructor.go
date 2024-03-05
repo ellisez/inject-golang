@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -30,6 +31,8 @@ func genConstructorFile(moduleInfo *model.ModuleInfo, dir string) error {
 	genConstructorImportsAst(moduleInfo, astFile)
 
 	genConstructorAst(moduleInfo, astFile)
+
+	addFileDoc(astFile, "\n// Code generate by \"inject-golang multiple\"; DO NOT EDIT.")
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -184,6 +187,14 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			},
 			stmts,
 		)
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+			{
+				Text: fmt.Sprintf("\n// %s", constructor),
+			},
+			{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.Name),
+			},
+		}}
 
 		addDecl(astFile, funcDecl)
 	}

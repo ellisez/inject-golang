@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -32,6 +33,8 @@ func genCtxFile(moduleInfo *model.ModuleInfo, dir string) error {
 	genCtxStructAst(moduleInfo, astFile)
 
 	genCtxConstructorAst(moduleInfo, astFile)
+
+	addFileDoc(astFile, "\n// Code generate by \"inject-golang singleton\"; DO NOT EDIT.")
 
 	err = format.Node(file, token.NewFileSet(), astFile)
 	if err != nil {
@@ -65,7 +68,7 @@ func genCtxStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	for _, instance := range moduleInfo.SingletonInstances {
 		fieldName := instance.Instance
 
-		fields = append(fields, astField(
+		field := astField(
 			fieldName,
 			astStarExpr(
 				astSelectorExpr(
@@ -73,11 +76,17 @@ func genCtxStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					instance.Name,
 				),
 			),
-		))
+		)
+		field.Doc = &ast.CommentGroup{List: []*ast.Comment{
+			{
+				Text: fmt.Sprintf("\n// Generate by annotations from %s.%s", instance.Package, instance.Name),
+			},
+		}}
+		fields = append(fields, field)
 	}
 	if moduleInfo.WebAppInstances != nil {
 		for _, instance := range moduleInfo.WebAppInstances {
-			fields = append(fields, astField(
+			field := astField(
 				instance.WebApp,
 				astStarExpr(
 					astSelectorExpr(
@@ -85,7 +94,23 @@ func genCtxStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 						"App",
 					),
 				),
-			))
+			)
+			if instance.Package == "" {
+				field.Doc = &ast.CommentGroup{
+					List: []*ast.Comment{
+						{
+							Text: "\n// Generate by system",
+						},
+					},
+				}
+			} else {
+				field.Doc = &ast.CommentGroup{List: []*ast.Comment{
+					{
+						Text: fmt.Sprintf("\n// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+					},
+				}}
+			}
+			fields = append(fields, field)
 		}
 	}
 
@@ -125,12 +150,13 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			} else {
 				caller = utils.TypeToAst(instance.PreConstruct)
 			}
-			stmts = append(stmts, astAssignStmt(
+			stmt := astAssignStmt(
 				astSelectorExpr(varName, provideInstance),
 				&ast.CallExpr{
 					Fun: caller,
 				},
-			))
+			)
+			stmts = append(stmts, stmt)
 		} else {
 			// [code] ctx.{{Instance}} = &{{Package}}.{{Name}}{}
 			stmts = append(stmts, astAssignStmt(

@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -84,7 +85,7 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				},
 			})
 
-			addDecl(astFile, astFuncDecl(
+			funcDecl := astFuncDecl(
 				[]*ast.Field{
 					astField(recvVar, astStarExpr(astIdent(global.StructName))),
 				},
@@ -94,7 +95,16 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					astField("err", astIdent("error")),
 				},
 				stmts,
-			))
+			)
+			funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
+				{
+					Text: fmt.Sprintf("\n// %s", instance.Proxy),
+				},
+				{
+					Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+				},
+			}}
+			addDecl(astFile, funcDecl)
 		}
 	}
 }

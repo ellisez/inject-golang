@@ -1,8 +1,8 @@
 package init
 
+// aaaaa
 import (
 	"github.com/ellisez/inject-golang/examples/model"
-	"github.com/gofiber/fiber/v2"
 )
 
 // ConfigureWebApp
@@ -18,13 +18,4 @@ func ConfigureWebApp(config *model.Config, defaultPort uint) (string, uint, erro
 		defaultPort = config.Port
 	}
 	return config.Host, defaultPort, nil
-}
-
-// WebAppStartupWithHostPort
-// @webApp WebApp
-// @static /images /images
-// @static /css /css [Compress,Browse]
-// @static /js /js [Compress,Download,Browse] index.html 86400
-func WebAppStartupWithHostPort(webApp *fiber.App, host string, port uint) (string, uint, error) {
-	return host, port, nil
 }
