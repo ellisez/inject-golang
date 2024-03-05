@@ -8,22 +8,27 @@ import (
 	"strings"
 )
 
-type arrayValue []string
+type arrayFlags []string
 
-func (a *arrayValue) String() string {
-	return fmt.Sprintf("%v", *a)
+// Value ...
+func (i *arrayFlags) String() string {
+	return fmt.Sprint(*i)
 }
 
-func (a *arrayValue) Set(s string) error {
-	*a = strings.Split(s, ",")
+// Set 方法是flag.Value接口, 设置flag Value的方法.
+// 通过多个flag指定的值， 所以我们追加到最终的数组上.
+func (i *arrayFlags) Set(value string) error {
+	*i = strings.Split(value, ",")
 	return nil
 }
+
+var h bool
+var modeFlag arrayFlags
+
 func CommandParse() error {
-	flag.BoolVar(&global.FlagAll, "all", true, "Generate all code")
-	flag.BoolVar(&global.FlagSingleton, "singleton", false, "Only Generate singleton code")
-	flag.BoolVar(&global.FlagMultiple, "multiple", false, "Only Generate multiple code")
-	flag.BoolVar(&global.FlagFunc, "func", false, "Only Generate func code")
-	flag.BoolVar(&global.FlagWeb, "web", false, "Only Generate web code")
+	flag.BoolVar(&h, "h", false, "help")
+
+	flag.Var(&modeFlag, "m", "Generate `mode`: all (default), singleton, multiple, func, web. example 'singleton,multiple'")
 
 	modulePath, err := os.Getwd()
 	if err != nil {
@@ -31,14 +36,50 @@ func CommandParse() error {
 	}
 	global.CurrentDirectory = modulePath
 
-	var scanDirectories arrayValue
-	flag.Var(&scanDirectories, "dirs", "Scan Directories, default \".\"")
+	flag.Usage = func() {
+		_, _ = fmt.Fprintf(os.Stderr,
+			`inject-golang version: 0.0.2
+Usage: inject-golang [-h help] [-m mode] pkg1 pkg2 ...
+Options:
+`)
+		flag.PrintDefaults()
+	}
 
 	flag.Parse()
-	if scanDirectories == nil {
+
+	if h {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	if modeFlag != nil {
+		for _, s := range modeFlag {
+			switch s {
+			case "all":
+				global.FlagAll = true
+				break
+			case "singleton":
+				global.FlagSingleton = true
+				break
+			case "multiple":
+				global.FlagMultiple = true
+				break
+			case "func":
+				global.FlagFunc = true
+				break
+			case "web":
+				global.FlagWeb = true
+				break
+			default:
+				fmt.Printf("unknown mode \"%s\", %s", s, flag.Lookup("m").Usage)
+			}
+		}
+	}
+
+	global.ScanDirectories = flag.Args()
+
+	if len(global.ScanDirectories) == 0 {
 		global.ScanDirectories = []string{modulePath}
-	} else {
-		global.ScanDirectories = scanDirectories
 	}
 	return nil
 }
