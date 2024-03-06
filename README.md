@@ -219,7 +219,7 @@ func (ctx *Ctx/*Same name function in Ctx*/) WebCtxAliasLoaded(WebApp *model.Web
 > At this point, the original function obtains the injected parameters.
 >
 
-### 3.3. web生成代码
+### 3.3. Web generated
 Annotation configuration
 ```go
 // ConfigureWebApp
