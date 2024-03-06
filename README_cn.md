@@ -36,7 +36,7 @@ func main() {
 > "." 表示当前包, 系统已支持go.work引入方式.
 
 ```go
-//go:generate inject-golang -m singleton,multiple github.com/gofiber/fiber/v2 .
+//go:generate inject-golang -m singleton,web github.com/ellisez/inject-golang/examples-work .
 func main() {
     ctx.New()
 }
@@ -46,7 +46,6 @@ func main() {
 
 ### 1.2. 运行生成器
 ```shell
-# 生成所有注解代码
 go generate -run inject-golang
 ```
 
@@ -73,7 +72,7 @@ inject-glang --clean
 > 
 > `@preConstruct`与`@postConstruct`可携带包名, 但需要`@import`来引入, 如"*model.Database".
 > 
-> 但一般我们不推荐直接使用唯一参数的函数, 而是使用代理函数, 帮我们扩充依赖注入的参数; 
+> 一般我们不推荐直接使用原始函数, 而是使用它的代理函数, 这样能帮我们扩充其他依赖注入的参数; 
 > 代理函数用法, 请参照[方法上注解](#23-方法上的注解-适用于所有方法)
 >
 >
@@ -91,13 +90,13 @@ inject-glang --clean
 // @injectCtx *<参数名, 必填>
 ```
 
-> `@proxy`注解用于标记该函数支持依赖注入, 最终系统会自动生成一个与函数名同名代理函数, 可通过容器对象获得代理函数.
+> `@proxy`用于标记该函数支持依赖注入, 最终系统会自动生成一个与函数名同名代理函数, 可通过容器对象访问代理函数.
 > 
 > `@injectParam`用于参数的依赖注入;
 > 
-> `@injectRecv`用于从属结构体的依赖注入;
+> `@injectRecv`用于所属结构体的依赖注入;
 > 
-> `@injectCtx`把容器本身注入到指定参数中;
+> `@injectCtx`用于注入容器对象本身;
 > 
 > 未被依赖注入的参数则会保留到生成代理函数中;
 
@@ -109,7 +108,7 @@ inject-glang --clean
 
 > `@webAppProvide`配置webApp, 不进行配置时系统默认会生成一个名为WebApp的实例. 
 > 
-> 如果webApp未被代码中使用, 则系统不会生成WebApp实例, 这也是为了使用与非web项目.
+> 如果webApp未被代码中使用, 则系统不会生成WebApp实例, 这也是为了适配与非web项目.
 > 
 > `@static`用于配置静态资源文件, 如png,css,js,html等
 
@@ -122,24 +121,22 @@ inject-glang --clean
 // @param *<参数名，必填> *<取值类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-> `@router`系统会生成一个与函数同名的代理函数, 以完成参数的解析和注入.
+> `@router`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入, 也可以通过`@proxy`更改.
 > 
-> `@webApp`用于指明路由注册在哪个webApp实例上, webApp由`@webAppProvide`进行配置, 默认会有一个名为WebApp实例, 当然名字也是可以更改的.
+> `@webApp`用于关联webApp实例, webApp由`@webAppProvide`提供, 默认实例名为"WebApp".
 > 
-> `@injectWebCtx`用于指定某个参数来接收当前请求的webCtx.
+> `@injectWebCtx`用于注入当前请求的webCtx, 只能用于`@router`和`@middleware`;
 > 
-> `@injectWebCtx`只有`@middleware`和`@router`才可以使用, 因为只有它们能够处理请求.
+> `@produce`用于定义返回数据类型, 只能用于`@router`;
 > 
-> `@produce`用于定义返回数据类型
-> 
-> `@param`用于路由参数的解析, 支持下列格式:
+> `@param`用于请求参数的解析, 支持下列格式:
 > * query: Get参数, 如/index.html?a=1;
 > * path: 路由参数, 如/article/:id;
 > * header: 头部信息参数;
-> * body: 请求body二进制流, 注意只能由一个body参数;
+> * body: body二进制流, 注意只能由一个body参数;
 > * formData: multipart/form方式提交的数据;
 > 
-> <b>注意: 路由函数要求每个参数必须都被配置依赖注入</b>
+> <b>注意: `@router`要求每个参数必须都被配置依赖注入</b>
 
 ### 2.6. 路由中间件上的注解:
 ```
@@ -149,9 +146,9 @@ inject-glang --clean
 // @param *<参数名，必填> *<参数类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-> `@middleware`系统会生成一个与函数同名的代理函数, 以完成参数的解析和注入.
+> `@middleware`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入, 也可以通过`@proxy`更改.
 >
-> <b>注意: 路由函数要求每个参数必须都被配置依赖注入</b>
+> <b>注意: `@middleware`要求每个参数必须都被配置依赖注入</b>
 
 ## 3. 生成模板
 
@@ -171,16 +168,20 @@ type WebApp struct {
 	Routers     []*Router
 }
 ```
-preConstruct函数, 要求必须是无参并且返回类型必须和结构体类型一样
+> preConstruct函数, 要求必须是无参并且返回类型必须和结构体类型一样
+
 ```go
 func PrepareWebCtxAlias() *WebApp {
+// preConstruct function
     return &WebApp{}
 }
 ```
-postConstruct函数, 要求参数必须是结构体类型
+
+> postConstruct函数, 要求参数必须是结构体类型
+
 ```go
 func WebCtxAliasLoaded(webApp *WebApp) {
-	
+// postConstruct function
 }
 ```
 
@@ -204,10 +205,15 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
 }
 ```
 
-> 由于postConstruct函数必须接收一个与注解的结构体一样的参数，而proxy代理函数对未注入的参数会保留到生成的函数中，
+> 许多时候, 某些函数有严格的格式, 如`@preConstruct`, `@postConstruct`等, 但我们又希望能依赖注入一些额外的参数, 以方便完成后续业务, 这个时候我们就可以考虑使用`@proxy`.
 > 
-> 所以我们推荐，postConstruct直接proxy生成的函数，而不是直接指向原函数。
-> 利用原函数保留未注入结构体参数，来促成生成的函数满足postConstruct的要求。
+> `@proxy`生成的代理函数, 只会保留未注入的参数, 利用这一点就能够生成符合一定格式的函数.
+> 
+> 以postConstruct函数为例, 它需要一个结构体类型的参数, 所以我们只需要在原函数中保留一个结构体类型参数让它不进行注入即可.
+> 
+> 而代理函数内部又会根据注入规则, 组装所需数据并最终调用原函数.
+> 
+> 此时原函数就获得了, 已经被注入后的参数.
 
 
 ### 3.3. web生成代码
@@ -308,21 +314,22 @@ func main() {
 }
 ```
 
-> `@webAppProvide`如果不定义时，默认系统会创建名为`WebApp`的实例，以及默认WebAppStartup的启动函数
-> 
-> `@webAppProvide <实例名>`通过给定名字来修改webApp的实例名, 通过`@proxy`来修改启动函数名
-> 
-> 相应的`@router`与`@middleware`通过`@webApp`指定所注册的webApp实例, 不配置`@webApp`或未给出实例名时, 
-> 默认关联的也是名为`WebApp`的实例.
-> 
-> 所以`@webAppProvide`与`@webApp`配置的实例名必须保持一致, 才能确保关联关系.
+> `@webAppProvide`用于定义web应用实例，不配置时系统默认会创建名为`WebApp`的实例，以及名为`WebAppStartup`的启动函数,
+>
+> 实例名通过`@webAppProvide`修改, 启动函数名通过`@proxy`来修改.
+>
+> `@router`与`@middleware`通过`@webApp`关联实例, 默认关联`WebApp`的实例名.
+>
+> `@webAppProvide`与`@webApp`实例名必须保持一致, 才能确保关联关系.
 
-> <b>由于原始middleware与router要求必须是`func(webCtx *fiber.Ctx) error`函数类型, 而系统生成的代理函数自动会补全webCtx参数, 所以原函数的每个参数都必须都要配置依赖注入.</b>
-> <br/>一旦出现未依注入参数, 就会被保留到生成的代理函数中, 就会造成无法满足`func(webCtx *fiber.Ctx) error`函数类型.
+> <b>注意: `@middleware`与`@router`要求每个参数都必须都要配置依赖注入. 系统会自动创建出符合webApp调用格式的代码函数</b>
+>
+> 只有`@middleware`和`@router`可以注入`@webCtx`, 它表示本次请求上下文.
+>
+> webCtx更多使用技巧, 可阅读`*fiber.Ctx`相关文档
+>
 
-> 如范例中启动函ConfigureWebApp由于未对extraParam配置任何依赖注入, 所以代理函数中仍然保留了extraParam参数.
-> 而main函数调用时则可以传递100整数值给与extraParam.
-### 3.3. 目录结构
+### 3.4. 目录结构
 ```
 /ctx
     |- gen_ctx.go
