@@ -19,6 +19,14 @@ type FieldInfo struct {
 	Comment  string   // 原始注解
 }
 
+type Mod struct {
+	Path    string            // the dir of go.mod
+	Package string            // go.mod mod
+	Version string            // go.mod version
+	Require map[string]string // go.mod require
+	Work    map[string]string // go.work
+}
+
 type ModuleInfo struct {
 	SingletonInstances []*StructInfo
 	MultipleInstances  []*StructInfo

@@ -1,12 +1,19 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
-func FileExists(filename string) (bool, error) {
+var goModCache string
+
+func ExistsFile(filename string) (bool, error) {
 	stat, err := os.Stat(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -22,7 +29,7 @@ func FileExists(filename string) (bool, error) {
 }
 
 func CreateFileIfNotExists(filename string) error {
-	exists, err := FileExists(filename)
+	exists, err := ExistsFile(filename)
 	if err != nil {
 		return err
 	}
@@ -35,7 +42,7 @@ func CreateFileIfNotExists(filename string) error {
 	return nil
 }
 
-func DirectoryExists(dirname string) (bool, error) {
+func ExistsDirectory(dirname string) (bool, error) {
 	stat, err := os.Stat(dirname)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -51,7 +58,7 @@ func DirectoryExists(dirname string) (bool, error) {
 }
 
 func CreateDirectoryIfNotExists(dirname string) error {
-	exists, err := DirectoryExists(dirname)
+	exists, err := ExistsDirectory(dirname)
 	if err != nil {
 		return err
 	}
@@ -62,4 +69,63 @@ func CreateDirectoryIfNotExists(dirname string) error {
 		}
 	}
 	return nil
+}
+
+func JoinPath(p string, j ...string) string {
+	if !filepath.IsAbs(p) {
+		abs, err := filepath.Abs(p)
+		if err == nil {
+			p = abs
+		}
+	}
+	for _, s := range j {
+		if filepath.IsAbs(s) {
+			p = s
+		} else {
+			p = filepath.Join(p, s)
+		}
+	}
+	return p
+}
+
+func DirnameOfPackage(packageName string) (string, error) {
+	if strings.HasPrefix(packageName, ".") {
+		return JoinPath(packageName), nil
+	}
+
+	if filepath.IsAbs(packageName) {
+		return packageName, nil
+	}
+
+	if Mod.Work != nil {
+		p := Mod.Work[packageName]
+		if p != "" {
+			return p, nil
+		}
+	}
+
+	var version string
+	for p, v := range Mod.Require {
+		if p == packageName {
+			version = v
+			break
+		}
+	}
+	if version == "" {
+		return "", fmt.Errorf("%s is not found in go.mod, try to \"go get %s\"", packageName, packageName)
+	}
+
+	if goModCache == "" {
+		out := &bytes.Buffer{}
+		command := exec.Command("go", "env", "GOMODCACHE")
+		command.Stdout = out
+		err := command.Run()
+		if err != nil {
+			return "", err
+		}
+		goModCache = out.String()
+		goModCache = strings.TrimSuffix(goModCache, "\n")
+	}
+
+	return JoinPath(goModCache, packageName+"@"+version), nil
 }

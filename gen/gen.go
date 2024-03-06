@@ -2,7 +2,7 @@ package gen
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/global"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -11,34 +11,28 @@ import (
 )
 
 func DoGen(moduleInfo *model.ModuleInfo) error {
-	if len(moduleInfo.SingletonInstances) == 0 &&
-		len(moduleInfo.MultipleInstances) == 0 &&
-		len(moduleInfo.FuncInstances) == 0 &&
-		len(moduleInfo.MethodInstances) == 0 {
-		return nil
-	}
-	genDir := filepath.Join(global.CurrentDirectory, global.GenPackage)
+	genDir := filepath.Join(Mod.Path, GenPackage)
 
 	err := utils.CreateDirectoryIfNotExists(genDir)
 	if err != nil {
 		return err
 	}
 
-	if global.FlagAll || global.FlagSingleton {
+	if FlagAll || FlagSingleton {
 		err = genCtxFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	if global.FlagAll || global.FlagMultiple {
+	if FlagAll || FlagMultiple {
 		err = genConstructorFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	if global.FlagAll || global.FlagFunc {
+	if FlagAll || FlagFunc {
 		err = genFuncFile(moduleInfo, genDir)
 		if err != nil {
 			return err
@@ -50,7 +44,7 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 		}
 	}
 
-	if global.FlagAll || global.FlagWeb {
+	if FlagAll || FlagWeb {
 		err = genWebFile(moduleInfo, genDir)
 		if err != nil {
 			return err

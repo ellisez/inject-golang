@@ -15,38 +15,83 @@ import (
 
 func annotateParse(text string) []string {
 	prefixLen := len("// ")
+	if len(text) < prefixLen {
+		return nil
+	}
 	text = text[prefixLen:]
 	text = strings.TrimSpace(text)
 	return strings.Split(text, " ")
 }
 
 type Parser struct {
-	Dirname string // 根目录, 用于写文件路径
-	Mod     string // golang模块名, 用于import
+	*model.Mod
 	Result  *model.ModuleInfo
 	FileSet *token.FileSet
 }
 
-func New(dirname string) *Parser {
-	return &Parser{
-		Dirname: dirname,
-		Result:  model.NewModuleInfo(),
-		FileSet: token.NewFileSet(),
+func ModParse(dirname string) (*model.Mod, error) {
+	dirname = utils.JoinPath(dirname)
+	mod := CacheModMap[dirname]
+	if mod != nil {
+		return mod, nil
 	}
-}
 
-func (p *Parser) ModParse() error {
-	filename := filepath.Join(p.Dirname, "go.mod")
+	mod = &model.Mod{}
+
+	/// go.mod
+	filename := filepath.Join(dirname, "go.mod")
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	goDotMod, err := modfile.Parse("go.mod", bytes, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p.Mod = goDotMod.Module.Mod.Path
-	return nil
+	mod.Path = dirname
+	mod.Package = goDotMod.Module.Mod.Path
+	mod.Version = goDotMod.Module.Mod.Version
+
+	mod.Require = make(map[string]string)
+	for _, r := range goDotMod.Require {
+		mod.Require[r.Mod.Path] = r.Mod.Version
+	}
+
+	if Mod == nil {
+		Mod = mod
+		/// go.work
+		filename = filepath.Join(dirname, "go.work")
+		existsWork, err := utils.ExistsFile(filename)
+		if err != nil {
+			return nil, err
+		}
+
+		if existsWork {
+			bytes, err := os.ReadFile(filename)
+			if err != nil {
+				return nil, err
+			}
+			goDotWork, err := modfile.ParseWork("go.goDotWork", bytes, nil)
+			if err != nil {
+				return nil, err
+			}
+			mod.Work = make(map[string]string)
+			for _, use := range goDotWork.Use {
+				if use.Path == "." {
+					mod.Work[mod.Package] = mod.Path
+					continue
+				}
+				localMod, err := ModParse(use.Path)
+				if err != nil {
+					return nil, err
+				}
+				mod.Work[localMod.Package] = utils.JoinPath(use.Path)
+			}
+		}
+	}
+	CacheModMap[mod.Path] = mod
+
+	return mod, nil
 }
 
 // DoParse
@@ -54,7 +99,7 @@ func (p *Parser) ModParse() error {
 func (p *Parser) DoParse(filename string) error {
 	// exclude gen dir
 	dirname := filepath.Dir(filename)
-	if dirname == filepath.Join(p.Dirname, GenPackage) {
+	if dirname == filepath.Join(p.Path, GenPackage) {
 		return nil
 	}
 
@@ -65,9 +110,9 @@ func (p *Parser) DoParse(filename string) error {
 			utils.Failure(err.Error())
 		}
 
-		importPackage := p.Mod
-		if p.Dirname != dirname {
-			rel, err := filepath.Rel(p.Dirname, dirname)
+		importPackage := p.Package
+		if p.Path != dirname {
+			rel, err := filepath.Rel(p.Path, dirname)
 			if err != nil {
 				return err
 			}

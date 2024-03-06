@@ -1,9 +1,10 @@
 package scan
 
 import (
-	"github.com/ellisez/inject-golang/global"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/parse"
+	"github.com/ellisez/inject-golang/utils"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -12,14 +13,18 @@ import (
 func DoScan() (*model.ModuleInfo, error) {
 	moduleInfo := model.NewModuleInfo()
 	fileSet := token.NewFileSet()
-	for _, directory := range global.ScanDirectories {
+
+	for _, directory := range ScanDirectories {
+		directory, err := utils.DirnameOfPackage(directory)
+		if err != nil {
+			return nil, err
+		}
 		p := &parse.Parser{
-			Dirname: directory,
 			Result:  moduleInfo,
 			FileSet: fileSet,
 		}
 
-		err := p.ModParse()
+		p.Mod, err = parse.ModParse(directory)
 		if err != nil {
 			return nil, err
 		}

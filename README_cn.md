@@ -9,6 +9,7 @@
 go install github.com/ellisez/inject-golang
 ```
 ### 1.1. 配置生成器
+> 默认扫描当前模块并生成所有注解
 ```go
 package main
 
@@ -21,12 +22,39 @@ func main() {
 	ctx.New()
 }
 ```
-> //go:generate inject-golang
+> 使用`-m`可指定只生成部分注解, 支持设置多个, 用逗号分隔, 可选singleton, multiple, func, web
+
+```go
+//go:generate inject-golang -m singleton,multiple
+func main() {
+    ctx.New()
+}
+```
+
+> 可指定扫描模块: 支持多个, 默认为当前模块, 外部模块则必须要被引入.
+> 
+> "." 表示当前包, 系统已支持go.work引入方式.
+
+```go
+//go:generate inject-golang -m singleton,multiple github.com/gofiber/fiber/v2 .
+func main() {
+    ctx.New()
+}
+```
+
+想了解更多配置命令, 请运行`inject-golang -h`.
 
 ### 1.2. 运行生成器
 ```shell
+# 生成所有注解代码
 go generate -run inject-golang
 ```
+
+### 1.3. 清空代码
+```shell
+inject-glang --clean
+```
+
 ## 2. 注解
 ### 2.1. 结构体上的注解：
 ```

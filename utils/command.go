@@ -3,8 +3,9 @@ package utils
 import (
 	"flag"
 	"fmt"
-	"github.com/ellisez/inject-golang/global"
+	. "github.com/ellisez/inject-golang/global"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,23 +23,21 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-var h bool
-var modeFlag arrayFlags
-
 func CommandParse() error {
-	flag.BoolVar(&h, "h", false, "help")
+
+	var h bool
+	var modeFlag arrayFlags
+	var clean bool
+
+	flag.BoolVar(&h, "h", false, "`help`")
 
 	flag.Var(&modeFlag, "m", "Generate `mode`: all (default), singleton, multiple, func, web. example 'singleton,multiple'")
 
-	modulePath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	global.CurrentDirectory = modulePath
+	flag.BoolVar(&clean, "clean", false, "`clean` up all code")
 
 	flag.Usage = func() {
 		_, _ = fmt.Fprintf(os.Stderr,
-			`inject-golang version: 0.0.2
+			`inject-golang v0.0.2
 Usage: inject-golang [-h help] [-m mode] pkg1 pkg2 ...
 Options:
 `)
@@ -51,35 +50,70 @@ Options:
 		flag.Usage()
 		os.Exit(0)
 	}
+	if clean {
+		err := os.Remove(filepath.Join(GenPackage, GenCtxFilename))
+		if err != nil {
+			if !os.IsNotExist(err) {
+				Failuref("Cleaning failed, %s", err.Error())
+			}
+		}
+		err = os.Remove(filepath.Join(GenPackage, GenConstructorFilename))
+		if err != nil {
+			if !os.IsNotExist(err) {
+				Failuref("Cleaning failed, %s", err.Error())
+			}
+		}
+		err = os.Remove(filepath.Join(GenPackage, GenFuncFilename))
+		if err != nil {
+			if !os.IsNotExist(err) {
+				Failuref("Cleaning failed, %s", err.Error())
+			}
+		}
+		err = os.Remove(filepath.Join(GenPackage, GenMethodFilename))
+		if err != nil {
+			if !os.IsNotExist(err) {
+				Failuref("Cleaning failed, %s", err.Error())
+			}
+		}
+		err = os.Remove(filepath.Join(GenPackage, GenWebFilename))
+		if err != nil {
+			if !os.IsNotExist(err) {
+				Failuref("Cleaning failed, %s", err.Error())
+			}
+		}
+		Success("Cleaning completed!")
+		os.Exit(0)
+	}
 
 	if modeFlag != nil {
+		FlagAll = false
 		for _, s := range modeFlag {
 			switch s {
 			case "all":
-				global.FlagAll = true
+				FlagAll = true
 				break
 			case "singleton":
-				global.FlagSingleton = true
+				FlagSingleton = true
 				break
 			case "multiple":
-				global.FlagMultiple = true
+				FlagMultiple = true
 				break
 			case "func":
-				global.FlagFunc = true
+				FlagFunc = true
 				break
 			case "web":
-				global.FlagWeb = true
+				FlagWeb = true
 				break
 			default:
-				fmt.Printf("unknown mode \"%s\", %s", s, flag.Lookup("m").Usage)
+				return fmt.Errorf("Options -m \"%s\" unknown\nUsage: %s", s, flag.Lookup("m").Usage)
 			}
 		}
 	}
 
-	global.ScanDirectories = flag.Args()
+	ScanDirectories = flag.Args()
 
-	if len(global.ScanDirectories) == 0 {
-		global.ScanDirectories = []string{modulePath}
+	if len(ScanDirectories) == 0 {
+		ScanDirectories = []string{"."}
 	}
 	return nil
 }

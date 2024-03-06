@@ -32,7 +32,7 @@ func (p *Parser) WebAppParse(funcDecl *ast.FuncDecl, funcInfo *model.FuncInfo) {
 				}
 				staticResource.Path = annotateArgs[1]
 				if argsLen < 3 {
-					utils.Failuref("%s, Dirname must be specified, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
 				}
 				staticResource.Path = annotateArgs[2]
 

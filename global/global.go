@@ -1,10 +1,10 @@
 package global
 
+import "github.com/ellisez/inject-golang/model"
+
 var (
 	GenPackage = "ctx"
 	StructName = "Ctx"
-
-	CurrentDirectory string
 
 	FlagAll       = true
 	FlagSingleton = false
@@ -19,4 +19,8 @@ var (
 	GenWebFilename         = "gen_web.go"
 
 	ScanDirectories []string
+
+	CacheModMap = make(map[string]*model.Mod)
+
+	Mod *model.Mod
 )

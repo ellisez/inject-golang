@@ -19,7 +19,7 @@ func NewRouterParam() *RouterParam {
 
 // MiddlewareInfo
 // @webApp <WebApp，default WebApp>
-// @static *<Path, required> *<Dirname, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
+// @static *<Path, required> *<Path, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
 type MiddlewareInfo struct {
 	*FuncInfo
 
@@ -81,7 +81,7 @@ func NewStaticResource() *StaticResource {
 
 // WebInfo
 // @webAppProvide <实例名，默认webApp>
-// @static <Path> <Dirname> [Features: Compress|Download|Browse] <Index> <MaxAge>
+// @static <Path> <Path> [Features: Compress|Download|Browse] <Index> <MaxAge>
 type WebInfo struct {
 	*FuncInfo
 
