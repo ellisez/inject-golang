@@ -262,7 +262,7 @@ func LoginController(username string, password string) error {
 return nil
 }
 ```
-generating
+Generating
 ```go
 func (ctx *Ctx) WebAppStartup1(extraParam int) error {
     ctx.WebApp.Static("/images", "")
