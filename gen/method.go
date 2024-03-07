@@ -109,11 +109,34 @@ func genMethodAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				args = append(args, astIdent(recvVar))
 				break
 			case "inject":
-				// [code] ctx.{{ParamInstance}},
-				if !moduleInfo.HasInstance(paramInstance) {
+				injectMode := ""
+				if moduleInfo.HasSingleton(paramInstance) {
+					// [code] ctx.{{ParamInstance}},
+					args = append(args, astSelectorExpr(recvVar, paramInstance))
+					injectMode = "singleton"
+				}
+
+				if injectMode == "" {
+					if moduleInfo.HasWebApp(paramInstance) {
+						// [code] ctx.{{ParamInstance}},
+						args = append(args, astSelectorExpr(recvVar, paramInstance))
+						injectMode = "webApp"
+					}
+				}
+
+				if injectMode == "" {
+					if moduleInfo.HasMultiple(paramInstance) {
+						// [code] ctx.New{{FieldInstance}}(),
+						args = append(args, &ast.CallExpr{
+							Fun: astSelectorExpr(recvVar, "New"+paramInstance),
+						})
+						injectMode = "multiple"
+					}
+				}
+
+				if injectMode == "" {
 					utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
 				}
-				args = append(args, astSelectorExpr(recvVar, paramInstance))
 
 			default:
 				// [code] {{ParamInstance}},

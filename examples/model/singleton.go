@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // Config
 // @provide
 type Config struct {
@@ -21,6 +23,7 @@ type Database struct {
 }
 
 func PrepareDatabase() *Database {
+	fmt.Println("call Database.preConstruct")
 	return &Database{
 		Host:     "127.0.0.1",
 		Port:     3000,
@@ -44,24 +47,6 @@ type WebApp struct {
 }
 
 func PrepareWebCtxAlias() *WebApp {
-	// PreConstruct is usually used to set default values.
-	// Unable to get Ctx, because it is not yet ready.
-	// If you want to run with Ctx, you can use PostConstruct.
-	/* error example
-	var m = ctx.NewMiddleWare("/api", func() error {
-		fmt.Printf("Call MiddleWare %s\n", "/api")
-		return nil
-	})
-	return &WebApp{
-		MiddleWares: []*MiddleWare{
-			m,
-		},
-		Routers: []*Router{
-			ctx.NewRouterAlias(m, "/login", func() error {
-				fmt.Printf("Call Router %s", "/login")
-				return nil
-			}),
-		},
-	}*/
+	fmt.Println("call WebApp.preConstruct")
 	return &WebApp{}
 }

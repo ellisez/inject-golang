@@ -8,9 +8,10 @@ import (
 // WebCtxAliasLoaded
 // @proxy
 // @injectParam database Database
+// @injectParam router RouterAlias
 // @injectCtx appCtx
-func WebCtxAliasLoaded(appCtx *ctx.Ctx, webApp *WebApp, database *Database) {
-	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
+func WebCtxAliasLoaded(appCtx *ctx.Ctx, webApp *WebApp, database *Database, router *Router) {
+	fmt.Printf("call WebApp.postConstruct: %v\n%v\n%v\n", webApp, database, router)
 	appCtx.TestLogin(webApp)
 }
 
@@ -18,5 +19,5 @@ func WebCtxAliasLoaded(appCtx *ctx.Ctx, webApp *WebApp, database *Database) {
 // @proxy
 // @injectParam database Database
 func (webApp *WebApp) TestLogin(database *Database) {
-	fmt.Printf("TestLogin: %v\n%v\n", webApp, database)
+	fmt.Printf("call TestLogin: %v\n%v\n", webApp, database)
 }

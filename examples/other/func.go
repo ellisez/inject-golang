@@ -6,5 +6,5 @@ import (
 )
 
 func DatabaseLoaded(database *model.Database) {
-	fmt.Printf("DatabaseLoaded: %v\n", database)
+	fmt.Printf("call Database.postConstruct: %v\n", database)
 }

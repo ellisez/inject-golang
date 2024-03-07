@@ -72,24 +72,6 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 	for _, instance := range moduleInfo.MultipleInstances {
 		recvVar := utils.FirstToLower(global.StructName)
-		params := make([]*ast.Field, 0)
-		for _, field := range instance.Fields {
-			if field.Source == "" {
-				// [code] {{FieldInstance}} {{FieldType}},
-				fieldInstance := field.Instance
-
-				params = append(params,
-					astField(
-						fieldInstance,
-						utils.AccessType(
-							field.Type,
-							instance.Package,
-							global.GenPackage,
-						),
-					),
-				)
-			}
-		}
 
 		provideInstance := instance.Instance
 		if provideInstance == "" || provideInstance == "_" {
@@ -136,21 +118,44 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 						astIdent(recvVar),
 					))
 				} else {
-					// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
-					if !moduleInfo.HasInstance(fieldInstance) {
+					injectMode := ""
+					if moduleInfo.HasSingleton(fieldInstance) {
+						// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+						stmts = append(stmts, astAssignStmt(
+							astSelectorExpr(instanceVar, fieldInstance),
+							astSelectorExpr(recvVar, fieldInstance),
+						))
+						injectMode = "singleton"
+					}
+
+					if injectMode == "" {
+						if moduleInfo.HasWebApp(fieldInstance) {
+							// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldInstance),
+								astSelectorExpr(recvVar, fieldInstance),
+							))
+							injectMode = "webApp"
+						}
+					}
+
+					if injectMode == "" {
+						if moduleInfo.HasMultiple(fieldInstance) {
+							// [code] {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldInstance),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, "New"+fieldInstance),
+								},
+							))
+							injectMode = "multiple"
+						}
+					}
+
+					if injectMode == "" {
 						utils.Failuref("%s, \"%s\" No matching Instance, at %s{}", field.Comment, fieldInstance, instance.Name)
 					}
-					stmts = append(stmts, astAssignStmt(
-						astSelectorExpr(instanceVar, fieldInstance),
-						astSelectorExpr(recvVar, field.Name),
-					))
 				}
-			} else {
-				// [code] {{Instance}}.{{FieldName}} = {{FieldInstance}}
-				stmts = append(stmts, astAssignStmt(
-					astSelectorExpr(instanceVar, fieldInstance),
-					astIdent(field.Name),
-				))
 			}
 		}
 
@@ -190,7 +195,7 @@ func genConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				astField(recvVar, astStarExpr(astIdent(global.StructName))),
 			},
 			constructor,
-			params,
+			nil,
 			[]*ast.Field{
 				{
 					Type: astStarExpr(instanceType),

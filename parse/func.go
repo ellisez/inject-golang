@@ -4,6 +4,7 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
+	"strings"
 )
 
 // FuncParse
@@ -146,6 +147,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 
 	if !hasAnnotate {
 		return
+	}
+	if strings.HasPrefix(funcInfo.Proxy, "New") {
+		utils.Failuref("%s, Proxy does not allow starting with \"New\", at %s()", funcInfo.ProxyComment, funcInfo.FuncName)
 	}
 
 	results := funcDecl.Type.Results

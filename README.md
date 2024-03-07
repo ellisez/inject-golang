@@ -370,7 +370,11 @@ func main() {
                     {{if FieldInstance == "Ctx"}}
                     ctx.{{Instance}}.{{FieldInstance}} = ctx
                     {{else}}
-                    ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+                        {{if IsSingleton}}
+                        ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+                        {{else if IsMultiple}}
+                        ctx.{{Instance}}.{{FieldInstance}} = ctx.New{{StructInstance}}()
+                        {{end}}
                     {{end}}
                 {{end}}
             {{end}}
@@ -389,11 +393,7 @@ func main() {
         # gen segment: Multiple instance #
         ------------------------------------
         {{range MultipleInstances}}
-            func (ctx *Ctx) New{{Instance}}(
-                {{range NormalFields}}
-                {{FieldInstance}} {{FieldType}},
-                {{end}}
-            ) *{{Type}} {
+            func (ctx *Ctx) New{{Instance}}() *{{Type}} {
                 {{if PreConstruct}}
                     {{Instance}} := {{PreConstruct}}()
                 {{else}}
@@ -404,10 +404,12 @@ func main() {
                         {{if FieldInstance == "Ctx"}}
                         {{Instance}}.{{FieldName}} = ctx
                         {{else}}
-                        {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+                            {{if IsSingleton}}
+                            {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+                            {{else if IsMultiple}}
+                            {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+                            {{end}}
                         {{end}}
-                    {{else}}
-                        {{Instance}}.{{FieldName}} = {{FieldInstance}}
                     {{end}}
                 {{end}}
                 
@@ -440,7 +442,11 @@ func main() {
                             {{if ParamInstance == "Ctx"}}
                             ctx,
                             {{else}}
-                            ctx.{{ParamInstance}},
+                                {{if IsSingleton}}
+                                ctx.{{ParamInstance}},
+                                {{else if IsMultiple}}
+                                ctx.New{{ParamInstance}}(),
+                                {{end}}
                             {{end}}
                         {{else}}
                             {{ParamInstance}},
@@ -475,7 +481,11 @@ func main() {
                         {{if ParamInstance == "Ctx"}}
                         ctx,
                         {{else}}
-                        ctx.{{ParamInstance}},
+                            {{if IsSingleton}}
+                            ctx.{{ParamInstance}},
+                            {{else if IsMultiple}}
+                            ctx.New{{ParamInstance}}(),
+                            {{end}}
                         {{end}}
                     {{else}}
                         {{ParamInstance}},

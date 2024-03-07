@@ -34,6 +34,8 @@ type ModuleInfo struct {
 	MethodInstances    []*FuncInfo
 
 	WebAppInstances []*WebInfo
+
+	Interface []*ast.FuncDecl
 }
 
 func NewModuleInfo() *ModuleInfo {
@@ -43,6 +45,7 @@ func NewModuleInfo() *ModuleInfo {
 		FuncInstances:      make([]*FuncInfo, 0),
 		MethodInstances:    make([]*FuncInfo, 0),
 		WebAppInstances:    make([]*WebInfo, 0),
+		Interface:          make([]*ast.FuncDecl, 0),
 	}
 }
 
@@ -75,6 +78,14 @@ func (moduleInfo *ModuleInfo) GetSingleton(name string) *StructInfo {
 	}
 	return nil
 }
+func (moduleInfo *ModuleInfo) GetMultiple(name string) *StructInfo {
+	for _, instance := range moduleInfo.MultipleInstances {
+		if instance.Instance == name {
+			return instance
+		}
+	}
+	return nil
+}
 func (moduleInfo *ModuleInfo) GetWebApp(name string) *WebInfo {
 	for _, instance := range moduleInfo.WebAppInstances {
 		if instance.WebApp == name {
@@ -85,13 +96,15 @@ func (moduleInfo *ModuleInfo) GetWebApp(name string) *WebInfo {
 }
 
 func (moduleInfo *ModuleInfo) HasInstance(name string) bool {
-	return moduleInfo.HasSingleton(name) || moduleInfo.HasWebApp(name)
+	return moduleInfo.HasSingleton(name) || moduleInfo.HasMultiple(name) || moduleInfo.HasWebApp(name)
 }
 
 func (moduleInfo *ModuleInfo) HasSingleton(name string) bool {
 	return moduleInfo.GetSingleton(name) != nil
 }
-
+func (moduleInfo *ModuleInfo) HasMultiple(name string) bool {
+	return moduleInfo.GetMultiple(name) != nil
+}
 func (moduleInfo *ModuleInfo) HasWebApp(name string) bool {
 	return moduleInfo.GetWebApp(name) != nil
 }

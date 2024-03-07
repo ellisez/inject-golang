@@ -198,14 +198,43 @@ func genCtxConstructorAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 							astIdent(varName),
 						))
 					} else {
-						// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
-						if !moduleInfo.HasInstance(fieldInstance) {
+						injectMode := ""
+						if moduleInfo.HasSingleton(fieldInstance) {
+							// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+							assignStmts = append(assignStmts, astAssignStmt(
+								astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
+								astSelectorExpr(varName, fieldInstance),
+							))
+							injectMode = "singleton"
+						}
+
+						if injectMode == "" {
+							if moduleInfo.HasWebApp(fieldInstance) {
+								// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+								assignStmts = append(assignStmts, astAssignStmt(
+									astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
+									astSelectorExpr(varName, fieldInstance),
+								))
+								injectMode = "webApp"
+							}
+						}
+
+						if injectMode == "" {
+							if moduleInfo.HasMultiple(fieldInstance) {
+								// [code] {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+								assignStmts = append(assignStmts, astAssignStmt(
+									astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
+									&ast.CallExpr{
+										Fun: astSelectorExpr(varName, "New"+fieldInstance),
+									},
+								))
+								injectMode = "multiple"
+							}
+						}
+
+						if injectMode == "" {
 							utils.Failuref("%s, \"%s\" No matching Instance, at %s{}", field.Comment, fieldInstance, instance.Name)
 						}
-						assignStmts = append(assignStmts, astAssignStmt(
-							astSelectorExprRecur(astSelectorExpr(varName, provideInstance), fieldInstance),
-							astSelectorExpr(varName, fieldInstance),
-						))
 					}
 				}
 			}

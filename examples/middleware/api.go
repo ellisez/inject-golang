@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/examples/ctx"
 	"github.com/ellisez/inject-golang/examples/model"
 	"github.com/gofiber/fiber/v2"
@@ -22,6 +23,7 @@ func CorsMiddleware(appCtx *ctx.Ctx, c *fiber.Ctx,
 	paramsInt int,
 	queryBool bool,
 	formFloat float64) error {
+	fmt.Printf("call CorsMiddleware: %v\n%v\n%v\n%s\n%d\n%t\n%f\n", appCtx, c, body, header, paramsInt, queryBool, formFloat)
 	return cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowCredentials: true,
