@@ -1,23 +1,37 @@
 package global
 
-import "github.com/ellisez/inject-golang/model"
+import (
+	"github.com/ellisez/inject-golang/model"
+)
 
 var (
-	GenPackage = "ctx"
-	StructName = "Ctx"
-
 	FlagAll       = true
 	FlagSingleton = false
 	FlagMultiple  = false
 	FlagFunc      = false
 	FlagWeb       = false
+)
 
-	GenCtxFilename         = "gen_ctx.go"
-	GenConstructorFilename = "gen_constructor.go"
-	GenFuncFilename        = "gen_func.go"
-	GenMethodFilename      = "gen_method.go"
-	GenWebFilename         = "gen_web.go"
+var (
+	GenPackage     = "ctx"
+	StructName     = "Ctx"
+	GenCtxFilename = "gen_ctx.go"
 
+	GenFactoryPackage  = "factory"
+	GenFactoryFilename = "gen_factory.go"
+
+	GenInternalPackage   = "internal"
+	GenSingletonFilename = "gen_singleton.go"
+	GenMultipleFilename  = "gen_multiple.go"
+	GenFuncFilename      = "gen_func.go"
+	GenMethodFilename    = "gen_method.go"
+	GenWebFilename       = "gen_web.go"
+
+	GenUtilsPackage     = "utils"
+	GenWebUtilsFilename = "gen_web_utils.go"
+)
+
+var (
 	ScanDirectories []string
 
 	CacheModMap = make(map[string]*model.Mod)

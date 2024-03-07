@@ -255,6 +255,28 @@ func IsBasicAstType(typeExpr ast.Expr) bool {
 	return true
 }
 
+func UniqueImport(imports []*ast.ImportSpec, importName string, importPath string) []*ast.ImportSpec {
+	importPath = fmt.Sprintf(`"%s"`, importPath)
+	var astImport *ast.ImportSpec
+	for _, aImport := range imports {
+		if importPath == aImport.Path.Value {
+			astImport = aImport
+			break
+		}
+	}
+	if astImport == nil {
+		astImport = &ast.ImportSpec{
+			Name: &ast.Ident{Name: importName},
+			Path: &ast.BasicLit{
+				Value: importPath,
+			},
+		}
+
+		return append(imports, astImport)
+	}
+	return imports
+}
+
 type importSorter []*ast.ImportSpec
 
 func (s importSorter) Len() int {

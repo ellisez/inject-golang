@@ -15,8 +15,9 @@ type MiddleWare struct {
 
 // Router
 // @provide RouterAlias multiple
+// @import github.com/ellisez/inject-golang/examples/handler
 // @preConstruct model.NewRouterAlias
-// @postConstruct model.AfterRouterCreate
+// @postConstruct handler.AfterRouterCreate
 type Router struct {
 	MiddleWare *MiddleWare
 	Path       string
@@ -26,8 +27,4 @@ type Router struct {
 func NewRouterAlias() *Router {
 	fmt.Println("call Router.preConstruct")
 	return &Router{}
-}
-
-func AfterRouterCreate(router *Router) {
-	fmt.Println("call Router.postConstruct")
 }

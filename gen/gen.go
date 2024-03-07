@@ -13,20 +13,16 @@ import (
 func DoGen(moduleInfo *model.ModuleInfo) error {
 	genDir := filepath.Join(Mod.Path, GenPackage)
 
-	err := utils.CreateDirectoryIfNotExists(genDir)
-	if err != nil {
-		return err
-	}
-
+	var err error
 	if FlagAll || FlagSingleton {
-		err = genCtxFile(moduleInfo, genDir)
+		err = genSingletonFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
 	if FlagAll || FlagMultiple {
-		err = genConstructorFile(moduleInfo, genDir)
+		err = genMultipleFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
@@ -45,10 +41,25 @@ func DoGen(moduleInfo *model.ModuleInfo) error {
 	}
 
 	if FlagAll || FlagWeb {
+		err = genWebUtilsFile(moduleInfo, genDir)
+		if err != nil {
+			return err
+		}
+
 		err = genWebFile(moduleInfo, genDir)
 		if err != nil {
 			return err
 		}
+	}
+
+	err = genCtxFile(moduleInfo, genDir)
+	if err != nil {
+		return err
+	}
+
+	err = genFactoryFile(moduleInfo, genDir)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -209,26 +220,12 @@ func astStructDecl(name string, fields []*ast.Field) *ast.GenDecl {
 	}
 }
 
-func astImport(astFile *ast.File, importName string, importPath string) *ast.ImportSpec {
-	importPath = fmt.Sprintf(`"%s"`, importPath)
-	var astImport *ast.ImportSpec
-	for _, aImport := range astFile.Imports {
-		if importPath == aImport.Path.Value {
-			astImport = aImport
-			break
-		}
-	}
-	if astImport == nil {
-		astImport = &ast.ImportSpec{
-			Name: astIdent(importName),
-			Path: &ast.BasicLit{
-				Value: importPath,
-			},
-		}
+func uniqueImport(astFile *ast.File, importName string, importPath string) {
+	astFile.Imports = utils.UniqueImport(astFile.Imports, importName, importPath)
+}
 
-		addImportSpec(astFile, astImport)
-	}
-	return astImport
+func uniqueCtxImport(moduleInfo *model.ModuleInfo, importName string, importPath string) {
+	moduleInfo.CtxImports = utils.UniqueImport(moduleInfo.CtxImports, importName, importPath)
 }
 
 func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
@@ -241,13 +238,6 @@ func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
 		}
 	}
 	return typeExpr
-}
-
-func addImportSpec(astFile *ast.File, astImport *ast.ImportSpec) {
-	if astFile.Imports == nil {
-		astFile.Imports = make([]*ast.ImportSpec, 0)
-	}
-	astFile.Imports = append(astFile.Imports, astImport)
 }
 
 func addImportDecl(astFile *ast.File) {
@@ -273,6 +263,16 @@ func addDecl(astFile *ast.File, genDecl ast.Decl) {
 }
 
 func addFileDoc(astFile *ast.File, doc string) {
+	if astFile.Decls == nil || len(astFile.Decls) == 0 {
+		astFile.Doc = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{
+					Text: doc,
+				},
+			},
+		}
+		return
+	}
 	firstDecl := astFile.Decls[0]
 	switch firstDecl.(type) {
 	case *ast.GenDecl:

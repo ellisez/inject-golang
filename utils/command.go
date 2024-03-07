@@ -51,31 +51,7 @@ Options:
 		os.Exit(0)
 	}
 	if clean {
-		err := os.Remove(filepath.Join(GenPackage, GenCtxFilename))
-		if err != nil {
-			if !os.IsNotExist(err) {
-				Failuref("Cleaning failed, %s", err.Error())
-			}
-		}
-		err = os.Remove(filepath.Join(GenPackage, GenConstructorFilename))
-		if err != nil {
-			if !os.IsNotExist(err) {
-				Failuref("Cleaning failed, %s", err.Error())
-			}
-		}
-		err = os.Remove(filepath.Join(GenPackage, GenFuncFilename))
-		if err != nil {
-			if !os.IsNotExist(err) {
-				Failuref("Cleaning failed, %s", err.Error())
-			}
-		}
-		err = os.Remove(filepath.Join(GenPackage, GenMethodFilename))
-		if err != nil {
-			if !os.IsNotExist(err) {
-				Failuref("Cleaning failed, %s", err.Error())
-			}
-		}
-		err = os.Remove(filepath.Join(GenPackage, GenWebFilename))
+		err := os.RemoveAll(filepath.Join(GenPackage))
 		if err != nil {
 			if !os.IsNotExist(err) {
 				Failuref("Cleaning failed, %s", err.Error())

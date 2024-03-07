@@ -2,14 +2,14 @@ package gen
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/global"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
 )
 
 func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
-	recvVar := utils.FirstToLower(global.StructName)
+	recvVar := utils.FirstToLower(StructName)
 	for _, webApp := range moduleInfo.WebAppInstances {
 		for _, instance := range webApp.Middlewares {
 			params := []*ast.Field{
@@ -26,7 +26,7 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 							utils.AccessType(
 								paramInfo.Type,
 								instance.Package,
-								global.GenPackage,
+								GenPackage,
 							),
 						),
 					)
@@ -47,6 +47,7 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 			args := make([]ast.Expr, 0)
 			for _, paramInfo := range instance.Params {
+				paramInstance := paramInfo.Instance
 				switch paramInfo.Source {
 				case "ctx":
 					args = append(args, astIdent("ctx"))
@@ -55,10 +56,43 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 					args = append(args, astIdent("webCtx"))
 					break
 				case "inject":
-					args = append(args, astSelectorExpr("ctx", paramInfo.Instance))
+					injectMode := ""
+					if moduleInfo.HasSingleton(paramInstance) {
+						// [code] ctx.{{ParamInstance}}(),
+						args = append(args,
+							&ast.CallExpr{
+								Fun: astSelectorExpr(recvVar, paramInstance),
+							})
+						injectMode = "singleton"
+					}
+
+					if injectMode == "" {
+						if moduleInfo.HasWebApp(paramInstance) {
+							// [code] ctx.{{ParamInstance}}(),
+							args = append(args,
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, paramInstance),
+								})
+							injectMode = "webApp"
+						}
+					}
+
+					if injectMode == "" {
+						if moduleInfo.HasMultiple(paramInstance) {
+							// [code] ctx.New{{ParamInstance}}(),
+							args = append(args, &ast.CallExpr{
+								Fun: astSelectorExpr(recvVar, "New"+paramInstance),
+							})
+							injectMode = "multiple"
+						}
+					}
+
+					if injectMode == "" {
+						utils.Failuref("%s, \"%s\" No matching Instance, at %s()", paramInfo.Comment, paramInstance, instance.FuncName)
+					}
 					break
 				default:
-					args = append(args, astIdent(paramInfo.Instance))
+					args = append(args, astIdent(paramInstance))
 				}
 
 			}
@@ -85,26 +119,40 @@ func genMiddlewareAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				},
 			})
 
+			genDoc := &ast.Comment{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+			}
+			results := []*ast.Field{
+				astField("err", astIdent("error")),
+			}
 			funcDecl := astFuncDecl(
 				[]*ast.Field{
-					astField(recvVar, astStarExpr(astIdent(global.StructName))),
+					astField(recvVar, astStarExpr(astIdent(StructName))),
 				},
 				instance.Proxy,
 				params,
-				[]*ast.Field{
-					astField("err", astIdent("error")),
-				},
+				results,
 				stmts,
 			)
 			funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
 				{
-					Text: fmt.Sprintf("\n// %s", instance.Proxy),
+					Text: fmt.Sprintf("// %s", instance.Proxy),
 				},
-				{
-					Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
-				},
+				genDoc,
 			}}
 			addDecl(astFile, funcDecl)
+			/// interface method field
+			methodField := astField(
+				instance.Proxy,
+				&ast.FuncType{
+					Params:  &ast.FieldList{List: params},
+					Results: &ast.FieldList{List: results},
+				},
+			)
+			methodField.Comment = &ast.CommentGroup{List: []*ast.Comment{
+				genDoc,
+			}}
+			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, methodField)
 		}
 	}
 }

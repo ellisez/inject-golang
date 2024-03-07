@@ -11,9 +11,9 @@ type Config struct {
 
 // Database
 // @provide _ singleton
-// @import github.com/ellisez/inject-golang/examples/other
+// @import github.com/ellisez/inject-golang/examples/handler
 // @preConstruct model.PrepareDatabase
-// @postConstruct other.DatabaseLoaded
+// @postConstruct handler.DatabaseLoaded
 type Database struct {
 	Host     string
 	Port     uint
@@ -35,8 +35,9 @@ func PrepareDatabase() *Database {
 
 // WebApp
 // @provide WebCtxAlias
+// @import github.com/ellisez/inject-golang/examples/handler
 // @injectField Database
-// @preConstruct model.PrepareWebCtxAlias
+// @preConstruct handler.PrepareWebCtxAlias
 // @postConstruct WebCtxAliasLoaded
 type WebApp struct {
 	// @inject
@@ -46,7 +47,9 @@ type WebApp struct {
 	Routers     []*Router
 }
 
-func PrepareWebCtxAlias() *WebApp {
-	fmt.Println("call WebApp.preConstruct")
-	return &WebApp{}
+// TestLogin
+// @proxy
+// @injectParam database Database
+func (webApp *WebApp) TestLogin(database *Database) {
+	fmt.Printf("call TestLogin: %v, %v\n", webApp, database)
 }

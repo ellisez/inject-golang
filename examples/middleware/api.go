@@ -17,13 +17,13 @@ import (
 // @param paramsInt path
 // @param queryBool query
 // @param formFloat formData
-func CorsMiddleware(appCtx *ctx.Ctx, c *fiber.Ctx,
+func CorsMiddleware(appCtx ctx.Ctx, c *fiber.Ctx,
 	body *model.Config,
 	header string,
 	paramsInt int,
 	queryBool bool,
 	formFloat float64) error {
-	fmt.Printf("call CorsMiddleware: %v\n%v\n%v\n%s\n%d\n%t\n%f\n", appCtx, c, body, header, paramsInt, queryBool, formFloat)
+	fmt.Printf("call CorsMiddleware: %v, %v, %v, %s, %d, %t, %f\n", appCtx, c, body, header, paramsInt, queryBool, formFloat)
 	return cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowCredentials: true,

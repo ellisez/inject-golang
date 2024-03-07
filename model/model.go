@@ -35,7 +35,8 @@ type ModuleInfo struct {
 
 	WebAppInstances []*WebInfo
 
-	Interface []*ast.FuncDecl
+	CtxImports      []*ast.ImportSpec
+	CtxMethodFields []*ast.Field
 }
 
 func NewModuleInfo() *ModuleInfo {
@@ -45,7 +46,9 @@ func NewModuleInfo() *ModuleInfo {
 		FuncInstances:      make([]*FuncInfo, 0),
 		MethodInstances:    make([]*FuncInfo, 0),
 		WebAppInstances:    make([]*WebInfo, 0),
-		Interface:          make([]*ast.FuncDecl, 0),
+
+		CtxImports:      make([]*ast.ImportSpec, 0),
+		CtxMethodFields: make([]*ast.Field, 0),
 	}
 }
 

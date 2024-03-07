@@ -63,7 +63,7 @@ func CreateDirectoryIfNotExists(dirname string) error {
 		return err
 	}
 	if !exists {
-		err = os.Mkdir(dirname, 0755)
+		err = os.MkdirAll(dirname, 0755)
 		if err != nil {
 			return err
 		}
