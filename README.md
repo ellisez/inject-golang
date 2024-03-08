@@ -886,3 +886,33 @@ func main() {
             {{end}}
         {{end}}
 ```
+
+## 4.Usage specifications
+
+### 4.1 Package Name Specification
+
+> In order to increase the readability of the code, except for special types of packages, such as `version packages` and `application packages`, please make sure to keep the package name consistent with the directory name in all other cases.
+
+The following is the naming convention for special type packages:
+* `Version package`: The directory name format is `v[\d.]+`, with the letter v followed by a number; 
+<br/>It represents a package within a specified version range;
+<br/>The package name of the version package only allows the use of the version name and the previous directory name, such as `github.com/gofiber/fiber/v2`, and can only use `v2` or `fiber`;
+
+* `Application package`: The package is named main and serves as the program startup entry point, usually appearing in the root directory of the mod module.
+<br/>Golang stipulates that main cannot be imported, so even if global variables are defined in the main package, it cannot be accessed by other packages;
+<br/>Although the application package cannot be imported, the system still reads the annotations inside the package;
+
+
+### 4.2 Circular dependency problem
+
+Golang prohibits two packages from importing each other. 
+
+> To avoid this, we should adhere to the principle of `separating declaration and invocation` in our design.
+
+The specific operation is as follows:
+* Two types of packages should be prepared, one for declaration and the other for calling; 
+<br/>Call packages can import dependent import declaration packages, but declaration packages prohibit the import of call packages;
+
+* The `declaration package` should include annotation codes such as `@provide`, `@webAppProvide`, and `@preConstruct`, which provide the rules for creating instances; <br/>Recommend the package name as `model`;
+* The `call package` should include annotation codes such as `@postConstruct`, `@proxy`, `@middleware`, and `@router`, which provide function callbacks for dependency injection; <br/>Recommended package name is `handler`;
+
