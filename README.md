@@ -3,13 +3,13 @@ Provide container of DI(Dependency Injection) for golang.
 
 Language: English [中文](README_cn.md) 
 
-### 1. Install and Run
+### 1. Install and Operation
 
 ```shell
 go install github.com/ellisez/inject-golang
 ```
-### 1.1. use go generate
-> By default, scan the current module and generate all annotations.
+### 1.1. Configuration generator
+> By default, the current module is scanned and all annotations are generated.
 ```go
 package main
 
@@ -22,7 +22,7 @@ func main() {
 	ctx.New()
 }
 ```
-> Use '- m' to specify that only partial annotations are generated, support setting multiple, separated by commas, and optional values such as 'singleton','multiple','fun', and 'web'
+> Use `-m` to specify that only partial annotations are generated, support setting multiple, separated by commas, and optional values such as 'singleton','multiple','fun', and 'web'
 
 ```go
 //go:generate inject-golang -m singleton,multiple
@@ -31,9 +31,9 @@ func main() {
 }
 ```
 
-> Can specify scanning modules: supports multiple, defaults to the current module, external modules must be imported.
+> Can specify scanning modules: supports multiple modules, defaults to the current module, external modules must be imported.
 >
-> "." indicates current package, The system already supports go.work.
+> Symbol "." represents current package, The system already supports `go.work`.
 
 ```go
 //go:generate inject-golang -m singleton,web github.com/ellisez/inject-golang/examples-work .
@@ -45,7 +45,7 @@ func main() {
 
 To learn more about commands, please run `inject-golang -h`.
 
-### 1.2. Run
+### 1.2. Run generator
 ```shell
 go generate -run inject-golang
 ```
@@ -55,8 +55,8 @@ go generate -run inject-golang
 inject-glang --clean
 ```
 
-## 2. Annotates
-### 2.1. Struct Annotate
+## 2. Annotate
+### 2.1. Struct annotate
 ```
 // @provide <Instance, default structName> <singleton default|multiple>
 // @import *<Path, required> <Alias>
@@ -78,11 +78,11 @@ inject-glang --clean
 >
 >
 
-### 2.2. Field Annotate in struct
+### 2.2. Field annotate in struct
 ```
 // @inject <Instance，default fieldName>
 ```
-### 2.3. Func Annotate (use for all func)
+### 2.3. Func annotate (use for all functions)
 ```
 // @proxy <Instance，default funcName>
 // @import *<Path, required> <Alias>
@@ -101,7 +101,7 @@ inject-glang --clean
 >
 > The parameters that have not been dependency injected will be retained in the generated proxy function;
 
-### 2.4. WebApp Annotate (web server provided)
+### 2.4. WebApp annotate (web server provided)
 ```
 // @webAppProvide <WebApp，default WebApp>
 // @static *<Path, required> *<Dirname, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
@@ -114,7 +114,7 @@ inject-glang --clean
 > `@static` is used to configure static resource files, such as PNG, CSS, JS, HTML, etc
 
 
-### 2.5. Router Annotate (like swag)
+### 2.5. Router annotate (like swag)
 ```
 // @route *<Path, required> [Method: get|post]
 // @webApp <WebApp，default WebApp>
@@ -141,7 +141,7 @@ inject-glang --clean
 > <b>Note: `@router` requires that each parameter must be configured with dependency injection</b>
 
 
-### 2.6. Middleware Annotate
+### 2.6. Middleware annotate
 ```
 // @middleware *<Path, required>
 // @webApp <WebApp，default WebApp>
@@ -178,7 +178,7 @@ func PrepareWebCtxAlias() *WebApp {
     return &WebApp{}
 }
 ```
-> postConstruct function, Requirement the parameter must be of the original structure type.
+> postConstruct function, Requiring the parameter must be of the original structure type.
 
 ```go
 func WebCtxAliasLoaded(webApp *WebApp) {
@@ -199,7 +199,7 @@ func WebCtxAliasLoaded(ctx *ctx.Ctx/*Special inject*/, webApp *WebApp/*uninjecte
 	ctx.TestLogin(webApp)
 }
 ```
-Generated Function
+Generated objective Function
 ```go
 func (ctx *Ctx/*Same name function in Ctx*/) WebCtxAliasLoaded(WebApp *model.WebApp/*Keep uninjected*/) {
 	model.WebCtxAliasLoaded(ctx/*Special inject*/, WebApp, ctx.Database/*param inject*/)
@@ -219,7 +219,7 @@ func (ctx *Ctx/*Same name function in Ctx*/) WebCtxAliasLoaded(WebApp *model.Web
 > At this point, the original function obtains the injected parameters.
 >
 
-### 3.3. Web generated
+### 3.3. Web generated code
 Annotation configuration
 ```go
 // ConfigureWebApp
@@ -262,7 +262,7 @@ func LoginController(username string, password string) error {
 return nil
 }
 ```
-Generating
+Generating code
 ```go
 func (ctx *Ctx) WebAppStartup1(extraParam int) error {
     ctx.WebApp.Static("/images", "")
@@ -333,7 +333,7 @@ func main() {
 > For more tips on using webCtx, you can read ` * fiber Ctx ` related documents.
 > 
 
-### 3.4. Generated Directory
+### 3.4. Directory structure
 ```
 /ctx
     |- gen_singleton.go
