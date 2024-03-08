@@ -45,5 +45,5 @@ func main() {
 	}
 
 	utils.Success("Successful!")
-	fmt.Println(filepath.Join(Mod.Path, GenPackage), "has generated")
+	fmt.Println(filepath.Join(Mod.Path, GenPackage), "generated")
 }

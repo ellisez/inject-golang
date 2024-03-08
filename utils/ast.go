@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
+	"go/token"
 	"regexp"
 	"sort"
 	"strings"
@@ -255,7 +256,7 @@ func IsBasicAstType(typeExpr ast.Expr) bool {
 	return true
 }
 
-func UniqueImport(imports []*ast.ImportSpec, importName string, importPath string) []*ast.ImportSpec {
+func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath string) []*ast.ImportSpec {
 	importPath = fmt.Sprintf(`"%s"`, importPath)
 	var astImport *ast.ImportSpec
 	for _, aImport := range imports {
@@ -293,7 +294,54 @@ func (s importSorter) Swap(x int, y int) {
 	s[y] = old
 }
 
-func SortImports(importSpecs []*ast.ImportSpec) {
+func SortImports(astFile *ast.File) {
+	importSpecs := astFile.Imports
 	var sorter importSorter = importSpecs
 	sort.Sort(sorter)
+}
+func UnusedImports(astFile *ast.File) {
+	var imports []*ast.ImportSpec
+	addImport := func(spec *ast.ImportSpec) {
+		for _, importSpec := range imports {
+			if importSpec.Path == spec.Path {
+				return
+			}
+		}
+		imports = append(imports, spec)
+	}
+	for _, spec := range astFile.Imports {
+		for _, ident := range astFile.Unresolved {
+			specName := spec.Name
+			if specName != nil {
+				if ident.String() == specName.String() {
+					addImport(spec)
+				}
+			} else {
+				specPath := spec.Path.Value
+				importPath := specPath[1 : len(specPath)-1]
+				if ok, _ := IsAllowedPackageName(importPath, ident.String()); ok {
+					addImport(spec)
+				}
+			}
+		}
+	}
+	astFile.Imports = imports
+
+	// copy to genDecl
+	specs := make([]ast.Spec, len(imports))
+	for i, spec := range imports {
+		specs[i] = spec
+	}
+
+	// find import genDecl
+	for _, decl := range astFile.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if genDecl.Tok == token.IMPORT {
+			genDecl.Specs = specs
+		}
+		break
+	}
 }

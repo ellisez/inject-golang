@@ -25,8 +25,7 @@ func annotateParse(text string) []string {
 
 type Parser struct {
 	*model.Mod
-	Result  *model.ModuleInfo
-	FileSet *token.FileSet
+	Result *model.ModuleInfo
 }
 
 func ModParse(dirname string) (*model.Mod, error) {
@@ -71,7 +70,7 @@ func ModParse(dirname string) (*model.Mod, error) {
 			if err != nil {
 				return nil, err
 			}
-			goDotWork, err := modfile.ParseWork("go.goDotWork", bytes, nil)
+			goDotWork, err := modfile.ParseWork("go.work", bytes, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -105,7 +104,7 @@ func (p *Parser) DoParse(filename string) error {
 
 	ext := filepath.Ext(filename)
 	if ext == ".go" {
-		astFile, err := parser.ParseFile(p.FileSet, filename, nil, parser.ParseComments)
+		astFile, err := parser.ParseFile(p.Result.FileSet, filename, nil, parser.ParseComments)
 		if err != nil {
 			utils.Failure(err.Error())
 		}
@@ -124,6 +123,11 @@ func (p *Parser) DoParse(filename string) error {
 		info.Dirname = dirname
 		info.Package = astFile.Name.String()
 		info.Import = importPackage
+
+		isAllow, packageType := utils.IsAllowedPackageName(info.Import, info.Package)
+		if !isAllow {
+			utils.Failuref("Detected %s Package, Illegal package name \"%s\", at %s", packageType, info.Package, info.Dirname)
+		}
 
 		decls := astFile.Decls
 

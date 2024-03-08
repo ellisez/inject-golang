@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -88,17 +89,17 @@ func JoinPath(p string, j ...string) string {
 	return p
 }
 
-func DirnameOfPackage(packageName string) (string, error) {
-	if strings.HasPrefix(packageName, ".") {
-		return JoinPath(packageName), nil
+func DirnameOfImportPath(importPath string) (string, error) {
+	if strings.HasPrefix(importPath, ".") {
+		return JoinPath(importPath), nil
 	}
 
-	if filepath.IsAbs(packageName) {
-		return packageName, nil
+	if filepath.IsAbs(importPath) {
+		return importPath, nil
 	}
 
 	if Mod.Work != nil {
-		p := Mod.Work[packageName]
+		p := Mod.Work[importPath]
 		if p != "" {
 			return p, nil
 		}
@@ -106,13 +107,13 @@ func DirnameOfPackage(packageName string) (string, error) {
 
 	var version string
 	for p, v := range Mod.Require {
-		if p == packageName {
+		if p == importPath {
 			version = v
 			break
 		}
 	}
 	if version == "" {
-		return "", fmt.Errorf("%s is not found in go.mod, try to \"go get %s\"", packageName, packageName)
+		return "", fmt.Errorf("%s is not found in go.mod, try to \"go get %s\"", importPath, importPath)
 	}
 
 	if goModCache == "" {
@@ -127,5 +128,23 @@ func DirnameOfPackage(packageName string) (string, error) {
 		goModCache = strings.TrimSuffix(goModCache, "\n")
 	}
 
-	return JoinPath(goModCache, packageName+"@"+version), nil
+	return JoinPath(goModCache, importPath+"@"+version), nil
+}
+
+func IsAllowedPackageName(importPath string, packageName string) (bool, string) {
+	if packageName == "main" {
+		return true, "main"
+	}
+	baseName := filepath.Base(importPath)
+	if packageName == baseName {
+		return true, "normal"
+	}
+	if regexp.MustCompile(`^v[\d.]+$`).MatchString(baseName) {
+		versionPackage := filepath.Base(filepath.Dir(importPath))
+		if packageName == versionPackage {
+			return true, "version"
+		}
+		return false, "version"
+	}
+	return false, "normal"
 }

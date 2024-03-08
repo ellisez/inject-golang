@@ -23,9 +23,5 @@ type FuncInfo struct {
 }
 
 func NewFuncInfo() *FuncInfo {
-	return &FuncInfo{
-		Imports: make([]*ImportInfo, 0),
-		Params:  make([]*FieldInfo, 0),
-		Results: make([]*FieldInfo, 0),
-	}
+	return &FuncInfo{}
 }

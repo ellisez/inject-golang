@@ -5,23 +5,20 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/parse"
 	"github.com/ellisez/inject-golang/utils"
-	"go/token"
 	"os"
 	"path/filepath"
 )
 
 func DoScan() (*model.ModuleInfo, error) {
 	moduleInfo := model.NewModuleInfo()
-	fileSet := token.NewFileSet()
 
 	for _, directory := range ScanDirectories {
-		directory, err := utils.DirnameOfPackage(directory)
+		directory, err := utils.DirnameOfImportPath(directory)
 		if err != nil {
 			return nil, err
 		}
 		p := &parse.Parser{
-			Result:  moduleInfo,
-			FileSet: fileSet,
+			Result: moduleInfo,
 		}
 
 		p.Mod, err = parse.ModParse(directory)

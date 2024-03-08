@@ -9,12 +9,7 @@ type RouterParam struct {
 }
 
 func NewRouterParam() *RouterParam {
-	return &RouterParam{
-		QueryParams:  make([]*FieldInfo, 0),
-		PathParams:   make([]*FieldInfo, 0),
-		HeaderParams: make([]*FieldInfo, 0),
-		FormParams:   make([]*FieldInfo, 0),
-	}
+	return &RouterParam{}
 }
 
 // MiddlewareInfo
@@ -60,7 +55,6 @@ func NewRouterInfoFromFuncInfo(funInfo *FuncInfo) *RouterInfo {
 		FuncInfo:    funInfo,
 		RouterParam: NewRouterParam(),
 		WebApp:      "WebApp",
-		Methods:     make([]string, 0),
 	}
 }
 
@@ -74,9 +68,7 @@ type StaticResource struct {
 }
 
 func NewStaticResource() *StaticResource {
-	return &StaticResource{
-		Features: make([]string, 0),
-	}
+	return &StaticResource{}
 }
 
 // WebInfo
@@ -96,21 +88,15 @@ func NewWebInfo() *WebInfo {
 	funInfo := NewFuncInfo()
 	funInfo.Proxy = "WebAppStartup"
 	return &WebInfo{
-		FuncInfo:    funInfo,
-		WebApp:      "WebApp",
-		Statics:     make([]*StaticResource, 0),
-		Middlewares: make([]*MiddlewareInfo, 0),
-		Routers:     make([]*RouterInfo, 0),
+		FuncInfo: funInfo,
+		WebApp:   "WebApp",
 	}
 }
 
 func NewWebInfoFromFunc(funInfo *FuncInfo) *WebInfo {
 	funInfo.Proxy = "WebAppStartup"
 	return &WebInfo{
-		FuncInfo:    funInfo,
-		WebApp:      "WebApp",
-		Statics:     make([]*StaticResource, 0),
-		Middlewares: make([]*MiddlewareInfo, 0),
-		Routers:     make([]*RouterInfo, 0),
+		FuncInfo: funInfo,
+		WebApp:   "WebApp",
 	}
 }

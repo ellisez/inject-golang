@@ -220,12 +220,9 @@ func astStructDecl(name string, fields []*ast.Field) *ast.GenDecl {
 	}
 }
 
-func uniqueImport(astFile *ast.File, importName string, importPath string) {
-	astFile.Imports = utils.UniqueImport(astFile.Imports, importName, importPath)
-}
-
-func uniqueCtxImport(moduleInfo *model.ModuleInfo, importName string, importPath string) {
-	moduleInfo.CtxImports = utils.UniqueImport(moduleInfo.CtxImports, importName, importPath)
+func addImport(astFile *ast.File, moduleInfo *model.ModuleInfo, importName string, importPath string) {
+	astFile.Imports = utils.AddUniqueImport(astFile.Imports, importName, importPath)
+	moduleInfo.CtxImports = utils.AddUniqueImport(moduleInfo.CtxImports, importName, importPath)
 }
 
 func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
@@ -240,57 +237,9 @@ func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
 	return typeExpr
 }
 
-func addImportDecl(astFile *ast.File) {
-	utils.SortImports(astFile.Imports)
-	specs := make([]ast.Spec, len(astFile.Imports))
-	for i, spec := range astFile.Imports {
-		specs[i] = spec
-	}
-
-	genDecl := &ast.GenDecl{
-		Tok:   token.IMPORT,
-		Specs: specs,
-	}
-
-	addDecl(astFile, genDecl)
-}
-
 func addDecl(astFile *ast.File, genDecl ast.Decl) {
 	if astFile.Decls == nil {
 		astFile.Decls = make([]ast.Decl, 0)
 	}
 	astFile.Decls = append(astFile.Decls, genDecl)
-}
-
-func addFileDoc(astFile *ast.File, doc string) {
-	if astFile.Decls == nil || len(astFile.Decls) == 0 {
-		astFile.Doc = &ast.CommentGroup{
-			List: []*ast.Comment{
-				{
-					Text: doc,
-				},
-			},
-		}
-		return
-	}
-	firstDecl := astFile.Decls[0]
-	switch firstDecl.(type) {
-	case *ast.GenDecl:
-		firstDecl.(*ast.GenDecl).Doc = &ast.CommentGroup{
-			List: []*ast.Comment{
-				{
-					Text: doc,
-				},
-			},
-		}
-		break
-	case *ast.FuncDecl:
-		firstDecl.(*ast.FuncDecl).Doc = &ast.CommentGroup{
-			List: []*ast.Comment{
-				{
-					Text: doc,
-				},
-			},
-		}
-	}
 }

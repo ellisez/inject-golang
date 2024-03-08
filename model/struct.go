@@ -22,10 +22,7 @@ type StructInfo struct {
 }
 
 func NewStructInfo() *StructInfo {
-	return &StructInfo{
-		Imports: make([]*ImportInfo, 0),
-		Fields:  make([]*FieldInfo, 0),
-	}
+	return &StructInfo{}
 }
 
 type ImportInfo struct {

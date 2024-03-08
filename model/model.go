@@ -2,6 +2,7 @@ package model
 
 import (
 	"go/ast"
+	"go/token"
 )
 
 type PackageInfo struct {
@@ -28,6 +29,7 @@ type Mod struct {
 }
 
 type ModuleInfo struct {
+	FileSet            *token.FileSet
 	SingletonInstances []*StructInfo
 	MultipleInstances  []*StructInfo
 	FuncInstances      []*FuncInfo
@@ -41,14 +43,7 @@ type ModuleInfo struct {
 
 func NewModuleInfo() *ModuleInfo {
 	return &ModuleInfo{
-		SingletonInstances: make([]*StructInfo, 0),
-		MultipleInstances:  make([]*StructInfo, 0),
-		FuncInstances:      make([]*FuncInfo, 0),
-		MethodInstances:    make([]*FuncInfo, 0),
-		WebAppInstances:    make([]*WebInfo, 0),
-
-		CtxImports:      make([]*ast.ImportSpec, 0),
-		CtxMethodFields: make([]*ast.Field, 0),
+		FileSet: token.NewFileSet(),
 	}
 }
 

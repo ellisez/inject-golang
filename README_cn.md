@@ -332,7 +332,7 @@ func main() {
 ### 3.4. 目录结构
 ```
 /ctx
-    |- gen_ctx.go
+    |- gen_singleton.go
         --------------------------------
         # gen segment: Struct #
         --------------------------------
@@ -366,7 +366,11 @@ func main() {
                     {{if FieldInstance == "Ctx"}}
                     ctx.{{Instance}}.{{FieldInstance}} = ctx
                     {{else}}
-                    ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}
+                        {{if IsSingleton}}
+                        ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}()
+                        {{else if IsMultiple}}
+                        ctx.{{Instance}}.{{FieldInstance}} = ctx.New{{StructInstance}}()
+                        {{end}}
                     {{end}}
                 {{end}}
             {{end}}
@@ -380,16 +384,12 @@ func main() {
             {{end}}
             return ctx
         }
-    |- gen_constructor.go
+    |- gen_multiple.go
         ------------------------------------
         # gen segment: Multiple instance #
         ------------------------------------
         {{range MultipleInstances}}
-            func (ctx *Ctx) New{{Instance}}(
-                {{range NormalFields}}
-                {{FieldInstance}} {{FieldType}},
-                {{end}}
-            ) *{{Type}} {
+            func (ctx *Ctx) New{{Instance}}() *{{Type}} {
                 {{if PreConstruct}}
                     {{Instance}} := {{PreConstruct}}()
                 {{else}}
@@ -400,10 +400,12 @@ func main() {
                         {{if FieldInstance == "Ctx"}}
                         {{Instance}}.{{FieldName}} = ctx
                         {{else}}
-                        {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}
+                            {{if IsSingleton}}
+                            {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}()
+                            {{else if IsMultiple}}
+                            {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+                            {{end}}
                         {{end}}
-                    {{else}}
-                        {{Instance}}.{{FieldName}} = {{FieldInstance}}
                     {{end}}
                 {{end}}
                 
@@ -436,7 +438,11 @@ func main() {
                             {{if ParamInstance == "Ctx"}}
                             ctx,
                             {{else}}
-                            ctx.{{ParamInstance}},
+                                {{if IsSingleton}}
+                                ctx.{{ParamInstance}}(),
+                                {{else if IsMultiple}}
+                                ctx.New{{ParamInstance}}(),
+                                {{end}}
                             {{end}}
                         {{else}}
                             {{ParamInstance}},
@@ -471,7 +477,11 @@ func main() {
                         {{if ParamInstance == "Ctx"}}
                         ctx,
                         {{else}}
-                        ctx.{{ParamInstance}},
+                            {{if IsSingleton}}
+                            ctx.{{ParamInstance}}(),
+                            {{else if IsMultiple}}
+                            ctx.New{{ParamInstance}}(),
+                            {{end}}
                         {{end}}
                     {{else}}
                         {{ParamInstance}},
@@ -498,7 +508,7 @@ func main() {
             {{end}}
         ) error {
             {{range Statics}}
-            ctx.{{WebApp}}.Static({{Path}}, {{Dirname}}, 
+            ctx.{{WebApp}}().Static({{Path}}, {{Dirname}}, 
                 {{if Features || Index || MaxAge}}
                 fiber.Static{
                     {{range Features}}
@@ -515,12 +525,12 @@ func main() {
             )
             {{end}}
             {{range Middlewares}}
-            ctx.{{WebApp}}.Group({{Path}}, ctx.{{Proxy}})
+            ctx.{{WebApp}}().Group({{Path}}, ctx.{{Proxy}})
             {{end}}
             
             {{range Routers}}
                 {{range Methods}}
-                ctx.{{WebApp}}.{{Method}}({{Path}}, ctx.{{Proxy}})
+                ctx.{{WebApp}}().{{Method}}({{Path}}, ctx.{{Proxy}})
                 {{end}}
             {{end}}
             
@@ -530,7 +540,11 @@ func main() {
                     {{if param.Source == "ctx"}}
                         ctx,
                     {{else if param.Source == "inject"}}
-                        ctx.{{ParamInstance}},
+                        {{if IsSingleton}}
+                        ctx.{{ParamInstance}}(),
+                        {{else if IsMultiple}}
+                        ctx.New{{ParamInstance}}(),
+                        {{end}}
                     {{else}}
                         {{ParamInstance}},
                     {{end}}
@@ -540,7 +554,7 @@ func main() {
                 return err
             }
             {{end}}
-            return webApp.Listen(fmt.Sprintf("%s:%d", host, port))
+            return ctx.{{WebApp}}().Listen(fmt.Sprintf("%s:%d", host, port))
         }
         {{end}}
         
@@ -560,12 +574,12 @@ func main() {
             ) (err error) {
                 {{if BodyParam}}
                     {{if Type == "[]btye"}}
-                        {{ParamInstance}} := Body(webCtx)
+                        {{ParamInstance}} := utils.Body(webCtx)
                     {{else if Type == "string"}}
-                        {{ParamInstance}} := BodyString(webCtx)
+                        {{ParamInstance}} := utils.BodyString(webCtx)
                     {{else}}
                         {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
-                        err := BodyParser(webCtx, {{ParamInstance}})
+                        err := utils.BodyParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -574,25 +588,25 @@ func main() {
                 
                 {{range _, param := HeaderParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := Header(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.Header(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := HeaderInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := HeaderBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := HeaderFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := HeaderParser(webCtx, {{ParamInstance}})
+                        err := utils.HeaderParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -601,25 +615,52 @@ func main() {
                 
                 {{range _, param := QueryParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := Query(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.Query(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := QueryInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := QueryBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := QueryFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := QueryParser(webCtx, {{ParamInstance}})
+                        err := utils.QueryParser(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{end}}
+                {{end}}
+                
+                {{range _, param := PathParams}}
+                    {{if Type == "string"}}
+                        {{ParamInstance}} := utils.Params(webCtx, {{ParamInstance}})
+                    {{else if Type == "int"}}
+                        {{ParamInstance}}, err := utils.ParamsInt(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else if Type == "bool"}}
+                        {{ParamInstance}}, err := utils.ParamsBool(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else if Type == "float64"}}
+                        {{ParamInstance}}, err := utils.ParamsFloat(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else}}
+                        {{ParamInstance}} := &model.Config{}
+                        err := utils.ParamsParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -628,30 +669,30 @@ func main() {
                 
                 {{range _, param := FormParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := FormString(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.FormString(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := FormInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := FormBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := FormFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "file"}}
-                        {{ParamInstance}}, err := FormFile(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormFile(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := FormParser(webCtx, {{ParamInstance}})
+                        err := utils.FormParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -665,7 +706,11 @@ func main() {
                         {{else if param.Source == "webCtx"}}
                             webCtx,
                         {{else if param.Source == "inject"}}
-                            ctx.{{ParamInstance}},
+                            {{if IsSingleton}}
+                            ctx.{{ParamInstance}}(),
+                            {{else if IsMultiple}}
+                            ctx.New{{ParamInstance}}(),
+                            {{end}}
                         {{else}}
                             {{param.Instance}},
                         {{end}}
@@ -691,12 +736,12 @@ func main() {
             ) (err error) {
                 {{if BodyParam}}
                     {{if Type == "[]btye"}}
-                        {{ParamInstance}} := Body(webCtx)
+                        {{ParamInstance}} := utils.Body(webCtx)
                     {{else if Type == "string"}}
-                        {{ParamInstance}} := BodyString(webCtx)
+                        {{ParamInstance}} := utils.BodyString(webCtx)
                     {{else}}
                         {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
-                        err := BodyParser(webCtx, {{ParamInstance}})
+                        err := utils.BodyParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -705,25 +750,25 @@ func main() {
                 
                 {{range _, param := HeaderParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := Header(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.Header(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := HeaderInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := HeaderBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := HeaderFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.HeaderFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := HeaderParser(webCtx, {{ParamInstance}})
+                        err := utils.HeaderParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -732,25 +777,52 @@ func main() {
                 
                 {{range _, param := QueryParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := Query(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.Query(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := QueryInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := QueryBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := QueryFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.QueryFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := QueryParser(webCtx, {{ParamInstance}})
+                        err := utils.QueryParser(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{end}}
+                {{end}}
+                
+                {{range _, param := PathParams}}
+                    {{if Type == "string"}}
+                        {{ParamInstance}} := utils.Params(webCtx, {{ParamInstance}})
+                    {{else if Type == "int"}}
+                        {{ParamInstance}}, err := utils.ParamsInt(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else if Type == "bool"}}
+                        {{ParamInstance}}, err := utils.ParamsBool(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else if Type == "float64"}}
+                        {{ParamInstance}}, err := utils.ParamsFloat(webCtx, {{ParamInstance}})
+                        if err != nil {
+                            return err
+                        }
+                    {{else}}
+                        {{ParamInstance}} := &model.Config{}
+                        err := utils.ParamsParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -759,30 +831,30 @@ func main() {
                 
                 {{range _, param := FormParams}}
                     {{if Type == "string"}}
-                        {{ParamInstance}} := FormString(webCtx, {{ParamInstance}})
+                        {{ParamInstance}} := utils.FormString(webCtx, {{ParamInstance}})
                     {{else if Type == "int"}}
-                        {{ParamInstance}}, err := FormInt(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormInt(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := FormBool(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormBool(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := FormFloat(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormFloat(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else if Type == "file"}}
-                        {{ParamInstance}}, err := FormFile(webCtx, {{ParamInstance}})
+                        {{ParamInstance}}, err := utils.FormFile(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
                     {{else}}
                         {{ParamInstance}} := &model.Config{}
-                        err := FormParser(webCtx, {{ParamInstance}})
+                        err := utils.FormParser(webCtx, {{ParamInstance}})
                         if err != nil {
                             return err
                         }
@@ -796,7 +868,11 @@ func main() {
                         {{else if param.Source == "webCtx"}}
                             webCtx,
                         {{else if param.Source == "inject"}}
-                            ctx.{{ParamInstance}},
+                            {{if IsSingleton}}
+                            ctx.{{ParamInstance}}(),
+                            {{else if IsMultiple}}
+                            ctx.New{{ParamInstance}}(),
+                            {{end}}
                         {{else}}
                             {{param.Instance}},
                         {{end}}
@@ -806,3 +882,20 @@ func main() {
             {{end}}
         {{end}}
 ```
+## 4. 使用规范
+
+### 4.1. 包名规范
+> 为了增加代码的可读性, 除了特殊类型的包, 如:`版本包`和`应用包`等之外, 其他情况下请务必保持包名与目录名一致。
+
+下面是特殊类型包的命名规范:
+* `版本包`：目录名格式为`v[\d.]+`, 字母v后跟数字; 它表示指定版本范围的包; <br/>`版本包`的包名只允许使用版本名和前一个的目录名, 如`github.com/gofiber/fiber/v2`, 只能使用`v2`或`fiber`
+* `应用包`: 包名为`main`, 作为程序启动入口, 一般出现在mod模块的根目录. <br/>golang规定`main`不能被import导入, 所以main包即使定义了全局变量也无法被其他包访问;<br/>虽然`应用包`不能被import, 但是系统仍然会读取包内的注解.
+
+### 4.2. 循环依赖问题
+
+golang禁止两个包互相import导入, 为了避免它, 在设计上我们应当遵守<b>"声明与调用分离"</b>这一原则. 
+
+具体做法如下:
+* 应当准备两类包, 一类负责声明包, 另一类负责调用包; 调用包可以import依赖导入声明包, 但声明包禁止导入调用包;
+* 声明包应当包含`@provide`,`@webAppProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
+* 调用包应当包含`@postConstruct`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
