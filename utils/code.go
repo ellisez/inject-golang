@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-func FixErrors(filename string, astFile *ast.File, moduleInfo *model.ModuleInfo, doc string) (*ast.File, error) {
+func OptimizeCode(filename string, astFile *ast.File, moduleInfo *model.ModuleInfo, doc string) (*ast.File, error) {
 	if astFile.Imports != nil {
 		specs := make([]ast.Spec, len(astFile.Imports))
 		for i, importSpec := range astFile.Imports {
