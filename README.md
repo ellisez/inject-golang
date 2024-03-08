@@ -909,7 +909,7 @@ Golang prohibits two packages from importing each other.
 
 > To avoid this, we should adhere to the principle of `separating declaration and invocation` in our design.
 
-The specific operation is as follows:
+The specific actions are as follows:
 * Two types of packages should be prepared, one for declaration and the other for calling; 
 <br/>Call packages can import dependent import declaration packages, but declaration packages prohibit the import of call packages;
 
