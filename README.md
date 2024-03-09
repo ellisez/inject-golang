@@ -916,3 +916,11 @@ The specific actions are as follows:
 * The `declaration package` should include annotation codes such as `@provide`, `@webAppProvide`, and `@preConstruct`, which provide the rules for creating instances; <br/>Recommend the package name as `model`;
 * The `call package` should include annotation codes such as `@postConstruct`, `@proxy`, `@middleware`, and `@router`, which provide function callbacks for dependency injection; <br/>Recommended package name is `handler`;
 
+4.3 Private attribute injection specification
+
+> The system supports dependency injection on the private properties of the structure, which means that the character segments marked with the annotations `@inject` and `@injectField` are private fields;
+>
+> The default matching rule is that the Getter function capitalizes the first letter of the field name, and the Setter function prefixes the field name with the 'Set' prefix.
+> For example: `@inputFieldA`, The Getter is `Field()`, The Setter is `SetField()`.
+>
+> The system also allows custom Getter and Setter functions, which only need to be configured on the `@inject` or `@injectField` annotations.
