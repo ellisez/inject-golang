@@ -100,50 +100,101 @@ func genMultipleNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			))
 		}
 		for _, field := range instance.Fields {
+			fieldName := field.Name
 			fieldInstance := field.Instance
 			switch field.Source {
 			case "ctx":
-				// [code] {{Instance}}.{{FieldName}} = ctx
-				stmts = append(stmts, astAssignStmt(
-					astSelectorExpr(instanceVar, fieldInstance),
-					astIdent(recvVar),
-				))
+				if utils.IsFirstLower(fieldName) {
+					// [code] {{Instance}}.{{Field.Setter}}(ctx)
+					fieldSetter := utils.FieldSetter(field)
+					stmts = append(stmts, &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: astSelectorExpr(instanceVar, fieldSetter),
+							Args: []ast.Expr{
+								astIdent(recvVar),
+							},
+						},
+					})
+				} else {
+					// [code] {{Instance}}.{{FieldName}} = ctx
+					stmts = append(stmts, astAssignStmt(
+						astSelectorExpr(instanceVar, fieldName),
+						astIdent(recvVar),
+					))
+				}
 				break
 			case "inject":
 				injectMode := ""
 				if moduleInfo.HasSingleton(fieldInstance) {
-					// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}()
-					stmts = append(stmts, astAssignStmt(
-						astSelectorExpr(instanceVar, fieldInstance),
-						&ast.CallExpr{
-							Fun: astSelectorExpr(recvVar, fieldInstance),
-						},
-					))
+					if utils.IsFirstLower(fieldName) {
+						// [code] {{Instance}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+						fieldSetter := utils.FieldSetter(field)
+						stmts = append(stmts, &ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun: astSelectorExpr(instanceVar, fieldSetter),
+								Args: []ast.Expr{
+									&ast.CallExpr{
+										Fun: astSelectorExpr(recvVar, fieldInstance),
+									},
+								},
+							},
+						})
+					} else {
+						// [code] {{Instance}}.{{Field.Name}} = ctx.{{Field.Instance}}()
+						stmts = append(stmts, astAssignStmt(
+							astSelectorExpr(instanceVar, fieldName),
+							&ast.CallExpr{
+								Fun: astSelectorExpr(recvVar, fieldInstance),
+							},
+						))
+					}
 					injectMode = "singleton"
 				}
 
 				if injectMode == "" {
 					if moduleInfo.HasWebApp(fieldInstance) {
-						// [code] {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}()
-						stmts = append(stmts, astAssignStmt(
-							astSelectorExpr(instanceVar, fieldInstance),
-							&ast.CallExpr{
-								Fun: astSelectorExpr(recvVar, fieldInstance),
-							},
-						))
+						if utils.IsFirstLower(fieldName) {
+							// [code] {{Instance}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+							fieldSetter := utils.FieldSetter(field)
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldSetter),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, fieldInstance),
+								},
+							))
+						} else {
+							// [code] {{Instance}}.{{Field.Name}} = ctx.{{Field.Instance}}()
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldName),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, fieldInstance),
+								},
+							))
+						}
 						injectMode = "webApp"
 					}
 				}
 
 				if injectMode == "" {
 					if moduleInfo.HasMultiple(fieldInstance) {
-						// [code] {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
-						stmts = append(stmts, astAssignStmt(
-							astSelectorExpr(instanceVar, fieldInstance),
-							&ast.CallExpr{
-								Fun: astSelectorExpr(recvVar, "New"+fieldInstance),
-							},
-						))
+						if utils.IsFirstLower(fieldName) {
+							// [code] {{Instance}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
+							fieldSetter := utils.FieldSetter(field)
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldSetter),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, "New"+fieldInstance),
+								},
+							))
+						} else {
+							// [code] {{Instance}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
+							stmts = append(stmts, astAssignStmt(
+								astSelectorExpr(instanceVar, fieldInstance),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(recvVar, "New"+fieldInstance),
+								},
+							))
+						}
 						injectMode = "multiple"
 					}
 				}

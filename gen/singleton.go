@@ -215,11 +215,24 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			fieldInstance := field.Instance
 			switch field.Source {
 			case "ctx":
-				// [code] ctx.{{PrivateName}}.{{Field.Name}} = ctx
-				assignStmts = append(assignStmts, astAssignStmt(
-					astSelectorExprRecur(structFieldAst, fieldName),
-					astIdent(varName),
-				))
+				if utils.IsFirstLower(fieldName) {
+					// [code] ctx.{{PrivateName}}.{{Field.Setter}}(ctx)
+					fieldSetter := utils.FieldSetter(field)
+					assignStmts = append(assignStmts, &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: astSelectorExprRecur(structFieldAst, fieldSetter),
+							Args: []ast.Expr{
+								astIdent(varName),
+							},
+						},
+					})
+				} else {
+					// [code] ctx.{{PrivateName}}.{{Field.Name}} = ctx
+					assignStmts = append(assignStmts, astAssignStmt(
+						astSelectorExprRecur(structFieldAst, fieldName),
+						astIdent(varName),
+					))
+				}
 				break
 			case "inject":
 				injectMode := ""
@@ -276,7 +289,7 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 				if injectMode == "" {
 					if moduleInfo.HasMultiple(fieldInstance) {
 						if utils.IsFirstLower(fieldName) {
-							// [code] {{PrivateName}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
+							// [code] ctx.{{PrivateName}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
 							fieldSetter := utils.FieldSetter(field)
 							assignStmts = append(assignStmts, astAssignStmt(
 								astSelectorExprRecur(structFieldAst, fieldSetter),

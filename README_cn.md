@@ -364,7 +364,11 @@ func main() {
             {{range SingletonInstances}}
                 {{range Fields}}
                     {{if Field.Source == "ctx"}}
-                    ctx.{{PrivateName}}.{{FieldInstance}} = ctx
+                        {{if IsPrivate}}
+                        ctx.{{PrivateName}}.{{Field.Setter}}(ctx)
+                        {{else}}
+                        ctx.{{PrivateName}}.{{Field.Name}} = ctx
+                        {{end}}
                     {{else if Field.Source == "inject"}}
                         {{if IsSingleton}}
                             {{if IsPrivate}}
@@ -404,14 +408,24 @@ func main() {
                     {{Instance}} := &{{Package}}.{{Name}}{}
                 {{end}}
                 {{range Fields}}
-                    {{if IsInject}}
-                        {{if FieldInstance == "Ctx"}}
-                        {{Instance}}.{{FieldName}} = ctx
+                    {{if Field.Source == "ctx"}}
+                        {{if IsPrivate}}
+                        {{Instance}}.{{Field.Setter}}(ctx)
                         {{else}}
-                            {{if IsSingleton}}
-                            {{Instance}}.{{FieldName}} = ctx.{{FieldInstance}}()
-                            {{else if IsMultiple}}
-                            {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+                        {{Instance}}.{{Field.Name}} = ctx
+                        {{end}}
+                    {{else if Field.Source == "inject"}}
+                        {{if IsSingleton}}
+                            {{if IsPrivate}}
+                            {{Instance}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+                            {{else}}
+                            {{Instance}}.{{Field.Name}} = ctx.{{Field.Instance}}()
+                            {{end}}
+                        {{else if IsMultiple}}
+                            {{if IsPrivate}}
+                            {{Instance}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
+                            {{else}}
+                            {{Instance}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
                             {{end}}
                         {{end}}
                     {{end}}
@@ -907,3 +921,13 @@ golang禁止两个包互相import导入, 为了避免它, 在设计上我们应�
 * 应当准备两类包, 一类负责声明, 另一类负责调用; 调用包可以import依赖导入声明包, 但声明包禁止导入调用包;
 * 声明包应当包含`@provide`,`@webAppProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
 * 调用包应当包含`@postConstruct`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
+
+### 4.3. 私有属性注入规范
+
+> 系统支持对结构体私有属性进行依赖注入, 也就是`@inject`与`@injectField`注解标记的字符段是私有字段;
+> 
+> 默认匹配规则为: Getter函数为属性名首字母大写, Setter函数为`Set`前缀加属性名.
+> 
+> 如: `@injectField fieldA`, Getter为`Field()`, Setter为`SetField()`.
+> 
+> 系统还允许自定义Getter与Setter函数, 只需要在`@inject`或`@injectField`注解上配置即可.
