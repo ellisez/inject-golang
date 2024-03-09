@@ -59,7 +59,7 @@ inject-glang --clean
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
 // @import *<模块加载路径，必填> <模块名>
-// @injectField *<字段名，必填> <实例名，默认同类名>
+// @injectField *<字段名，必填> <实例名，默认同类名> <读取函数Getter, 仅在私有属性时中作> <写入函数Setter, 仅在私有属性时工作>
 // @preConstruct *<构造前调用函数，必填>
 // @postConstruct *<构造后调用函数，必填>
 ```
@@ -79,7 +79,7 @@ inject-glang --clean
 
 ### 2.2. 结构体的属性注解：
 ```
-// @inject <实例名，默认同类名>
+// @inject <实例名，默认同类名> <读取函数Getter, 仅在私有属性时中作> <写入函数Setter, 仅在私有属性时工作>
 ```
 ### 2.3. 方法上的注解 (适用于所有方法)
 ```
@@ -338,7 +338,7 @@ func main() {
         --------------------------------
         type Ctx struct {
             {{range SingletonInstances}}
-            {{Instance}} {{Name}}
+            {{PrivateName}} {{Name}}
             {{end}}
             {{range WebAppInstances}}
             {{WebApp}} *fiber.App
@@ -352,24 +352,32 @@ func main() {
             ctx := &Ctx{}
             {{range SingletonInstances}}
                 {{if PreConstruct}}
-                    ctx.{{Instance}} := {{PreConstruct}}()
+                    ctx.{{PrivateName}} := {{PreConstruct}}()
                 {{else}}
-                    ctx.{{Instance}} = &{{Package}}.{{Name}}{}
+                    ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
                 {{end}}
             {{end}}
             {{range WebAppInstances}}
-                ctx.{{WebApp}} := fiber.New()
+                ctx.{{PrivateName}} := fiber.New()
             {{end}}
             
             {{range SingletonInstances}}
-                {{range InjectFields}}
-                    {{if FieldInstance == "Ctx"}}
-                    ctx.{{Instance}}.{{FieldInstance}} = ctx
-                    {{else}}
+                {{range Fields}}
+                    {{if Field.Source == "ctx"}}
+                    ctx.{{PrivateName}}.{{FieldInstance}} = ctx
+                    {{else if Field.Source == "inject"}}
                         {{if IsSingleton}}
-                        ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}()
+                            {{if IsPrivate}}
+                            ctx.{{PrivateName}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+                            {{else}}
+                            ctx.{{PrivateName}}.{{Field.Name}} = ctx.{{Field.Instance}}()
+                            {{end}}
                         {{else if IsMultiple}}
-                        ctx.{{Instance}}.{{FieldInstance}} = ctx.New{{StructInstance}}()
+                            {{if IsPrivate}}
+                            ctx.{{PrivateName}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
+                            {{else}}
+                            ctx.{{PrivateName}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
+                            {{end}}
                         {{end}}
                     {{end}}
                 {{end}}

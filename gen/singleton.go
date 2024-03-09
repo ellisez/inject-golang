@@ -69,18 +69,15 @@ func genSingletonStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	fields := make([]*ast.Field, 0)
 	funcDecls := make([]*ast.FuncDecl, 0)
 	for _, instance := range moduleInfo.SingletonInstances {
-		fieldName := utils.FirstToLower(instance.Instance)
+		fieldName := instance.PrivateName()
+		fieldGetter := instance.Getter()
+		fieldSetter := instance.Setter()
 		fieldType := astStarExpr(
 			astSelectorExpr(
 				instance.Package,
 				instance.Name,
 			),
 		)
-		doc := &ast.CommentGroup{List: []*ast.Comment{
-			{
-				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.Name),
-			},
-		}}
 
 		/// private field
 		field := astField(
@@ -89,61 +86,40 @@ func genSingletonStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		)
 		fields = append(fields, field)
 
-		/// public method
-		publicMethod := astFuncDecl(
-			[]*ast.Field{
-				astField("ctx", astStarExpr(astIdent("Ctx"))),
-			},
-			instance.Instance,
-			nil,
-			[]*ast.Field{
-				astField("", fieldType),
-			},
-			[]ast.Stmt{
-				&ast.ReturnStmt{
-					Results: []ast.Expr{
-						astSelectorExpr("ctx", fieldName),
-					},
-				},
-			},
+		getterDecl, getterField := astCtxGetter(
+			fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.Name),
+			fieldGetter,
+			fieldName,
+			fieldType,
 		)
-		publicMethod.Doc = doc
-		funcDecls = append(funcDecls, publicMethod)
+		funcDecls = append(funcDecls, getterDecl)
+		moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, getterField)
 
-		/// interface method field
-		methodField := astField(
-			instance.Instance,
-			&ast.FuncType{
-				Results: &ast.FieldList{List: []*ast.Field{
-					astField("", fieldType),
-				}},
-			},
+		setterDecl, setterField := astCtxSetter(
+			fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.Name),
+			fieldSetter,
+			fieldName,
+			fieldType,
 		)
-		methodField.Comment = doc
-		moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, methodField)
+		funcDecls = append(funcDecls, setterDecl)
+		moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, setterField)
 	}
 	if moduleInfo.WebAppInstances != nil {
 		for _, instance := range moduleInfo.WebAppInstances {
-			fieldName := utils.FirstToLower(instance.WebApp)
+			fieldName := instance.PrivateName()
+			fieldGetter := instance.Getter()
+			fieldSetter := instance.Setter()
 			fieldType := astStarExpr(
 				astSelectorExpr(
 					"fiber",
 					"App",
 				),
 			)
-			var doc *ast.CommentGroup
+			var doc string
 			if instance.Package == "" {
-				doc = &ast.CommentGroup{List: []*ast.Comment{
-					{
-						Text: "// Generate by system",
-					},
-				}}
+				doc = "// Generate by system"
 			} else {
-				doc = &ast.CommentGroup{List: []*ast.Comment{
-					{
-						Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
-					},
-				}}
+				doc = fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName)
 			}
 
 			/// private field
@@ -153,38 +129,23 @@ func genSingletonStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			)
 			fields = append(fields, field)
 
-			/// public method
-			publicMethod := astFuncDecl(
-				[]*ast.Field{
-					astField("ctx", astStarExpr(astIdent("Ctx"))),
-				},
-				instance.WebApp,
-				nil,
-				[]*ast.Field{
-					astField("", fieldType),
-				},
-				[]ast.Stmt{
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							astSelectorExpr("ctx", fieldName),
-						},
-					},
-				},
+			getterDecl, getterField := astCtxGetter(
+				doc,
+				fieldGetter,
+				fieldName,
+				fieldType,
 			)
-			publicMethod.Doc = doc
-			funcDecls = append(funcDecls, publicMethod)
+			funcDecls = append(funcDecls, getterDecl)
+			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, getterField)
 
-			/// interface method field
-			methodField := astField(
-				instance.WebApp,
-				&ast.FuncType{
-					Results: &ast.FieldList{List: []*ast.Field{
-						astField("", fieldType),
-					}},
-				},
+			setterDecl, setterField := astCtxSetter(
+				doc,
+				fieldSetter,
+				fieldName,
+				fieldType,
 			)
-			methodField.Comment = doc
-			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, methodField)
+			funcDecls = append(funcDecls, setterDecl)
+			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, setterField)
 		}
 	}
 
@@ -204,7 +165,7 @@ func genSingletonStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	varName := "ctx"
 	stmts := make([]ast.Stmt, 0)
-	// [code] ctx := &ProvideContainer{}
+	// [code] ctx := &Ctx{}
 	stmts = append(stmts, astDefineStmt(
 		astIdent(varName),
 		astDeclareRef(astIdent(StructName), nil),
@@ -213,11 +174,11 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	assignStmts := make([]ast.Stmt, 0)
 	postStmts := make([]ast.Stmt, 0)
 	for _, instance := range moduleInfo.SingletonInstances {
-		provideInstance := utils.FirstToLower(instance.Instance)
-		structFieldAst := astSelectorExpr(varName, provideInstance)
+		privateName := instance.PrivateName()
+		structFieldAst := astSelectorExpr(varName, privateName)
 
 		if instance.PreConstruct != "" {
-			// [code] ctx.{{Instance}} = {{PreConstruct}}()
+			// [code] ctx.{{PrivateName}} = {{PreConstruct}}()
 			var caller ast.Expr
 			if !strings.Contains(instance.PreConstruct, ".") {
 				if moduleInfo.HasFunc(instance.PreConstruct) {
@@ -236,7 +197,7 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 			)
 			stmts = append(stmts, stmt)
 		} else {
-			// [code] ctx.{{Instance}} = &{{Package}}.{{Name}}{}
+			// [code] ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
 			stmts = append(stmts, astAssignStmt(
 				structFieldAst,
 				astDeclareRef(
@@ -250,63 +211,94 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 		}
 
 		for _, field := range instance.Fields {
+			fieldName := field.Name
 			fieldInstance := field.Instance
 			switch field.Source {
 			case "ctx":
-				// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx
+				// [code] ctx.{{PrivateName}}.{{Field.Name}} = ctx
 				assignStmts = append(assignStmts, astAssignStmt(
-					astSelectorExprRecur(structFieldAst, fieldInstance),
+					astSelectorExprRecur(structFieldAst, fieldName),
 					astIdent(varName),
 				))
 				break
 			case "inject":
-				if fieldInstance == "Ctx" {
-					assignStmts = append(assignStmts, astAssignStmt(
-						astSelectorExprRecur(structFieldAst, fieldInstance),
-						astIdent(varName),
-					))
-				} else {
-					injectMode := ""
-					if moduleInfo.HasSingleton(fieldInstance) {
-						// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}()
+				injectMode := ""
+				if moduleInfo.HasSingleton(fieldInstance) {
+					if utils.IsFirstLower(fieldName) {
+						// [code] ctx.{{PrivateName}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+						fieldSetter := utils.FieldSetter(field)
+						assignStmts = append(assignStmts, &ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun: astSelectorExprRecur(structFieldAst, fieldSetter),
+								Args: []ast.Expr{
+									&ast.CallExpr{
+										Fun: astSelectorExpr(varName, fieldInstance),
+									},
+								},
+							},
+						})
+					} else {
+						// [code] ctx.{{PrivateName}}.{{Field.Name}} = ctx.{{Field.Instance}}()
 						assignStmts = append(assignStmts, astAssignStmt(
-							astSelectorExprRecur(structFieldAst, fieldInstance),
+							astSelectorExprRecur(structFieldAst, fieldName),
 							&ast.CallExpr{
 								Fun: astSelectorExpr(varName, fieldInstance),
 							},
 						))
-						injectMode = "singleton"
 					}
+					injectMode = "singleton"
+				}
 
-					if injectMode == "" {
-						if moduleInfo.HasWebApp(fieldInstance) {
-							// [code] ctx.{{Instance}}.{{FieldInstance}} = ctx.{{StructInstance}}()
+				if injectMode == "" {
+					if moduleInfo.HasWebApp(fieldInstance) {
+						if utils.IsFirstLower(fieldName) {
+							// [code] ctx.{{PrivateName}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
+							fieldSetter := utils.FieldSetter(field)
 							assignStmts = append(assignStmts, astAssignStmt(
-								astSelectorExprRecur(structFieldAst, fieldInstance),
+								astSelectorExprRecur(structFieldAst, fieldSetter),
 								&ast.CallExpr{
 									Fun: astSelectorExpr(varName, fieldInstance),
 								},
 							))
-							injectMode = "webApp"
+						} else {
+							// [code] ctx.{{PrivateName}}.{{Field.Name}} = ctx.{{Field.Instance}}()
+							assignStmts = append(assignStmts, astAssignStmt(
+								astSelectorExprRecur(structFieldAst, fieldName),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(varName, fieldInstance),
+								},
+							))
 						}
+						injectMode = "webApp"
 					}
+				}
 
-					if injectMode == "" {
-						if moduleInfo.HasMultiple(fieldInstance) {
-							// [code] {{Instance}}.{{FieldName}} = ctx.New{{FieldInstance}}()
+				if injectMode == "" {
+					if moduleInfo.HasMultiple(fieldInstance) {
+						if utils.IsFirstLower(fieldName) {
+							// [code] {{PrivateName}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
+							fieldSetter := utils.FieldSetter(field)
+							assignStmts = append(assignStmts, astAssignStmt(
+								astSelectorExprRecur(structFieldAst, fieldSetter),
+								&ast.CallExpr{
+									Fun: astSelectorExpr(varName, "New"+fieldInstance),
+								},
+							))
+						} else {
+							// [code] {{PrivateName}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
 							assignStmts = append(assignStmts, astAssignStmt(
 								astSelectorExprRecur(structFieldAst, fieldInstance),
 								&ast.CallExpr{
 									Fun: astSelectorExpr(varName, "New"+fieldInstance),
 								},
 							))
-							injectMode = "multiple"
 						}
+						injectMode = "multiple"
 					}
+				}
 
-					if injectMode == "" {
-						utils.Failuref("%s, \"%s\" No matching Instance, at %s{}", field.Comment, fieldInstance, instance.Name)
-					}
+				if injectMode == "" {
+					utils.Failuref("%s, \"%s\" No matching Instance, at %s{}", field.Comment, fieldInstance, instance.Name)
 				}
 				break
 			default:

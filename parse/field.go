@@ -29,6 +29,19 @@ func FieldParse(field *ast.Field, structInfo *model.StructInfo) {
 						fieldInfo.Instance = fieldInstance
 					}
 				}
+				if argsLen >= 3 {
+					fieldGetter := annotateArgs[2]
+					if fieldGetter != "" && fieldGetter != "_" {
+						fieldInfo.Getter = fieldGetter
+					}
+				}
+
+				if argsLen >= 4 {
+					fieldSetter := annotateArgs[3]
+					if fieldSetter != "" && fieldSetter != "_" {
+						fieldInfo.Setter = fieldSetter
+					}
+				}
 				fieldInfo.Comment = comment.Text
 				fieldInfo.Source = "inject"
 			}

@@ -220,6 +220,80 @@ func astStructDecl(name string, fields []*ast.Field) *ast.GenDecl {
 	}
 }
 
+func astCtxGetter(doc string, getter string, privateName string, fieldType ast.Expr) (*ast.FuncDecl, *ast.Field) {
+	astDoc := &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: doc,
+		},
+	}}
+	/// public method
+	publicMethod := astFuncDecl(
+		[]*ast.Field{
+			astField("ctx", astStarExpr(astIdent("Ctx"))),
+		},
+		getter,
+		nil,
+		[]*ast.Field{
+			astField("", fieldType),
+		},
+		[]ast.Stmt{
+			&ast.ReturnStmt{
+				Results: []ast.Expr{
+					astSelectorExpr("ctx", privateName),
+				},
+			},
+		},
+	)
+	publicMethod.Doc = astDoc
+	/// interface method
+	methodField := astField(
+		getter,
+		&ast.FuncType{
+			Results: &ast.FieldList{List: []*ast.Field{
+				astField("", fieldType),
+			}},
+		},
+	)
+	methodField.Comment = astDoc
+	return publicMethod, methodField
+}
+
+func astCtxSetter(doc string, getter string, privateName string, fieldType ast.Expr) (*ast.FuncDecl, *ast.Field) {
+	astDoc := &ast.CommentGroup{List: []*ast.Comment{
+		{
+			Text: doc,
+		},
+	}}
+	/// public method
+	publicMethod := astFuncDecl(
+		[]*ast.Field{
+			astField("ctx", astStarExpr(astIdent("Ctx"))),
+		},
+		getter,
+		[]*ast.Field{
+			astField(privateName, fieldType),
+		},
+		nil,
+		[]ast.Stmt{
+			astAssignStmt(astSelectorExpr("ctx", privateName),
+				astIdent(privateName),
+			),
+		},
+	)
+	publicMethod.Doc = astDoc
+	/// interface method
+	methodField := astField(
+		getter,
+		&ast.FuncType{
+			Params: &ast.FieldList{List: []*ast.Field{
+				astField("", fieldType),
+			}},
+		},
+	)
+	methodField.Comment = astDoc
+	return publicMethod, methodField
+}
+
 func addImport(astFile *ast.File, moduleInfo *model.ModuleInfo, importName string, importPath string) {
 	astFile.Imports = utils.AddUniqueImport(astFile.Imports, importName, importPath)
 	moduleInfo.CtxImports = utils.AddUniqueImport(moduleInfo.CtxImports, importName, importPath)

@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 type RouterParam struct {
 	QueryParams  []*FieldInfo // query取值
 	PathParams   []*FieldInfo // path取值
@@ -82,6 +84,17 @@ type WebInfo struct {
 	Middlewares   []*MiddlewareInfo // 组内中间件
 	Routers       []*RouterInfo     // 组内路由
 	WebAppComment string            // @webApp注解
+}
+
+func (w *WebInfo) PrivateName() string {
+	return strings.ToLower(w.WebApp[0:1]) + w.WebApp[1:]
+}
+func (w *WebInfo) Getter() string {
+	return w.WebApp
+}
+
+func (w *WebInfo) Setter() string {
+	return "Set" + w.WebApp
 }
 
 func NewWebInfo() *WebInfo {

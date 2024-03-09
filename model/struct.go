@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 // StructInfo
 // @provide <Instance，default structName> <singleton default|multiple>
 // @import *<Path, required> <Alias>
@@ -21,8 +23,27 @@ type StructInfo struct {
 	PostConstructComment string        // @postConstruct注解
 }
 
+func (s *StructInfo) PrivateName() string {
+	return strings.ToLower(s.Instance[0:1]) + s.Instance[1:]
+}
+func (s *StructInfo) Getter() string {
+	switch s.Mode {
+	case "singleton":
+		return s.Instance
+	case "multiple":
+		return "New" + s.Instance
+	}
+	return ""
+}
+
+func (s *StructInfo) Setter() string {
+	return "Set" + s.Instance
+}
+
 func NewStructInfo() *StructInfo {
-	return &StructInfo{}
+	return &StructInfo{
+		Mode: "singleton",
+	}
 }
 
 type ImportInfo struct {

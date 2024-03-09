@@ -36,20 +36,40 @@ func PrepareDatabase() *Database {
 // WebApp
 // @provide WebCtxAlias
 // @import github.com/ellisez/inject-golang/examples/handler
-// @injectField Database
+// @injectField database Database _ _
 // @preConstruct handler.PrepareWebCtxAlias
 // @postConstruct WebCtxAliasLoaded
 type WebApp struct {
-	// @inject
-	*Config
-	*Database
+	// @inject Config Config SetConfig1
+	config      *Config
+	database    *Database
 	MiddleWares []*MiddleWare
 	Routers     []*Router
+}
+
+func (w *WebApp) SetDatabase(database *Database) {
+	fmt.Println("call WebApp.database setter")
+	w.database = database
+}
+
+func (w *WebApp) Database() *Database {
+	fmt.Println("call WebApp.database getter")
+	return w.database
+}
+
+func (w *WebApp) Config() *Config {
+	fmt.Println("call WebApp.config getter")
+	return w.config
+}
+
+func (w *WebApp) SetConfig1(config *Config) {
+	fmt.Println("call WebApp.config setter")
+	w.config = config
 }
 
 // TestLogin
 // @proxy
 // @injectParam database Database
-func (webApp *WebApp) TestLogin(database *Database) {
-	fmt.Printf("call TestLogin: %v, %v\n", webApp, database)
+func (w *WebApp) TestLogin(database *Database) {
+	fmt.Printf("call TestLogin: %v, %v\n", w, database)
 }

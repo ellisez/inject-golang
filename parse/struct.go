@@ -76,6 +76,20 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 						fieldInfo.Instance = fieldInstance
 					}
 				}
+
+				if argsLen >= 4 {
+					fieldGetter := annotateArgs[3]
+					if fieldGetter != "" && fieldGetter != "_" {
+						fieldInfo.Getter = fieldGetter
+					}
+				}
+
+				if argsLen >= 5 {
+					fieldSetter := annotateArgs[4]
+					if fieldSetter != "" && fieldSetter != "_" {
+						fieldInfo.Setter = fieldSetter
+					}
+				}
 				fieldInfo.Source = "inject"
 			} else if annotateName == "@preConstruct" {
 				if argsLen < 2 {

@@ -14,7 +14,9 @@ type PackageInfo struct {
 type FieldInfo struct {
 	Name     string   // 字段名
 	Type     ast.Expr // 字段类型
-	Instance string   // 实例名，默认同类名
+	Instance string   // 实例名，默认同参数名
+	Getter   string   // 读取函数, 仅在私有属性注入时工作
+	Setter   string   // 写入函数, 仅在私有属性注入时工作
 	Source   string   // 来源: '' | inject | query | path | header | body | formData | multipart
 	IsEmbed  bool     // 是否为内嵌属性，声明内嵌属性不具有字段名
 	Comment  string   // 原始注解

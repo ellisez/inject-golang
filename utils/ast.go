@@ -345,3 +345,19 @@ func UnusedImports(astFile *ast.File) {
 		break
 	}
 }
+
+func FieldSetter(fieldInfo *model.FieldInfo) string {
+	fieldSetter := fieldInfo.Setter
+	if fieldSetter == "" {
+		fieldSetter = "Set" + FirstToUpper(fieldInfo.Name)
+	}
+	return fieldSetter
+}
+
+func FieldGetter(fieldInfo *model.FieldInfo) string {
+	fieldGetter := fieldInfo.Getter
+	if fieldGetter == "" {
+		fieldGetter = FirstToUpper(fieldInfo.Name)
+	}
+	return fieldGetter
+}

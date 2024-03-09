@@ -6,11 +6,21 @@ import "fmt"
 // @provide _ multiple
 // @injectField Database
 type MiddleWare struct {
-	// @inject
-	Config *Config
+	// @inject Config
+	config *Config
 	*Database
 	Path   string
 	Handle func() error
+}
+
+func (m *MiddleWare) Config() *Config {
+	fmt.Println("call MiddleWare.config getter")
+	return m.config
+}
+
+func (m *MiddleWare) SetConfig(config *Config) {
+	fmt.Println("call MiddleWare.config setter")
+	m.config = config
 }
 
 // Router
