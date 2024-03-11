@@ -37,6 +37,7 @@ type ModuleInfo struct {
 	FuncInstances      []*FuncInfo
 	MethodInstances    []*FuncInfo
 
+	CtxInstances    []*CtxInfo
 	WebAppInstances []*WebInfo
 
 	CtxImports      []*ast.ImportSpec

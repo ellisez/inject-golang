@@ -154,6 +154,28 @@ inject-glang --clean
 >
 > <b>Note: `@middleware` requires that each parameter must be configured with dependency injection</b>
 
+### 2.7. Context configuration
+```go
+// @ctxProvide
+// @value *<FieldName> *<FieldType: string|bool|int|float64|uint> <default value>
+func CtxConfigure(appCtx ctx.Ctx) {
+    appCtx.SetFieldA(true)
+}
+```
+
+> `@ctxProvide` is used to configure context rules, and the system will create a startup function named `New` by default, which is called `ctx.New()` in the main() example;
+>
+> The function labeled `@ctxProvide` runs after all instances are created, and can also be understood as the `postConstruct` function of `ctx`.
+> It Usually used for the final overall assembly work.
+>
+> `@value` is used to define global variables and only supports basic types such as `string`, `bool`, `int`, `float64`, and `uint`;
+>
+> Due to the fact that the `@provide` annotation can only define structural types, `@value` is a very good supplement to support basic types;
+>
+
+>
+> Note: If using the proxy function configured with `@proxy`, it is required that each parameter must be configured with dependency injection.
+
 ## 3. Generated code
 
 ### 3.1. PreConstruct & PostConstruct
@@ -342,6 +364,11 @@ func main() {
         # gen segment: Struct #
         --------------------------------
         type Ctx struct {
+            {{range CtxInstances}}
+                {{range Values}}
+                {{Value.Name}} {{Value.Type}}
+                {{end}}
+            {{end}}
             {{range SingletonInstances}}
             {{Instance}} {{Name}}
             {{end}}
@@ -355,6 +382,11 @@ func main() {
         -----------------------------------
         func New() *Ctx {
             ctx := &Ctx{}
+            {{range CtxInstances}}
+                {{range Values}}
+                ctx.{{PrivateName}} := {{Value.Default}}
+                {{end}}
+            {{end}}
             {{range SingletonInstances}}
                 {{if PreConstruct}}
                     ctx.{{Instance}} := {{PreConstruct}}()

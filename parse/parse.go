@@ -10,7 +10,6 @@ import (
 	"golang.org/x/mod/modfile"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func annotateParse(text string) []string {
@@ -19,8 +18,70 @@ func annotateParse(text string) []string {
 		return nil
 	}
 	text = text[prefixLen:]
-	text = strings.TrimSpace(text)
-	return strings.Split(text, " ")
+
+	var strs []string
+	mode := "seek" // seek | endOfSpace | endOfDoubleQuote | endOfBackQuote
+	lastIndex := 0
+
+	add := func(index int) {
+		if mode != "seek" {
+			strs = append(strs, text[lastIndex:index])
+			mode = "seek"
+		}
+		lastIndex = index
+	}
+
+	for index, char := range text {
+		switch mode {
+		case "seek":
+			switch char {
+			case ' ', '\t':
+				continue
+			case '"':
+				mode = "endOfDoubleQuote"
+				lastIndex = index
+				break
+			case '`':
+				mode = "endOfBackQuote"
+				lastIndex = index
+				break
+			default:
+				mode = "endOfSpace"
+				lastIndex = index
+			}
+		case "endOfSpace":
+			switch char {
+			case ' ', '\t':
+				add(index)
+				break
+			default:
+
+			}
+			break
+		case "endOfDoubleQuote":
+			switch char {
+			case '"':
+				add(index + 1)
+				break
+			default:
+
+			}
+			break
+		case "endOfBackQuote":
+			switch char {
+			case '`':
+				add(index + 1)
+				break
+			default:
+
+			}
+			break
+		}
+	}
+	if mode != "seek" {
+		strs = append(strs, text[lastIndex:])
+	}
+	return strs
 }
 
 type Parser struct {

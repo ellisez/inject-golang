@@ -98,18 +98,18 @@ func (w *WebInfo) Setter() string {
 }
 
 func NewWebInfo() *WebInfo {
-	funInfo := NewFuncInfo()
-	funInfo.Proxy = "WebAppStartup"
+	funcInfo := NewFuncInfo()
+	funcInfo.Proxy = "WebAppStartup"
 	return &WebInfo{
-		FuncInfo: funInfo,
+		FuncInfo: funcInfo,
 		WebApp:   "WebApp",
 	}
 }
 
-func NewWebInfoFromFunc(funInfo *FuncInfo) *WebInfo {
-	funInfo.Proxy = "WebAppStartup"
+func NewWebInfoFromFunc(funcInfo *FuncInfo) *WebInfo {
+	funcInfo.Proxy = "WebAppStartup"
 	return &WebInfo{
-		FuncInfo: funInfo,
+		FuncInfo: funcInfo,
 		WebApp:   "WebApp",
 	}
 }

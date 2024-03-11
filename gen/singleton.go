@@ -48,6 +48,16 @@ func genSingletonFile(moduleInfo *model.ModuleInfo, dir string) error {
 }
 
 func genSingletonImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
+	for _, instance := range moduleInfo.CtxInstances {
+		addImport(astFile, moduleInfo, "", instance.Import)
+		for _, importInfo := range instance.Imports {
+			importName := importInfo.Name
+			if importName == "_" {
+				importName = ""
+			}
+			addImport(astFile, moduleInfo, importName, importInfo.Path)
+		}
+	}
 
 	for _, instance := range moduleInfo.SingletonInstances {
 		addImport(astFile, moduleInfo, "", instance.Import)
@@ -68,6 +78,39 @@ func genSingletonImportsAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 func genSingletonStructAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 	fields := make([]*ast.Field, 0)
 	funcDecls := make([]*ast.FuncDecl, 0)
+	for _, instance := range moduleInfo.CtxInstances {
+		for _, value := range instance.Values {
+			fieldName := value.PrivateName()
+			fieldGetter := value.Getter()
+			fieldSetter := value.Setter()
+			fieldType := astIdent(value.Type)
+
+			/// private field
+			field := astField(
+				fieldName,
+				fieldType,
+			)
+			fields = append(fields, field)
+
+			getterDecl, getterField := astCtxGetter(
+				fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+				fieldGetter,
+				fieldName,
+				fieldType,
+			)
+			funcDecls = append(funcDecls, getterDecl)
+			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, getterField)
+
+			setterDecl, setterField := astCtxSetter(
+				fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+				fieldSetter,
+				fieldName,
+				fieldType,
+			)
+			funcDecls = append(funcDecls, setterDecl)
+			moduleInfo.CtxMethodFields = append(moduleInfo.CtxMethodFields, setterField)
+		}
+	}
 	for _, instance := range moduleInfo.SingletonInstances {
 		fieldName := instance.PrivateName()
 		fieldGetter := instance.Getter()
@@ -173,6 +216,21 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 	assignStmts := make([]ast.Stmt, 0)
 	postStmts := make([]ast.Stmt, 0)
+	for _, instance := range moduleInfo.CtxInstances {
+		for _, value := range instance.Values {
+			defaultValue := value.Default
+			if defaultValue == "" {
+				continue
+			}
+			privateName := value.PrivateName()
+			structFieldAst := astSelectorExpr(varName, privateName)
+			// [code] ctx.{{PrivateName}} = &{{Value.Default}}
+			stmts = append(stmts, astAssignStmt(
+				structFieldAst,
+				astIdent(defaultValue),
+			))
+		}
+	}
 	for _, instance := range moduleInfo.SingletonInstances {
 		privateName := instance.PrivateName()
 		structFieldAst := astSelectorExpr(varName, privateName)
@@ -357,6 +415,26 @@ func genSingletonNewAst(moduleInfo *model.ModuleInfo, astFile *ast.File) {
 
 	stmts = append(stmts, assignStmts...)
 	stmts = append(stmts, postStmts...)
+	for _, instance := range moduleInfo.CtxInstances {
+		if instance.Proxy != "" {
+			// [code] ctx.{{Proxy}}()
+			stmts = append(stmts, &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: astSelectorExpr(varName, instance.Proxy),
+				},
+			})
+		} else {
+			// [code] {{Package}}.{{FuncName}}(ctx)
+			stmts = append(stmts, &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: astSelectorExpr(instance.Package, instance.FuncName),
+					Args: []ast.Expr{
+						astIdent(varName),
+					},
+				},
+			})
+		}
+	}
 	// [code] return ctx
 	stmts = append(stmts, &ast.ReturnStmt{
 		Results: []ast.Expr{

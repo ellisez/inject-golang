@@ -151,6 +151,28 @@ inject-glang --clean
 >
 > <b>注意: `@middleware`要求每个参数必须都被配置依赖注入</b>
 
+### 2.7. 上下文配置:
+```go
+// @ctxProvide
+// @value *<字段名> *<字段类型: string|bool|int|float64|uint> <默认值default>
+func CtxConfigure(appCtx ctx.Ctx) {
+    appCtx.SetFieldA(true)
+}
+```
+
+> `@ctxProvide`用于配置上下文的规则, 系统默认会创建名为`New`的启动函数, 也就是范例中`main()`里调用的`ctx.New()`;
+> 
+> `@ctxProvide`所标注的函数, 运行在所有实例创建完成之后, 也可以理解为`ctx`的`postConstruct`函数.
+> 一般用做最后的整体组装的工作.
+> 
+> `@value`用于定义全局变量, 它只支持基本类型string, bool, int, float64, uint; 
+> 
+> 由于`@provide`注解只能定义结构体类型, 所以`@value`对支持基本类型支持, 是非常好的补充;
+>
+
+> 注意: 如果使用`@proxy`代理函数, 要求每个参数必须都被配置依赖注入.
+> 
+
 ## 3. 生成模板
 
 ### 3.1. PreConstruct & PostConstruct
@@ -338,6 +360,11 @@ func main() {
         # gen segment: Struct #
         --------------------------------
         type Ctx struct {
+            {{range CtxInstances}}
+                {{range Values}}
+                {{Value.Name}} {{Value.Type}}
+                {{end}}
+            {{end}}
             {{range SingletonInstances}}
             {{PrivateName}} {{Name}}
             {{end}}
@@ -351,6 +378,11 @@ func main() {
         -----------------------------------
         func New() *Ctx {
             ctx := &Ctx{}
+            {{range CtxInstances}}
+                {{range Values}}
+                ctx.{{PrivateName}} := {{Value.Default}}
+                {{end}}
+            {{end}}
             {{range SingletonInstances}}
                 {{if PreConstruct}}
                     ctx.{{PrivateName}} := {{PreConstruct}}()
@@ -393,6 +425,13 @@ func main() {
                     {{PostConstruct}}(
                         ctx.{{Instance}},
                     )
+                {{end}}
+            {{end}}
+            {{range CtxInstances}}
+                {{Proxy != ""}}
+                ctx.{{Proxy}}()
+                {{else}}
+                {{Package}}.{{FuncName}}(ctx)
                 {{end}}
             {{end}}
             return ctx

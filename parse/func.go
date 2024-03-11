@@ -27,6 +27,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 
 	fillEmptyParam(funcDecl.Type, funcInfo)
 
+	isCtx := false
 	isWebApp := false
 	isMiddleware := false
 	isRouter := false
@@ -120,7 +121,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 			} else if annotateName == "@webAppProvide" {
 				isWebApp = true
 				hasAnnotate = true
-				if isMiddleware {
+				if isCtx {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@ctxProvide", funcInfo.FuncName)
+				} else if isMiddleware {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
 				} else if isRouter {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
@@ -128,7 +131,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 			} else if annotateName == "@middleware" {
 				isMiddleware = true
 				hasAnnotate = true
-				if isWebApp {
+				if isCtx {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@ctxProvide", funcInfo.FuncName)
+				} else if isWebApp {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
 				} else if isRouter {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
@@ -136,10 +141,22 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 			} else if annotateName == "@router" {
 				isRouter = true
 				hasAnnotate = true
+				if isCtx {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@ctxProvide", funcInfo.FuncName)
+				} else if isWebApp {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
+				} else if isMiddleware {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
+				}
+			} else if annotateName == "@ctxProvide" {
+				isCtx = true
+				hasAnnotate = true
 				if isWebApp {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
 				} else if isMiddleware {
 					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
+				} else if isRouter {
+					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
 				}
 			}
 		}
@@ -163,7 +180,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 		ParamParse(param, funcInfo)
 	}
 
-	if isWebApp {
+	if isCtx {
+		p.CtxParse(funcDecl, funcInfo)
+	} else if isWebApp {
 		p.WebAppParse(funcDecl, funcInfo)
 	} else if isMiddleware {
 		p.MiddlewareParse(funcDecl, funcInfo)
