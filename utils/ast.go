@@ -6,7 +6,6 @@ import (
 	"go/ast"
 	"go/token"
 	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -278,27 +277,6 @@ func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath st
 	return imports
 }
 
-type importSorter []*ast.ImportSpec
-
-func (s importSorter) Len() int {
-	return len(s)
-}
-
-func (s importSorter) Less(x int, y int) bool {
-	return s[x].Path.Value < s[y].Path.Value
-}
-
-func (s importSorter) Swap(x int, y int) {
-	old := s[x]
-	s[x] = s[y]
-	s[y] = old
-}
-
-func SortImports(astFile *ast.File) {
-	importSpecs := astFile.Imports
-	var sorter importSorter = importSpecs
-	sort.Sort(sorter)
-}
 func UnusedImports(astFile *ast.File) {
 	var imports []*ast.ImportSpec
 	addImport := func(spec *ast.ImportSpec) {

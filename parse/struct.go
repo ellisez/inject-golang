@@ -103,6 +103,10 @@ func (p *Parser) StructParse(structDecl *ast.GenDecl, packageInfo *model.Package
 				}
 				structInfo.PostConstructComment = comment.Text
 				structInfo.PostConstruct = annotateArgs[1]
+			} else if annotateName == "@order" {
+				if argsLen >= 2 {
+					structInfo.Order = annotateArgs[1]
+				}
 			}
 		}
 	}

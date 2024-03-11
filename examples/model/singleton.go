@@ -35,6 +35,7 @@ func PrepareDatabase() *Database {
 
 // WebApp
 // @provide WebCtxAlias
+// @order first
 // @import github.com/ellisez/inject-golang/examples/handler
 // @injectField database Database _ _
 // @preConstruct handler.PrepareWebCtxAlias

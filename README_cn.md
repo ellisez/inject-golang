@@ -58,6 +58,7 @@ inject-glang --clean
 ### 2.1. 结构体上的注解：
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
+// @order <创建顺序，数字或字符串>
 // @import *<模块加载路径，必填> <模块名>
 // @injectField *<字段名，必填> <实例名，默认同类名> <读取函数Getter, 仅在私有属性时中作> <写入函数Setter, 仅在私有属性时工作>
 // @preConstruct *<构造前调用函数，必填>

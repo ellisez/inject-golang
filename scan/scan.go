@@ -30,6 +30,8 @@ func DoScan() (*model.ModuleInfo, error) {
 			return nil, err
 		}
 	}
+	utils.SortStructInfo(moduleInfo.SingletonInstances)
+	utils.SortStructInfo(moduleInfo.MultipleInstances)
 	return moduleInfo, nil
 }
 func recurDirectory(filename string, handle func(filename string) error) error {

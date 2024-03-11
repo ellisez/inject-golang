@@ -11,6 +11,7 @@ import "strings"
 type StructInfo struct {
 	// @inject <实例名，默认同类名>
 	*PackageInfo
+	Order                string
 	Imports              []*ImportInfo // import语句
 	Name                 string        // 结构体名称
 	Instance             string        // 实例名，默认同类名
