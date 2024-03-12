@@ -8,7 +8,6 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // gen_ctx.go
@@ -146,29 +145,22 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	for _, instance := range ctx.SingletonInstances {
 		instanceName := instance.GetInstance()
 		instanceFunc := instance.GetFunc()
-		constructor := instance.GetConstructor()
+		instanceType := instance.GetType()
 
 		fieldName := utils.FirstToLower(instanceName)
 		fieldExpr := astSelectorExpr(ctxVar, fieldName)
-
 		var constructorExpr ast.Expr
-		if constructor == "" {
+		if instanceFunc.FuncName == "" {
 			// [code] ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
 			constructorExpr = astDeclareRef(
-				astSelectorExpr(
-					instanceFunc.Package,
-					instanceFunc.FuncName,
-				),
+				instanceType,
 				nil,
 			)
 		} else {
-			// [code] ctx.{{PrivateName}} = {{Constructor}}()
-			if strings.Contains(constructor, ".") {
-				constructorExpr = &ast.CallExpr{Fun: ast.NewIdent(constructor)}
-			} else {
-				constructorExpr = &ast.CallExpr{Fun: astSelectorExpr(ctxVar, constructor)}
-			}
+			// [code] ctx.{{PrivateName}} = {{Package}}.{{FuncName}}()
+			constructorExpr = &ast.CallExpr{Fun: astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName)}
 		}
+
 		stmts = append(stmts, astAssignStmt(
 			fieldExpr,
 			constructorExpr,
@@ -178,12 +170,16 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	// call func
 	for _, instance := range ctx.SingletonInstances {
 		if _, ok := instance.(*model.Provide); ok {
-			instanceCallExpr := astInstanceCallExpr(instance.GetFunc(), ctx, ctxVar)
+			handler := instance.GetHandler()
+			if handler != "" {
 
-			// [code] {{Package}}.{{FunName}}(...)
-			stmts = append(stmts, &ast.ExprStmt{
-				X: instanceCallExpr,
-			})
+				instanceCallExpr := astInstanceCallExpr(ast.NewIdent(handler), instance.GetFunc(), ctx, ctxVar)
+
+				// [code] {{Package}}.{{FunName}}(...)
+				stmts = append(stmts, &ast.ExprStmt{
+					X: instanceCallExpr,
+				})
+			}
 		}
 	}
 

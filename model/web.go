@@ -54,7 +54,8 @@ type WebInstance struct {
 func NewWebInstance() *WebInstance {
 	webInstance := &WebInstance{Provide: NewProvide()}
 	webInstance.Mode = "singleton"
-	webInstance.Constructor = "fiber.New"
+	webInstance.Package = "fiber"
+	webInstance.FuncName = "New"
 	webInstance.Instance = "WebApp"
 	webInstance.Type = &ast.StarExpr{
 		X: &ast.SelectorExpr{

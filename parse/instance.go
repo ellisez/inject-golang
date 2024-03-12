@@ -46,11 +46,11 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 				}
 			}
 			break
-		case "@constructor":
+		case "@handler":
 			if argsLen < 2 {
-				utils.Failuref(`%s %s, Constructor must be specified`, commonFunc.Loc.String(), instanceNode.Comment)
+				utils.Failuref(`%s %s, Handler must be specified`, commonFunc.Loc.String(), instanceNode.Comment)
 			}
-			instanceNode.Constructor = args[1]
+			instanceNode.Handler = args[1]
 			break
 		}
 	}

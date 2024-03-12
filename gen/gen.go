@@ -319,7 +319,7 @@ func astInstanceProxyParams(instanceFunc *model.Func) []*ast.Field {
 	}
 	return params
 }
-func astInstanceCallExpr(instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) *ast.CallExpr {
+func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) *ast.CallExpr {
 
 	var args []ast.Expr
 	for _, param := range instanceFunc.Params {
@@ -342,9 +342,9 @@ func astInstanceCallExpr(instanceFunc *model.Func, ctx *model.Ctx, ctxVar string
 		}
 	}
 
-	// [code] {{Package}}.{{FunName}}(...)
+	// [code] {{Package}}.{{Handler}}(...)
 	return &ast.CallExpr{
-		Fun:  astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName),
+		Fun:  handler,
 		Args: args,
 	}
 

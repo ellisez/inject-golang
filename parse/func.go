@@ -86,8 +86,17 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					if paramInstance != "" && paramInstance != "_" {
 						param.Instance = paramInstance
 					}
-				} else {
-					param.Instance = utils.FirstToUpper(paramName)
+				}
+
+				if argsLen >= 4 {
+					pointer := annotateArgs[3]
+					switch pointer {
+					case "", "&", "*":
+						param.Pointer = pointer
+						break
+					default:
+						utils.Failuref(`%s %s, Pointer "%s" not supported, only ["", "&", "*"] are allowed`, commonFunc.Loc.String(), comment.Text, pointer)
+					}
 				}
 				param.Comment = comment.Text
 				param.Source = "inject"

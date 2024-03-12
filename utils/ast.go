@@ -203,10 +203,12 @@ func ToFile(field *ast.Field) *model.Field {
 	if field.Names != nil {
 		fieldName = field.Names[0].String()
 	}
-	return &model.Field{
+	f := &model.Field{
 		Name: fieldName,
 		Type: field.Type,
 	}
+	f.Instance = FieldName(f)
+	return f
 }
 
 func IsBasicType(typeStr string) bool {

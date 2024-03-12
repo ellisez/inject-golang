@@ -26,7 +26,7 @@ func genMiddlewareAst(ctx *model.Ctx, astFile *ast.File) {
 				stmts = append(stmts, genWebFormParams(
 					instance.FormParams, instance.Package, instance.Func)...)
 
-				instanceCallExpr := astInstanceCallExpr(webInstance.Func, ctx, ctxVar)
+				instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), webInstance.Func, ctx, ctxVar)
 				stmts = append(stmts, &ast.ReturnStmt{
 					Results: []ast.Expr{
 						instanceCallExpr,

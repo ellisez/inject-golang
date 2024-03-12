@@ -65,6 +65,7 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 		instanceName := instance.GetInstance()
 		instanceType := instance.GetType()
 		instanceFunc := instance.GetFunc()
+		handler := instance.GetHandler()
 
 		instanceVar := utils.FirstToLower(instanceName)
 
@@ -77,7 +78,7 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 		))
 
 		// [code] {{Package}}.{{FuncName}}(...)
-		instanceCallExpr := astInstanceCallExpr(instance.GetFunc(), ctx, ctxVar)
+		instanceCallExpr := astInstanceCallExpr(ast.NewIdent(handler), instance.GetFunc(), ctx, ctxVar)
 
 		stmts = append(stmts, &ast.ExprStmt{
 			X: instanceCallExpr,

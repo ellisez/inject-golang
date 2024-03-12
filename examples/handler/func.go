@@ -6,13 +6,26 @@ import (
 	"github.com/ellisez/inject-golang/examples/model"
 )
 
-// WebCtxAliasLoaded
+// WebAppAliasLoaded example for injection proxy
 // @proxy
-// @import github.com/ellisez/inject-golang/examples/model
 // @injectParam database Database
-// @injectParam router RouterAlias
 // @injectCtx appCtx
-func WebCtxAliasLoaded(appCtx ctx.Ctx, webApp *model.WebApp, database *model.Database, router *model.Router) {
-	fmt.Printf("call instance.postConstruct: %v, %v, %v\n", webApp, database, router)
+// @injectParam webApp WebAppAlias
+// @injectParam isReady IsReady &
+// @injectParam middleware MiddleWare
+// @injectParam router RouterAlias
+func WebAppAliasLoaded(appCtx ctx.Ctx, webApp *model.WebApp, database *model.Database, isReady *bool, middleware *model.MiddleWare, router *model.Router) {
+	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", webApp, database, isReady)
+	webApp.Database = database
+	webApp.Config = appCtx.Config()
+	webApp.MiddleWares = append(webApp.MiddleWares, middleware, appCtx.NewMiddleWare())
+	antherRouter := appCtx.NewRouterAlias()
+	antherRouter.Path = "/logout"
+	webApp.Routers = append(webApp.Routers, router, antherRouter)
 	appCtx.TestLogin(webApp)
+	*isReady = true
+}
+
+func AfterRouterCreate(router *model.Router) {
+	fmt.Printf("call Router.postConstruct: %v\n", router)
 }

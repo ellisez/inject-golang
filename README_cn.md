@@ -62,7 +62,7 @@ inject-glang --clean
 ```
 // @proxy <代理方法名，默认同方法名>
 // @import *<模块加载路径，必填> <模块名>
-// @injectParam *<参数名，必填> <实例名，默认同参数名>
+// @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, 默认""|&|*>
 // @injectRecv *<参数名，必填> <实例名，默认同参数名>
 // @injectCtx *<参数名, 必填>
 ```
@@ -74,43 +74,43 @@ inject-glang --clean
 > `@injectRecv`用于所属结构体的依赖注入;
 >
 > `@injectCtx`用于注入容器对象本身;
+> 
+> `@injectPara`支持指针运算, `&`表示取值的地址, `*`表示取地址对应的值, 两者互为反操作; 默认是""表示不进行指针运算.
 
 > 未被依赖注入的参数则会保留到生成代理函数中;
-> 
+>
 
 ### 2.2. 实例注解
-`实例注解`指的是定义在构造函数上的注解
+`实例注解`指的是定义在构造函数上用于声明实例的注解
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
 // @order <创建顺序，数字或字符串>
 // @import *<模块加载路径，必填> <模块名>
-// @injectParam *<参数名，必填> <实例名，默认同参数名>
+// @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, ""|&|*>
 // @injectRecv *<参数名，必填> <实例名，默认同参数名>
 // @injectCtx *<参数名, 必填>
-// @constructor *<构造函数, 必填>
+// @handler *<处理函数, 必填>
 ```
 
 > 系统默认会加载容器包以及注解所在代码的包, 但如果有额外的包, 则需要使用`@import`声明.
 > 
-> `@provide`所标记的函数格式, 支持依赖注入, 但需要`order`定义创建顺序, 以免注入时还未进行初始化;
+> `@provide`所标记的构造函数必须有且只有一个返回类型并且不能有任务参数. 它不支持依赖注入;
 > 
-> `@constructor`所标记的构造函数, 必须是一个返回结构体类型并且无参的函数, 不支持依赖注入;
+> `@handler`可支持依赖注入, 但需要`order`定义创建顺序, 以免注入时还未进行初始化;
 > 
-> 若不指定`@constructor`构造函数, 系统将直接使用结构体来构建;
-> 
-> `@constructor`可以携带包名, 表示调用原始函数, 但如果不带包名, 则表示调用代理函数.
+> `@handler`可以携带包名, 表示调用原始函数, 但如果不带包名, 则表示调用代理函数.
 > 
 > 一般我们不推荐直接使用原始函数, 而是使用它的代理函数, 这样能帮我们扩充其他依赖注入的参数; 
 > 代理函数用法, 请参照[方法上注解](#23-方法上的注解-适用于所有方法)
 >
 
-### 2.3. WebApp注解 (提供了web服务器)
+### 2.4. WebApp注解 (提供了web服务器)
 ```
-// @webAppProvide <WebApp，默认名为WebApp>
+// @webProvide <WebApp，默认名为WebApp>
 // @static *<访问路径，必填> *<匹配目录，必填> [特征: Compress|Download|Browse] <目录的Index文件> <过期时间MaxAge>
 ```
 
-> `@webAppProvide`配置webApp, 不进行配置时系统默认会生成一个名为WebApp的实例. 
+> `@webProvide`配置webApp, 不进行配置时系统默认会生成一个名为WebApp的实例. 
 > 
 > 如果webApp未被代码中使用, 则系统不会生成WebApp实例, 这也是为了适配与非web项目.
 > 
@@ -127,7 +127,7 @@ inject-glang --clean
 
 > `@router`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入, 也可以通过`@proxy`更改.
 > 
-> `@webApp`用于关联webApp实例, webApp由`@webAppProvide`提供, 默认实例名为"WebApp".
+> `@webApp`用于关联webApp实例, webApp由`@webProvide`提供, 默认实例名为"WebApp".
 > 
 > `@injectWebCtx`用于注入当前请求的webCtx, 只能用于`@router`和`@middleware`;
 > 
@@ -224,7 +224,7 @@ func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.W
 注解配置
 ```go
 // ConfigureWebApp
-// @webAppProvide WebApp
+// @webProvide WebApp
 // @proxy WebAppStartup1
 // @injectParam config Config
 // @static /images /images
@@ -318,13 +318,13 @@ func main() {
 }
 ```
 
-> `@webAppProvide`用于定义web应用实例，不配置时系统默认会创建名为`WebApp`的实例，以及名为`WebAppStartup`的启动函数,
+> `@webProvide`用于定义web应用实例，不配置时系统默认会创建名为`WebApp`的实例，以及名为`WebAppStartup`的启动函数,
 >
-> 实例名通过`@webAppProvide`修改, 启动函数名通过`@proxy`来修改.
+> 实例名通过`@webProvide`修改, 启动函数名通过`@proxy`来修改.
 >
 > `@router`与`@middleware`通过`@webApp`关联实例, 默认关联`WebApp`的实例名.
 >
-> `@webAppProvide`与`@webApp`实例名必须保持一致, 才能确保关联关系.
+> `@webProvide`与`@webApp`实例名必须保持一致, 才能确保关联关系.
 
 > <b>注意: `@middleware`与`@router`要求每个参数都必须都要配置依赖注入. 系统会自动创建出符合webApp调用格式的代码函数</b>
 >
@@ -923,7 +923,7 @@ golang禁止两个包互相import导入, 为了避免它, 在设计上我们应�
 
 具体做法如下:
 * 应当准备两类包, 一类负责声明, 另一类负责调用; 调用包可以import依赖导入声明包, 但声明包禁止导入调用包;
-* 声明包应当包含`@provide`,`@webAppProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
+* 声明包应当包含`@provide`,`@webProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
 * 调用包应当包含`@postConstruct`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
 
 ### 4.3. 私有属性注入规范

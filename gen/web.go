@@ -172,7 +172,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				[]*ast.Field{
 					astField(instanceVar, astStarExpr(ast.NewIdent(CtxType))),
 				},
-				instanceName,
+				instanceName+"Startup",
 				proxyParams,
 				[]*ast.Field{
 					astField("", ast.NewIdent("error")),
@@ -268,7 +268,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 
 			if webInstance.FuncName != "" {
 				// [code] host, port, err := {{Package}}.{{FuncName}}(...)
-				instanceCallExpr := astInstanceCallExpr(webInstance.Func, ctx, ctxVar)
+				instanceCallExpr := astInstanceCallExpr(astSelectorExpr(webInstance.Package, webInstance.FuncName), webInstance.Func, ctx, ctxVar)
 
 				stmts = append(stmts, astDefineStmtMany(
 					[]ast.Expr{
