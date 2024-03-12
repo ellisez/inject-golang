@@ -14,7 +14,7 @@ var (
 
 var (
 	GenPackage     = "ctx"
-	StructName     = "Ctx"
+	CtxType        = "Ctx"
 	GenCtxFilename = "gen_ctx.go"
 
 	GenFactoryPackage  = "factory"
@@ -34,7 +34,7 @@ var (
 var (
 	ScanDirectories []string
 
-	CacheModMap = make(map[string]*model.Mod)
+	CacheModMap = make(map[string]*model.Module)
 
-	Mod *model.Mod
+	Mod *model.Module
 )

@@ -49,22 +49,22 @@ type WebApp struct {
 }
 
 func (w *WebApp) SetDatabase(database *Database) {
-	fmt.Println("call WebApp.database setter")
+	fmt.Println("call instance.database setter")
 	w.database = database
 }
 
 func (w *WebApp) Database() *Database {
-	fmt.Println("call WebApp.database getter")
+	fmt.Println("call instance.database getter")
 	return w.database
 }
 
 func (w *WebApp) Config() *Config {
-	fmt.Println("call WebApp.config getter")
+	fmt.Println("call instance.config getter")
 	return w.config
 }
 
 func (w *WebApp) SetConfig1(config *Config) {
-	fmt.Println("call WebApp.config setter")
+	fmt.Println("call instance.config setter")
 	w.config = config
 }
 

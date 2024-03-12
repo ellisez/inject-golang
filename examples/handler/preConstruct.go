@@ -6,6 +6,6 @@ import (
 )
 
 func PrepareWebCtxAlias() *model.WebApp {
-	fmt.Println("call WebApp.preConstruct")
+	fmt.Println("call instance.preConstruct")
 	return &model.WebApp{}
 }

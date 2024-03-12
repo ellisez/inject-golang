@@ -10,77 +10,71 @@ import (
 	"path/filepath"
 )
 
-func DoGen(moduleInfo *model.ModuleInfo) error {
+func DoGen(ctx *model.Ctx) error {
 	genDir := filepath.Join(Mod.Path, GenPackage)
 
 	var err error
 	if FlagAll || FlagSingleton {
-		err = genSingletonFile(moduleInfo, genDir)
+		err = genSingletonFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
 	if FlagAll || FlagMultiple {
-		err = genMultipleFile(moduleInfo, genDir)
+		err = genMultipleFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
 	if FlagAll || FlagFunc {
-		err = genFuncFile(moduleInfo, genDir)
+		err = genFuncFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 
-		err = genMethodFile(moduleInfo, genDir)
+		err = genMethodFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
 	if FlagAll || FlagWeb {
-		err = genWebUtilsFile(moduleInfo, genDir)
+		err = genWebUtilsFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 
-		err = genWebFile(moduleInfo, genDir)
+		err = genWebFile(ctx, genDir)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = genCtxFile(moduleInfo, genDir)
+	err = genCtxFile(ctx, genDir)
 	if err != nil {
 		return err
 	}
 
-	err = genFactoryFile(moduleInfo, genDir)
+	err = genFactoryFile(ctx, genDir)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func astIdent(text string) *ast.Ident {
-	ident := new(ast.Ident)
-	ident.Name = text
-	return ident
-}
-
 func astSelectorExpr(x string, sel string) *ast.SelectorExpr {
 	selectorExpr := new(ast.SelectorExpr)
-	selectorExpr.X = astIdent(x)
-	selectorExpr.Sel = astIdent(sel)
+	selectorExpr.X = ast.NewIdent(x)
+	selectorExpr.Sel = ast.NewIdent(sel)
 	return selectorExpr
 }
 
 func astSelectorExprRecur(x ast.Expr, sel string) *ast.SelectorExpr {
 	selectorExpr := new(ast.SelectorExpr)
 	selectorExpr.X = x
-	selectorExpr.Sel = astIdent(sel)
+	selectorExpr.Sel = ast.NewIdent(sel)
 	return selectorExpr
 }
 
@@ -148,7 +142,7 @@ func astField(name string, typeExpr ast.Expr) *ast.Field {
 	var astName []*ast.Ident
 	if name != "" {
 		astName = []*ast.Ident{
-			astIdent(name),
+			ast.NewIdent(name),
 		}
 	}
 	return &ast.Field{
@@ -189,7 +183,7 @@ func astFuncDecl(recv []*ast.Field, name string, params []*ast.Field, results []
 	}
 	return &ast.FuncDecl{
 		Recv: recvAst,
-		Name: astIdent(name),
+		Name: ast.NewIdent(name),
 		Body: &ast.BlockStmt{
 			List: body,
 		},
@@ -205,31 +199,35 @@ func astFuncDecl(recv []*ast.Field, name string, params []*ast.Field, results []
 }
 
 func astStructDecl(name string, fields []*ast.Field) *ast.GenDecl {
+	var fieldList *ast.FieldList
+	if fields != nil {
+		fieldList = &ast.FieldList{
+			List: fields,
+		}
+	}
 	return &ast.GenDecl{
 		Tok: token.TYPE,
 		Specs: []ast.Spec{
 			&ast.TypeSpec{
-				Name: astIdent(name),
+				Name: ast.NewIdent(name),
 				Type: &ast.StructType{
-					Fields: &ast.FieldList{
-						List: fields,
-					},
+					Fields: fieldList,
 				},
 			},
 		},
 	}
 }
 
-func astCtxGetter(doc string, getter string, privateName string, fieldType ast.Expr) (*ast.FuncDecl, *ast.Field) {
+func astCtxGetter(doc string, getter string, privateName string, fieldType ast.Expr) *ast.FuncDecl {
 	astDoc := &ast.CommentGroup{List: []*ast.Comment{
 		{
 			Text: doc,
 		},
 	}}
-	/// public method
-	publicMethod := astFuncDecl(
+
+	getterDecl := astFuncDecl(
 		[]*ast.Field{
-			astField("ctx", astStarExpr(astIdent("Ctx"))),
+			astField("ctx", astStarExpr(ast.NewIdent("Ctx"))),
 		},
 		getter,
 		nil,
@@ -244,30 +242,20 @@ func astCtxGetter(doc string, getter string, privateName string, fieldType ast.E
 			},
 		},
 	)
-	publicMethod.Doc = astDoc
-	/// interface method
-	methodField := astField(
-		getter,
-		&ast.FuncType{
-			Results: &ast.FieldList{List: []*ast.Field{
-				astField("", fieldType),
-			}},
-		},
-	)
-	methodField.Comment = astDoc
-	return publicMethod, methodField
+	getterDecl.Doc = astDoc
+	return getterDecl
 }
 
-func astCtxSetter(doc string, getter string, privateName string, fieldType ast.Expr) (*ast.FuncDecl, *ast.Field) {
+func astCtxSetter(doc string, getter string, privateName string, fieldType ast.Expr) *ast.FuncDecl {
 	astDoc := &ast.CommentGroup{List: []*ast.Comment{
 		{
 			Text: doc,
 		},
 	}}
-	/// public method
-	publicMethod := astFuncDecl(
+
+	setterDecl := astFuncDecl(
 		[]*ast.Field{
-			astField("ctx", astStarExpr(astIdent("Ctx"))),
+			astField("ctx", astStarExpr(ast.NewIdent("Ctx"))),
 		},
 		getter,
 		[]*ast.Field{
@@ -276,27 +264,95 @@ func astCtxSetter(doc string, getter string, privateName string, fieldType ast.E
 		nil,
 		[]ast.Stmt{
 			astAssignStmt(astSelectorExpr("ctx", privateName),
-				astIdent(privateName),
+				ast.NewIdent(privateName),
 			),
 		},
 	)
-	publicMethod.Doc = astDoc
-	/// interface method
-	methodField := astField(
-		getter,
-		&ast.FuncType{
-			Params: &ast.FieldList{List: []*ast.Field{
-				astField("", fieldType),
-			}},
-		},
-	)
-	methodField.Comment = astDoc
-	return publicMethod, methodField
+	setterDecl.Doc = astDoc
+	return setterDecl
 }
 
-func addImport(astFile *ast.File, moduleInfo *model.ModuleInfo, importName string, importPath string) {
+func astNewInstance(instance model.Instance, ctxVar string) ast.Expr {
+	instanceName := instance.GetInstance()
+	switch instance.GetMode() {
+	case "singleton":
+		return astSelectorExpr(ctxVar, instanceName)
+	case "multiple":
+		return &ast.CallExpr{
+			Fun: astSelectorExpr(ctxVar, "New"+instanceName),
+		}
+	}
+	return nil
+}
+
+func astInstanceProxyFunc(instanceFunc *model.Func, instanceName string, params ...*ast.Field) *ast.FuncDecl {
+	if instanceName == "" {
+		instanceName = instanceFunc.FuncName
+	}
+
+	instanceVar := utils.FirstToLower(CtxType)
+
+	params = append(params, astInstanceProxyParams(instanceFunc)...)
+	var results []*ast.Field
+	for _, result := range instanceFunc.Results {
+		resultName := utils.FieldName(result)
+		results = append(results, astField(resultName, result.Type))
+	}
+
+	return astFuncDecl(
+		[]*ast.Field{
+			astField(instanceVar, astStarExpr(ast.NewIdent(CtxType))),
+		},
+		instanceName,
+		params,
+		results,
+		nil,
+	)
+}
+func astInstanceProxyParams(instanceFunc *model.Func) []*ast.Field {
+	var params []*ast.Field
+	for _, param := range instanceFunc.Params {
+		if param.Source == "" {
+			paramName := utils.FieldName(param)
+			params = append(params, astField(paramName, param.Type))
+		}
+	}
+	return params
+}
+func astInstanceCallExpr(instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) *ast.CallExpr {
+
+	var args []ast.Expr
+	for _, param := range instanceFunc.Params {
+		switch param.Source {
+		case "ctx":
+			args = append(args, ast.NewIdent(ctxVar))
+			break
+		case "webCtx":
+			args = append(args, ast.NewIdent("webCtx"))
+			break
+		case "inject":
+			paramInstance := ctx.InstanceOf(param.Instance)
+			if paramInstance == nil {
+				utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), param.Comment, param.Instance)
+			}
+			args = append(args, astNewInstance(paramInstance, ctxVar))
+			break
+		case "":
+			args = append(args, ast.NewIdent(param.Instance))
+		}
+	}
+
+	// [code] {{Package}}.{{FunName}}(...)
+	return &ast.CallExpr{
+		Fun:  astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName),
+		Args: args,
+	}
+
+}
+
+func addImport(astFile *ast.File, ctx *model.Ctx, importName string, importPath string) {
 	astFile.Imports = utils.AddUniqueImport(astFile.Imports, importName, importPath)
-	moduleInfo.CtxImports = utils.AddUniqueImport(moduleInfo.CtxImports, importName, importPath)
+	ctx.Imports = utils.AddUniqueImport(ctx.Imports, importName, importPath)
 }
 
 func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {

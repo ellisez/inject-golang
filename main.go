@@ -34,12 +34,12 @@ func init() {
 }
 
 func main() {
-	moduleInfo, err := scan.DoScan()
+	ctx, err := scan.DoScan()
 	if err != nil {
 		utils.Failure(err.Error())
 	}
 
-	err = gen.DoGen(moduleInfo)
+	err = gen.DoGen(ctx)
 	if err != nil {
 		utils.Failure(err.Error())
 	}

@@ -1,115 +1,71 @@
 package model
 
-import "strings"
+import "go/ast"
 
-type RouterParam struct {
-	QueryParams  []*FieldInfo // query取值
-	PathParams   []*FieldInfo // path取值
-	HeaderParams []*FieldInfo // header取值
-	BodyParam    *FieldInfo   // body取值
-	FormParams   []*FieldInfo // formData取值
+type WebParam struct {
+	QueryParams  []*Field // query取值
+	PathParams   []*Field // path取值
+	HeaderParams []*Field // header取值
+	BodyParam    *Field   // body取值
+	FormParams   []*Field // formData取值
 }
 
-func NewRouterParam() *RouterParam {
-	return &RouterParam{}
+func NewWebParam() *WebParam {
+	return &WebParam{}
 }
 
-// MiddlewareInfo
-// @webApp <WebApp，default WebApp>
-// @static *<Path, required> *<Path, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
-type MiddlewareInfo struct {
-	*FuncInfo
+type Middleware struct {
+	*Proxy
 
-	*RouterParam
-
-	WebApp            string // 所属WebApp，默认WebApp
-	Path              string // 路径
-	Handle            string // 处理函数名fiber.Handler，当前函数名
-	MiddlewareComment string
-}
-
-func NewMiddlewareInfoFromFuncInfo(funcInfo *FuncInfo) *MiddlewareInfo {
-	return &MiddlewareInfo{
-		FuncInfo:    funcInfo,
-		RouterParam: NewRouterParam(),
-		WebApp:      "WebApp",
-	}
-}
-
-// RouterInfo
-// @webApp <WebApp，default WebApp>
-// @route *<Path, required> [Method: get|post]
-// @param *<ParamName, required> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
-type RouterInfo struct {
-	*FuncInfo
-
-	*RouterParam
-
+	*WebParam
 	WebApp string // 所属WebApp，默认WebApp
-
-	Methods       []string // 请求方式get|post|put|patch
-	Path          string   // 路径
-	RouterComment string   // @router注解
+	Path   string // 路径
 }
 
-func NewRouterInfoFromFuncInfo(funInfo *FuncInfo) *RouterInfo {
-	return &RouterInfo{
-		FuncInfo:    funInfo,
-		RouterParam: NewRouterParam(),
-		WebApp:      "WebApp",
+func NewMiddleware() *Middleware {
+	return &Middleware{Proxy: NewProxy(), WebParam: NewWebParam()}
+}
+
+type Router struct {
+	*Middleware
+	Methods []string // 请求方式get|post|put|patch
+}
+
+func NewRouter() *Router {
+	return &Router{Middleware: NewMiddleware()}
+}
+
+type WebResource struct {
+	Path     string
+	Dirname  string
+	Features []string
+	Index    string
+	MaxAge   int
+	Comment  string
+}
+
+type WebInstance struct {
+	*Provide
+	Resources   []*WebResource // 静态资源
+	Middlewares []*Middleware  // 组内中间件
+	Routers     []*Router      // 组内路由
+}
+
+func NewWebInstance() *WebInstance {
+	webInstance := &WebInstance{Provide: NewProvide()}
+	webInstance.Mode = "singleton"
+	webInstance.Constructor = "fiber.New"
+	webInstance.Instance = "WebApp"
+	webInstance.Type = &ast.StarExpr{
+		X: &ast.SelectorExpr{
+			X:   ast.NewIdent("fiber"),
+			Sel: ast.NewIdent("App"),
+		}}
+	webInstance.Imports = []*Import{
+		{
+			Name: "",
+			Path: "github.com/gofiber/fiber/v2",
+		},
 	}
-}
-
-type StaticResource struct {
-	Path          string
-	Dirname       string
-	Features      []string
-	Index         string
-	MaxAge        int
-	StaticComment string
-}
-
-func NewStaticResource() *StaticResource {
-	return &StaticResource{}
-}
-
-// WebInfo
-// @webAppProvide <实例名，默认webApp>
-// @static <Path> <Path> [Features: Compress|Download|Browse] <Index> <MaxAge>
-type WebInfo struct {
-	*FuncInfo
-
-	WebApp        string            // WebApp实例名
-	Statics       []*StaticResource // 静态资源
-	Middlewares   []*MiddlewareInfo // 组内中间件
-	Routers       []*RouterInfo     // 组内路由
-	WebAppComment string            // @webApp注解
-}
-
-func (w *WebInfo) PrivateName() string {
-	return strings.ToLower(w.WebApp[0:1]) + w.WebApp[1:]
-}
-func (w *WebInfo) Getter() string {
-	return w.WebApp
-}
-
-func (w *WebInfo) Setter() string {
-	return "Set" + w.WebApp
-}
-
-func NewWebInfo() *WebInfo {
-	funInfo := NewFuncInfo()
-	funInfo.Proxy = "WebAppStartup"
-	return &WebInfo{
-		FuncInfo: funInfo,
-		WebApp:   "WebApp",
-	}
-}
-
-func NewWebInfoFromFunc(funInfo *FuncInfo) *WebInfo {
-	funInfo.Proxy = "WebAppStartup"
-	return &WebInfo{
-		FuncInfo: funInfo,
-		WebApp:   "WebApp",
-	}
+	return webInstance
 }

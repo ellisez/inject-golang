@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-func OptimizeCode(filename string, astFile *ast.File, moduleInfo *model.ModuleInfo, doc string) (*ast.File, error) {
+func OptimizeCode(filename string, astFile *ast.File, ctx *model.Ctx, doc string) (*ast.File, error) {
 	if astFile.Imports != nil {
 		specs := make([]ast.Spec, len(astFile.Imports))
 		for i, importSpec := range astFile.Imports {
@@ -35,13 +35,18 @@ func OptimizeCode(filename string, astFile *ast.File, moduleInfo *model.ModuleIn
 			},
 		}, astFile.Decls...)
 	}
-	///////////
-	buffer := &bytes.Buffer{}
-	err := format.Node(buffer, moduleInfo.FileSet, astFile)
+
+	err := GenerateCode(filename, astFile, ctx)
 	if err != nil {
 		return nil, err
 	}
-	newAstFile, err := parser.ParseFile(moduleInfo.FileSet, filename, buffer, parser.ParseComments)
+	///////////
+	buffer := &bytes.Buffer{}
+	err = format.Node(buffer, ctx.FileSet, astFile)
+	if err != nil {
+		return nil, err
+	}
+	newAstFile, err := parser.ParseFile(ctx.FileSet, filename, buffer, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +56,7 @@ func OptimizeCode(filename string, astFile *ast.File, moduleInfo *model.ModuleIn
 	return newAstFile, nil
 }
 
-func GenerateCode(filename string, astFile *ast.File, moduleInfo *model.ModuleInfo) error {
+func GenerateCode(filename string, astFile *ast.File, ctx *model.Ctx) error {
 	fileDir := filepath.Dir(filename)
 	err := CreateDirectoryIfNotExists(fileDir)
 	if err != nil {
@@ -64,9 +69,17 @@ func GenerateCode(filename string, astFile *ast.File, moduleInfo *model.ModuleIn
 	}
 	defer file.Close()
 
-	err = format.Node(file, moduleInfo.FileSet, astFile)
+	err = format.Node(file, ctx.FileSet, astFile)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func GetterOf(instance string) string {
+	return FirstToUpper(instance)
+}
+
+func SetterOf(instance string) string {
+	return "Set" + FirstToUpper(instance)
 }

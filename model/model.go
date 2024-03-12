@@ -5,24 +5,7 @@ import (
 	"go/token"
 )
 
-type PackageInfo struct {
-	Dirname string // 结构体目录
-	Package string // 结构体包名
-	Import  string // 用于import
-}
-
-type FieldInfo struct {
-	Name     string   // 字段名
-	Type     ast.Expr // 字段类型
-	Instance string   // 实例名，默认同参数名
-	Getter   string   // 读取函数, 仅在私有属性注入时工作
-	Setter   string   // 写入函数, 仅在私有属性注入时工作
-	Source   string   // 来源: '' | inject | query | path | header | body | formData | multipart
-	IsEmbed  bool     // 是否为内嵌属性，声明内嵌属性不具有字段名
-	Comment  string   // 原始注解
-}
-
-type Mod struct {
+type Module struct {
 	Path    string            // the dir of go.mod
 	Package string            // go.mod mod
 	Version string            // go.mod version
@@ -30,81 +13,102 @@ type Mod struct {
 	Work    map[string]string // go.work
 }
 
-type ModuleInfo struct {
-	FileSet            *token.FileSet
-	SingletonInstances []*StructInfo
-	MultipleInstances  []*StructInfo
-	FuncInstances      []*FuncInfo
-	MethodInstances    []*FuncInfo
-
-	WebAppInstances []*WebInfo
-
-	CtxImports      []*ast.ImportSpec
-	CtxMethodFields []*ast.Field
+type Import struct {
+	Name string
+	Path string
 }
 
-func NewModuleInfo() *ModuleInfo {
-	return &ModuleInfo{
+type CommonFunc struct {
+	Imports []*Import
+
+	*Func
+}
+
+func NewCommonFunc() *CommonFunc {
+	return &CommonFunc{
+		Func: &Func{},
+	}
+}
+
+type Comment struct {
+	Comment string
+	Args    []string
+}
+
+type Proxy struct {
+	*CommonFunc
+	Instance string
+	Comment  string
+}
+
+func NewProxy() *Proxy {
+	return &Proxy{CommonFunc: NewCommonFunc()}
+}
+
+type Method struct {
+	From     *Func
+	FuncName string
+	Params   []*Field
+	Results  []*Field
+}
+
+type Gen struct {
+	Imports []*ast.ImportSpec
+	Methods []*ast.FuncDecl
+}
+type Ctx struct {
+	FileSet *token.FileSet
+
+	SingletonInstances []Instance
+	MultipleInstances  []Instance
+	FuncInstances      []*Proxy
+	MethodInstances    []*Proxy
+
+	HasWebInstance bool
+	*Gen
+}
+
+func NewCtx() *Ctx {
+	return &Ctx{
 		FileSet: token.NewFileSet(),
+		Gen:     &Gen{},
 	}
 }
 
-func (moduleInfo *ModuleInfo) HasFunc(funcName string) bool {
-	for _, instance := range moduleInfo.MultipleInstances {
-		if "New"+instance.Instance == funcName {
-			return true
+func (ctx *Ctx) MethodOf(funcName string) *ast.FuncDecl {
+	for _, method := range ctx.Methods {
+		if method.Name.String() == funcName {
+			return method
 		}
 	}
-
-	for _, instance := range moduleInfo.FuncInstances {
-		if instance.Proxy == funcName {
-			return true
-		}
-	}
-
-	for _, instance := range moduleInfo.MethodInstances {
-		if instance.Proxy == funcName {
-			return true
-		}
-	}
-	return false
+	return nil
 }
 
-func (moduleInfo *ModuleInfo) GetSingleton(name string) *StructInfo {
-	for _, instance := range moduleInfo.SingletonInstances {
-		if instance.Instance == name {
+func (ctx *Ctx) SingletonOf(name string) Instance {
+	for _, instance := range ctx.SingletonInstances {
+		if instance.GetInstance() == name {
 			return instance
 		}
 	}
 	return nil
 }
-func (moduleInfo *ModuleInfo) GetMultiple(name string) *StructInfo {
-	for _, instance := range moduleInfo.MultipleInstances {
-		if instance.Instance == name {
-			return instance
-		}
-	}
-	return nil
-}
-func (moduleInfo *ModuleInfo) GetWebApp(name string) *WebInfo {
-	for _, instance := range moduleInfo.WebAppInstances {
-		if instance.WebApp == name {
+func (ctx *Ctx) MultipleOf(name string) Instance {
+	for _, instance := range ctx.MultipleInstances {
+		if instance.GetInstance() == name {
 			return instance
 		}
 	}
 	return nil
 }
 
-func (moduleInfo *ModuleInfo) HasInstance(name string) bool {
-	return moduleInfo.HasSingleton(name) || moduleInfo.HasMultiple(name) || moduleInfo.HasWebApp(name)
-}
-
-func (moduleInfo *ModuleInfo) HasSingleton(name string) bool {
-	return moduleInfo.GetSingleton(name) != nil
-}
-func (moduleInfo *ModuleInfo) HasMultiple(name string) bool {
-	return moduleInfo.GetMultiple(name) != nil
-}
-func (moduleInfo *ModuleInfo) HasWebApp(name string) bool {
-	return moduleInfo.GetWebApp(name) != nil
+func (ctx *Ctx) InstanceOf(name string) Instance {
+	instance := ctx.SingletonOf(name)
+	if instance != nil {
+		return instance
+	}
+	instance = ctx.MultipleOf(name)
+	if instance != nil {
+		return instance
+	}
+	return nil
 }

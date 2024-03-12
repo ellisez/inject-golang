@@ -183,30 +183,14 @@ func TypeWithPackage(astType ast.Expr, packageName string) ast.Expr {
 	return astType
 }
 
-func FieldName(field *ast.Field) string {
-	if field.Names != nil {
-		return field.Names[0].String()
+func FieldName(field *model.Field) string {
+	if field.Name != "" {
+		return field.Name
 	}
 	return TypeShortName(field.Type)
 }
-func HasField(structType *ast.StructType, fieldName string) bool {
-	for _, field := range structType.Fields.List {
-		if fieldName == FieldName(field) {
-			return true
-		}
-	}
-	return false
-}
 
-func FindFieldInfo(structInfo *model.StructInfo, fieldName string) *model.FieldInfo {
-	for _, field := range structInfo.Fields {
-		if fieldName == field.Name {
-			return field
-		}
-	}
-	return nil
-}
-func FindParamInfo(funcInfo *model.FuncInfo, fieldName string) *model.FieldInfo {
+func FindParam(funcInfo *model.Func, fieldName string) *model.Field {
 	for _, field := range funcInfo.Params {
 		if fieldName == field.Name {
 			return field
@@ -214,20 +198,14 @@ func FindParamInfo(funcInfo *model.FuncInfo, fieldName string) *model.FieldInfo 
 	}
 	return nil
 }
-func ToFileInfo(field *ast.Field) *model.FieldInfo {
+func ToFile(field *ast.Field) *model.Field {
 	var fieldName string
-	isEmbed := false
 	if field.Names != nil {
 		fieldName = field.Names[0].String()
-	} else {
-		fieldName = TypeShortName(field.Type)
-		isEmbed = true
 	}
-	return &model.FieldInfo{
-		Name:     fieldName,
-		Instance: fieldName,
-		Type:     field.Type,
-		IsEmbed:  isEmbed,
+	return &model.Field{
+		Name: fieldName,
+		Type: field.Type,
 	}
 }
 
@@ -324,18 +302,18 @@ func UnusedImports(astFile *ast.File) {
 	}
 }
 
-func FieldSetter(fieldInfo *model.FieldInfo) string {
-	fieldSetter := fieldInfo.Setter
+func FieldSetter(fieldInfo *model.Field) string {
+	fieldSetter := fieldInfo.Instance
 	if fieldSetter == "" {
-		fieldSetter = "Set" + FirstToUpper(fieldInfo.Name)
+		fieldSetter = FieldName(fieldInfo)
 	}
-	return fieldSetter
+	return "Set" + fieldSetter
 }
 
-func FieldGetter(fieldInfo *model.FieldInfo) string {
-	fieldGetter := fieldInfo.Getter
+func FieldGetter(fieldInfo *model.Field) string {
+	fieldGetter := fieldInfo.Instance
 	if fieldGetter == "" {
-		fieldGetter = FirstToUpper(fieldInfo.Name)
+		fieldGetter = FieldName(fieldInfo)
 	}
 	return fieldGetter
 }

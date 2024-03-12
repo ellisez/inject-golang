@@ -4,33 +4,34 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
-	"strings"
 )
 
-// FuncParse
-// 解析方法 -> 注解 -> 生成代码: 当前代码
-func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInfo) {
+func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPath string) {
 	funcName := funcDecl.Name.String()
 
-	funcInfo := model.NewFuncInfo()
-	funcInfo.PackageInfo = packageInfo
-	funcInfo.FuncName = funcName
-	funcInfo.Proxy = funcName
+	funcNode := &model.Func{
+		Package:  packageName,
+		FuncName: funcName,
+	}
+	commonFunc := model.NewCommonFunc()
+	commonFunc.Func = funcNode
+	commonFunc.Imports = append(commonFunc.Imports, &model.Import{Path: importPath})
 
 	astRec := funcDecl.Recv
 
 	if astRec != nil {
 		fieldRec := astRec.List[0]
-		paramInfo := utils.ToFileInfo(fieldRec)
-		funcInfo.Recv = paramInfo
+		param := utils.ToFile(fieldRec)
+		funcNode.Recv = param
+		funcNode.Params = append(funcNode.Params, param)
 	}
 
-	fillEmptyParam(funcDecl.Type, funcInfo)
+	fillEmptyParam(funcDecl.Type, funcNode)
 
-	isWebApp := false
-	isMiddleware := false
-	isRouter := false
-	hasAnnotate := false
+	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
+
+	var comments []*model.Comment
+	mode := "" // ""|@proxy|@provide|@webProvide|@middleware|@router
 	if funcDecl.Doc != nil {
 		for _, comment := range funcDecl.Doc.List {
 			annotateArgs := annotateParse(comment.Text)
@@ -39,150 +40,122 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageInfo *model.PackageInf
 				continue
 			}
 			annotateName := annotateArgs[0]
-			if annotateName == "@proxy" {
-				if argsLen >= 2 {
-					proxy := annotateArgs[1]
-					if proxy != "" && proxy != "_" {
-						funcInfo.Proxy = proxy
-					}
+
+			switch annotateName {
+			case "@proxy", "@provide", "@webProvide", "@middleware", "@router":
+				if mode != "" {
+					utils.Failuref("%s %s, conflict with %s", commonFunc.Loc.String(), comment.Text, mode)
 				}
-				funcInfo.ProxyComment = comment.Text
-				hasAnnotate = true
-			} else if annotateName == "@import" {
-				importInfo := &model.ImportInfo{}
-				funcInfo.Imports = append(funcInfo.Imports, importInfo)
+				mode = annotateName
+
+				comments = append(comments, &model.Comment{
+					Comment: comment.Text,
+					Args:    annotateArgs,
+				})
+				break
+			case "@import":
+				importInfo := &model.Import{}
+				commonFunc.Imports = append(commonFunc.Imports, importInfo)
 
 				if argsLen < 2 {
-					utils.Failuref("%s, Path must be specified, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
 				}
 				importInfo.Path = annotateArgs[1]
 				if argsLen >= 3 {
 					importName := annotateArgs[2]
 					if importName == "." {
-						utils.Failuref("%s, Cannot support DotImport, at %s()", comment.Text, funcInfo.FuncName)
+						utils.Failuref("%s %s, Cannot support DotImport", commonFunc.Loc.String(), comment.Text)
 					}
 					if importName != "" {
 						importInfo.Name = importName
 					}
 				}
-			} else if annotateName == "@injectParam" {
+				break
+			case "@injectParam":
 				if argsLen < 2 {
-					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 				}
 				paramName := annotateArgs[1]
-				paramInfo := utils.FindParamInfo(funcInfo, paramName)
-				if paramInfo == nil {
-					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
+				param := utils.FindParam(funcNode, paramName)
+				if param == nil {
+					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 				}
 
 				if argsLen >= 3 {
 					paramInstance := annotateArgs[2]
 					if paramInstance != "" && paramInstance != "_" {
-						paramInfo.Instance = paramInstance
+						param.Instance = paramInstance
 					}
 				} else {
-					paramInfo.Instance = utils.FirstToUpper(paramName)
+					param.Instance = utils.FirstToUpper(paramName)
 				}
-				paramInfo.Comment = comment.Text
-				paramInfo.Source = "inject"
-			} else if annotateName == "@injectRecv" {
+				param.Comment = comment.Text
+				param.Source = "inject"
+				break
+			case "@injectRecv":
 				if argsLen < 2 {
-					utils.Failuref("%s, RecvName must be specified, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)
 				}
 				paramName := annotateArgs[1]
-				if funcInfo.Recv.Name != paramName {
-					utils.Failuref("%s, RecvName not found, at %s()", comment.Text, funcInfo.FuncName)
+				if funcNode.Recv.Name != paramName {
+					utils.Failuref("%s %s, RecvName not found", commonFunc.Loc.String(), comment.Text)
 				}
 
-				paramInfo := funcInfo.Recv
+				recv := funcNode.Recv
 				if argsLen >= 3 {
 					paramInstance := annotateArgs[2]
 					if paramInstance != "" && paramInstance != "_" {
-						paramInfo.Instance = paramInstance
+						recv.Instance = paramInstance
 					}
 				} else {
-					paramInfo.Instance = utils.FirstToUpper(paramName)
+					recv.Instance = utils.FirstToUpper(paramName)
 				}
-				paramInfo.Comment = comment.Text
-				paramInfo.Source = "inject"
-			} else if annotateName == "@injectCtx" {
+				recv.Comment = comment.Text
+				recv.Source = "inject"
+				break
+			case "@injectCtx":
 				if argsLen < 2 {
-					utils.Failuref("%s, ParamName must be specified, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 				}
 				paramName := annotateArgs[1]
-				paramInfo := utils.FindParamInfo(funcInfo, paramName)
+				paramInfo := utils.FindParam(funcNode, paramName)
 				if paramInfo == nil {
-					utils.Failuref("%s, ParamName not found, at %s()", comment.Text, funcInfo.FuncName)
+					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 				}
 
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "ctx"
-			} else if annotateName == "@webAppProvide" {
-				isWebApp = true
-				hasAnnotate = true
-				if isMiddleware {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
-				} else if isRouter {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
-				}
-			} else if annotateName == "@middleware" {
-				isMiddleware = true
-				hasAnnotate = true
-				if isWebApp {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
-				} else if isRouter {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@router", funcInfo.FuncName)
-				}
-			} else if annotateName == "@router" {
-				isRouter = true
-				hasAnnotate = true
-				if isWebApp {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@webAppProvide", funcInfo.FuncName)
-				} else if isMiddleware {
-					utils.Failuref("%s, conflict with %s, at %s()", comment.Text, "@middleware", funcInfo.FuncName)
-				}
+				break
+			default:
+				comments = append(comments, &model.Comment{
+					Comment: comment.Text,
+					Args:    annotateArgs,
+				})
 			}
+
 		}
 	}
 
-	if !hasAnnotate {
-		return
-	}
-	if strings.HasPrefix(funcInfo.Proxy, "New") {
-		utils.Failuref("%s, Proxy does not allow starting with \"New\", at %s()", funcInfo.ProxyComment, funcInfo.FuncName)
-	}
-
-	results := funcDecl.Type.Results
-	if results != nil {
-		for _, resultField := range results.List {
-			funcInfo.Results = append(funcInfo.Results, utils.ToFileInfo(resultField))
-		}
-	}
-
-	for _, param := range funcDecl.Type.Params.List {
-		ParamParse(param, funcInfo)
-	}
-
-	if isWebApp {
-		p.WebAppParse(funcDecl, funcInfo)
-	} else if isMiddleware {
-		p.MiddlewareParse(funcDecl, funcInfo)
-	} else if isRouter {
-		p.RouterParse(funcDecl, funcInfo)
-	} else {
-		addFuncOrMethodInstances(p.Result, funcInfo)
+	switch mode {
+	case "@proxy":
+		p.ProxyParse(funcDecl, commonFunc, comments)
+		break
+	case "@provide":
+		p.InstanceParse(funcDecl, commonFunc, comments)
+		break
+	case "@webProvide":
+		p.WebParse(funcDecl, commonFunc, comments)
+		break
+	case "@middleware":
+		p.MiddlewareParse(funcDecl, commonFunc, comments)
+		break
+	case "@router":
+		p.RouterParse(funcDecl, commonFunc, comments)
+		break
 	}
 }
-func fillEmptyParam(funcType *ast.FuncType, funcInfo *model.FuncInfo) {
+func fillEmptyParam(funcType *ast.FuncType, funcNode *model.Func) {
 	for _, field := range funcType.Params.List {
-		funcInfo.Params = append(funcInfo.Params, utils.ToFileInfo(field))
-	}
-}
-
-func addFuncOrMethodInstances(result *model.ModuleInfo, funcInfo *model.FuncInfo) {
-	if funcInfo.Recv == nil {
-		result.FuncInstances = append(result.FuncInstances, funcInfo)
-	} else {
-		result.MethodInstances = append(result.MethodInstances, funcInfo)
+		funcNode.Params = append(funcNode.Params, utils.ToFile(field))
 	}
 }

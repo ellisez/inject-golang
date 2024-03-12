@@ -27,26 +27,26 @@ func SortImports(importSpecs []*ast.ImportSpec) {
 	sort.Sort(sorter)
 }
 
-type sortStructInfo []*model.StructInfo
+type sortableInstance []model.Instance
 
-func (s sortStructInfo) Len() int {
+func (s sortableInstance) Len() int {
 	return len(s)
 }
 
-func (s sortStructInfo) Less(x int, y int) bool {
-	if s[x].Order != "" && s[y].Order == "" {
+func (s sortableInstance) Less(x int, y int) bool {
+	if s[x].GetOrder() != "" && s[y].GetOrder() == "" {
 		return true
 	}
-	return s[x].Order < s[y].Order
+	return s[x].GetOrder() < s[y].GetOrder()
 }
 
-func (s sortStructInfo) Swap(x int, y int) {
+func (s sortableInstance) Swap(x int, y int) {
 	old := s[x]
 	s[x] = s[y]
 	s[y] = old
 }
 
-func SortStructInfo(structInfos []*model.StructInfo) {
-	var sorter sortStructInfo = structInfos
+func SortInstance(instances []model.Instance) {
+	var sorter sortableInstance = instances
 	sort.Sort(sorter)
 }

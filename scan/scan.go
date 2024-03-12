@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 )
 
-func DoScan() (*model.ModuleInfo, error) {
-	moduleInfo := model.NewModuleInfo()
+func DoScan() (*model.Ctx, error) {
+	ctx := model.NewCtx()
 
 	for _, directory := range ScanDirectories {
 		directory, err := utils.DirnameOfImportPath(directory)
@@ -18,10 +18,10 @@ func DoScan() (*model.ModuleInfo, error) {
 			return nil, err
 		}
 		p := &parse.Parser{
-			Result: moduleInfo,
+			Ctx: ctx,
 		}
 
-		p.Mod, err = parse.ModParse(directory)
+		p.Module, err = parse.ModParse(directory)
 		if err != nil {
 			return nil, err
 		}
@@ -30,9 +30,9 @@ func DoScan() (*model.ModuleInfo, error) {
 			return nil, err
 		}
 	}
-	utils.SortStructInfo(moduleInfo.SingletonInstances)
-	utils.SortStructInfo(moduleInfo.MultipleInstances)
-	return moduleInfo, nil
+	utils.SortInstance(ctx.SingletonInstances)
+	utils.SortInstance(ctx.MultipleInstances)
+	return ctx, nil
 }
 func recurDirectory(filename string, handle func(filename string) error) error {
 	list, err := os.ReadDir(filename)
