@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ellisez/inject-golang/gen"
 	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/parse"
 	"github.com/ellisez/inject-golang/scan"
 	"github.com/ellisez/inject-golang/utils"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -20,7 +22,10 @@ func init() {
 	mod, err := parse.ModParse(modulePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			utils.Failure("current directory is not a mod, try to run \"go mod init\"")
+			var pathError *fs.PathError
+			errors.As(err, &pathError)
+			filename := pathError.Path
+			utils.Failuref(`"%s" is not a mod, try to run "go mod init"`, filepath.Dir(filename))
 		} else {
 			utils.Failure(err.Error())
 		}

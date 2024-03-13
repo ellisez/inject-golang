@@ -2,5 +2,5 @@ go 1.19
 
 use (
 	.
-	../examples-work
+	../examples_work
 )
