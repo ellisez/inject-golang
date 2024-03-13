@@ -4,6 +4,7 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
+	"strings"
 )
 
 func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
@@ -41,7 +42,9 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 			if argsLen >= 2 {
 				order := args[1]
 				if order != "" && order != "_" {
-					instanceNode.Order = order
+					instanceNode.Order = strings.TrimFunc(order, func(r rune) bool {
+						return r == '"' || r == '`'
+					})
 				}
 			}
 		case "@handler":

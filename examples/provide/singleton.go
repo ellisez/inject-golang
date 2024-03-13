@@ -5,11 +5,11 @@ import (
 	"github.com/ellisez/inject-golang/examples/model"
 )
 
-// ProvideIsReady example for basic type
+// IsReady example for basic type
 // @provide IsReady
 // @order "step 1: Setting variable"
-func ProvideIsReady() bool {
-	fmt.Println("call IsReady.ProvideIsReady")
+func IsReady() bool {
+	fmt.Println("call IsReady.IsReady")
 	return false
 }
 
