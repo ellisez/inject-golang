@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // gen_ctx.go
@@ -134,7 +135,9 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 // # gen segment: Singleton instance #
 func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := "ctx"
-	stmts := make([]ast.Stmt, 0)
+
+	var docs []*ast.Comment
+	var stmts []ast.Stmt
 	// [code] ctx := &Ctx{}
 	stmts = append(stmts, astDefineStmt(
 		ast.NewIdent(ctxVar),
@@ -143,37 +146,64 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 
 	// create instances
 	for _, instance := range ctx.SingletonInstances {
+		instanceOrder := instance.GetOrder()
 		instanceName := instance.GetInstance()
 		instanceFunc := instance.GetFunc()
 		instanceType := instance.GetType()
 
 		fieldName := utils.FirstToLower(instanceName)
 		fieldExpr := astSelectorExpr(ctxVar, fieldName)
-		var constructorExpr ast.Expr
-		if instanceFunc.FuncName == "" {
-			// [code] ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
-			constructorExpr = astDeclareRef(
-				instanceType,
-				nil,
-			)
-		} else {
-			// [code] ctx.{{PrivateName}} = {{Package}}.{{FuncName}}()
-			constructorExpr = &ast.CallExpr{Fun: astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName)}
+		constructor := instance.GetConstructor()
+
+		if constructor == nil {
+			if instanceFunc.FuncName == "" {
+				// [code] ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
+				constructor = astDeclareRef(
+					instanceType,
+					nil,
+				)
+			} else {
+				// [code] ctx.{{PrivateName}} = {{Package}}.{{FuncName}}()
+				constructor = &ast.CallExpr{Fun: astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName)}
+			}
 		}
 
 		stmts = append(stmts, astAssignStmt(
 			fieldExpr,
-			constructorExpr,
+			constructor,
 		))
+
+		if instanceOrder != "" {
+			docs = append(docs, &ast.Comment{
+				Text: "//  " + instanceOrder,
+			})
+		}
 	}
 
 	// call func
 	for _, instance := range ctx.SingletonInstances {
 		if _, ok := instance.(*model.Provide); ok {
+			instanceName := instance.GetInstance()
+			fieldName := utils.FirstToLower(instanceName)
+			fieldExpr := astSelectorExpr(ctxVar, fieldName)
+
 			handler := instance.GetHandler()
 			if handler != "" {
 
-				instanceCallExpr := astInstanceCallExpr(ast.NewIdent(handler), instance.GetFunc(), ctx, ctxVar)
+				var instanceCallExpr *ast.CallExpr
+				if strings.Contains(handler, ".") {
+					// [code] {{Handler}}(ctx.{{}})
+					instanceCallExpr = &ast.CallExpr{
+						Fun:  ast.NewIdent(handler),
+						Args: []ast.Expr{fieldExpr},
+					}
+				} else {
+					// [code] ctx.{{Handler}}(ctx.{{}})
+					instanceCallExpr = &ast.CallExpr{
+						Fun:  astSelectorExpr(ctxVar, handler),
+						Args: []ast.Expr{fieldExpr},
+					}
+				}
 
 				// [code] {{Package}}.{{FunName}}(...)
 				stmts = append(stmts, &ast.ExprStmt{
@@ -201,6 +231,11 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 		stmts,
 	)
+	if docs != nil {
+		docs = append([]*ast.Comment{{Text: "// Action list:"}}, docs...)
+		ctx.Doc = docs
+		funcDecl.Doc = &ast.CommentGroup{List: docs}
+	}
 
 	addDecl(astFile, funcDecl)
 }

@@ -110,12 +110,9 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 		}
 
 		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance)
-		genDoc := &ast.Comment{
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
-		}
-		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-			genDoc,
-		}}
+		}}}
 		addDecl(astFile, funcDecl)
 		ctx.Methods = append(ctx.Methods, funcDecl)
 	}

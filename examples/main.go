@@ -9,7 +9,7 @@ import "github.com/ellisez/inject-golang/examples/ctx/factory"
 
 func main() {
 	c := factory.New()
-	err := c.WebAppStartup1(3001)
+	err := c.WebAppStartup("127.0.0.1", 3001)
 	if err != nil {
 		return
 	}

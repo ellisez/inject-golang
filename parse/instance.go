@@ -37,7 +37,6 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 				}
 			}
 			instanceNode.Comment = comment.Comment
-			break
 		case "@order":
 			if argsLen >= 2 {
 				order := args[1]
@@ -45,13 +44,11 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 					instanceNode.Order = order
 				}
 			}
-			break
 		case "@handler":
 			if argsLen < 2 {
 				utils.Failuref(`%s %s, Handler must be specified`, commonFunc.Loc.String(), instanceNode.Comment)
 			}
 			instanceNode.Handler = args[1]
-			break
 		}
 	}
 
@@ -66,10 +63,8 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 	switch instanceNode.Mode {
 	case "singleton":
 		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, instanceNode)
-		break
 	case "multiple":
 		p.Ctx.MultipleInstances = append(p.Ctx.MultipleInstances, instanceNode)
-		break
 	default:
 		utils.Failuref(`%s %s, Mode "%s" is invalid`, commonFunc.Loc.String(), instanceNode.Comment, instanceNode.Mode)
 	}

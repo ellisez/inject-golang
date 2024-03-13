@@ -53,6 +53,7 @@ type Method struct {
 }
 
 type Gen struct {
+	Doc     []*ast.Comment
 	Imports []*ast.ImportSpec
 	Methods []*ast.FuncDecl
 }

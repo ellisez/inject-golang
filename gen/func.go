@@ -61,7 +61,7 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
 	for _, instance := range ctx.FuncInstances {
-		params := make([]*ast.Field, 0)
+		var params []*ast.Field
 		for _, paramInfo := range instance.Params {
 			if paramInfo.Source == "" {
 				// [code] {{ParamInstance}} {{ParamType}},
@@ -84,8 +84,7 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 			}
 		}
 
-		stmts := make([]ast.Stmt, 0)
-
+		var stmts []ast.Stmt
 		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
 		if len(instance.Results) == 0 {
 			stmts = append(stmts, &ast.ExprStmt{
@@ -109,15 +108,9 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		funcDecl.Body = &ast.BlockStmt{
 			List: stmts,
 		}
-		genDoc := &ast.Comment{
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
-		}
-		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-			{
-				Text: fmt.Sprintf("\n// %s", instance.Instance),
-			},
-			genDoc,
-		}}
+		}}}
 		addDecl(astFile, funcDecl)
 		ctx.Methods = append(ctx.Methods, funcDecl)
 	}

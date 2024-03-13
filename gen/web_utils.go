@@ -1281,3 +1281,45 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 	}}
 	addDecl(astFile, funcDecl)
 }
+
+func paramConvStmts(strCall *ast.CallExpr, convCall *ast.CallExpr) []ast.Stmt {
+	return []ast.Stmt{
+		astDefineStmt(ast.NewIdent("str"), strCall),
+		// [code] if str == "" && defaultValue != nil
+		&ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				Op: token.LAND,
+				X: &ast.BinaryExpr{
+					Op: token.EQL,
+					X:  ast.NewIdent("str"),
+					Y:  astStringExpr(""),
+				},
+				Y: &ast.BinaryExpr{
+					Op: token.NEQ,
+					X:  ast.NewIdent("defaultValue"),
+					Y:  ast.NewIdent("nil"),
+				},
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					// [code] return defaultValue[0], nil
+					&ast.ReturnStmt{
+						Results: []ast.Expr{
+							&ast.IndexExpr{
+								Index: astIntExpr("0"),
+								X:     ast.NewIdent("defaultValue"),
+							},
+							ast.NewIdent("nil"),
+						},
+					},
+				},
+			},
+		},
+		// [code] return strconv.ParseBool(str)
+		&ast.ReturnStmt{
+			Results: []ast.Expr{
+				convCall,
+			},
+		},
+	}
+}

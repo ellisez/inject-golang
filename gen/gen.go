@@ -276,7 +276,8 @@ func astNewInstance(instance model.Instance, ctxVar string) ast.Expr {
 	instanceName := instance.GetInstance()
 	switch instance.GetMode() {
 	case "singleton":
-		return astSelectorExpr(ctxVar, instanceName)
+		instanceVar := utils.FirstToLower(instanceName)
+		return astSelectorExpr(ctxVar, instanceVar)
 	case "multiple":
 		return &ast.CallExpr{
 			Fun: astSelectorExpr(ctxVar, "New"+instanceName),
@@ -295,8 +296,7 @@ func astInstanceProxyFunc(instanceFunc *model.Func, instanceName string, params 
 	params = append(params, astInstanceProxyParams(instanceFunc)...)
 	var results []*ast.Field
 	for _, result := range instanceFunc.Results {
-		resultName := utils.FieldName(result)
-		results = append(results, astField(resultName, result.Type))
+		results = append(results, astField(result.Name, result.Type))
 	}
 
 	return astFuncDecl(
@@ -313,8 +313,8 @@ func astInstanceProxyParams(instanceFunc *model.Func) []*ast.Field {
 	var params []*ast.Field
 	for _, param := range instanceFunc.Params {
 		if param.Source == "" {
-			paramName := utils.FieldName(param)
-			params = append(params, astField(paramName, param.Type))
+			paramVar := utils.FieldVar(param)
+			params = append(params, astField(paramVar, param.Type))
 		}
 	}
 	return params
@@ -323,23 +323,32 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 
 	var args []ast.Expr
 	for _, param := range instanceFunc.Params {
+		var argExpr ast.Expr
 		switch param.Source {
 		case "ctx":
-			args = append(args, ast.NewIdent(ctxVar))
-			break
+			argExpr = ast.NewIdent(ctxVar)
 		case "webCtx":
-			args = append(args, ast.NewIdent("webCtx"))
-			break
+			argExpr = ast.NewIdent("webCtx")
 		case "inject":
 			paramInstance := ctx.InstanceOf(param.Instance)
 			if paramInstance == nil {
 				utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), param.Comment, param.Instance)
 			}
-			args = append(args, astNewInstance(paramInstance, ctxVar))
-			break
+			argExpr = astNewInstance(paramInstance, ctxVar)
 		case "":
-			args = append(args, ast.NewIdent(param.Instance))
+			fallthrough
+		default:
+			paramVar := utils.FieldVar(param)
+			argExpr = ast.NewIdent(paramVar)
 		}
+
+		switch param.Pointer {
+		case "&":
+			argExpr = &ast.UnaryExpr{Op: token.AND, X: argExpr}
+		case "*":
+			argExpr = astStarExpr(argExpr)
+		}
+		args = append(args, argExpr)
 	}
 
 	// [code] {{Package}}.{{Handler}}(...)

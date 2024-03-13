@@ -1,6 +1,5 @@
 package provide
 
-// aaaaa
 import (
 	"github.com/ellisez/inject-golang/examples/model"
 )

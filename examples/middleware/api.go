@@ -10,6 +10,7 @@ import (
 
 // CorsMiddleware
 // @middleware /api
+// @import github.com/ellisez/inject-golang/examples/model
 // @injectWebCtx c
 // @injectCtx appCtx
 // @param body body

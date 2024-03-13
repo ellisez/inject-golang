@@ -54,8 +54,6 @@ type WebInstance struct {
 func NewWebInstance() *WebInstance {
 	webInstance := &WebInstance{Provide: NewProvide()}
 	webInstance.Mode = "singleton"
-	webInstance.Package = "fiber"
-	webInstance.FuncName = "New"
 	webInstance.Instance = "WebApp"
 	webInstance.Type = &ast.StarExpr{
 		X: &ast.SelectorExpr{
@@ -66,6 +64,12 @@ func NewWebInstance() *WebInstance {
 		{
 			Name: "",
 			Path: "github.com/gofiber/fiber/v2",
+		},
+	}
+	webInstance.Constructor = &ast.CallExpr{
+		Fun: &ast.SelectorExpr{
+			X:   ast.NewIdent("fiber"),
+			Sel: ast.NewIdent("New"),
 		},
 	}
 	return webInstance

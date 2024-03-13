@@ -30,6 +30,12 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 
 	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
 
+	if funcDecl.Type.Results != nil {
+		for _, result := range funcDecl.Type.Results.List {
+			funcNode.Results = append(funcNode.Results, utils.ToFile(result))
+		}
+	}
+
 	var comments []*model.Comment
 	mode := "" // ""|@proxy|@provide|@webProvide|@middleware|@router
 	if funcDecl.Doc != nil {
@@ -52,7 +58,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					Comment: comment.Text,
 					Args:    annotateArgs,
 				})
-				break
 			case "@import":
 				importInfo := &model.Import{}
 				commonFunc.Imports = append(commonFunc.Imports, importInfo)
@@ -70,7 +75,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 						importInfo.Name = importName
 					}
 				}
-				break
 			case "@injectParam":
 				if argsLen < 2 {
 					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
@@ -93,14 +97,12 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					switch pointer {
 					case "", "&", "*":
 						param.Pointer = pointer
-						break
 					default:
 						utils.Failuref(`%s %s, Pointer "%s" not supported, only ["", "&", "*"] are allowed`, commonFunc.Loc.String(), comment.Text, pointer)
 					}
 				}
 				param.Comment = comment.Text
 				param.Source = "inject"
-				break
 			case "@injectRecv":
 				if argsLen < 2 {
 					utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)
@@ -116,12 +118,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					if paramInstance != "" && paramInstance != "_" {
 						recv.Instance = paramInstance
 					}
-				} else {
-					recv.Instance = utils.FirstToUpper(paramName)
 				}
 				recv.Comment = comment.Text
 				recv.Source = "inject"
-				break
 			case "@injectCtx":
 				if argsLen < 2 {
 					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
@@ -134,7 +133,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "ctx"
-				break
 			default:
 				comments = append(comments, &model.Comment{
 					Comment: comment.Text,
@@ -148,19 +146,14 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 	switch mode {
 	case "@proxy":
 		p.ProxyParse(funcDecl, commonFunc, comments)
-		break
 	case "@provide":
 		p.InstanceParse(funcDecl, commonFunc, comments)
-		break
 	case "@webProvide":
 		p.WebParse(funcDecl, commonFunc, comments)
-		break
 	case "@middleware":
 		p.MiddlewareParse(funcDecl, commonFunc, comments)
-		break
 	case "@router":
 		p.RouterParse(funcDecl, commonFunc, comments)
-		break
 	}
 }
 func fillEmptyParam(funcType *ast.FuncType, funcNode *model.Func) {

@@ -28,18 +28,14 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 			middleware.Path = args[1]
 
 			middleware.Comment = comment.Comment
-			break
 		case "@param":
 			webParamParse(middleware.WebParam, commonFunc, comment)
-			break
 		case "@injectWebCtx":
 			injectWebCtxParse(commonFunc, comment)
-			break
 		case "@webApp":
 			if argsLen >= 2 {
 				middleware.WebApp = args[1]
 			}
-			break
 		}
 	}
 
@@ -66,10 +62,4 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, webInstance)
 	}
 	p.Ctx.HasWebInstance = true
-
-	if funcDecl.Recv == nil {
-		p.Ctx.FuncInstances = append(p.Ctx.FuncInstances, middleware.Proxy)
-	} else {
-		p.Ctx.MethodInstances = append(p.Ctx.MethodInstances, middleware.Proxy)
-	}
 }

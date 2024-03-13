@@ -7,6 +7,7 @@ import (
 
 // NewMiddleWare example for multiple default
 // @provide MiddleWare multiple
+// @import github.com/ellisez/inject-golang/examples/model
 // @injectParam Database
 func NewMiddleWare(Database *model.Database) *model.MiddleWare {
 	return &model.MiddleWare{
@@ -16,6 +17,7 @@ func NewMiddleWare(Database *model.Database) *model.MiddleWare {
 
 // NewRouterAlias example for multiple injection
 // @provide RouterAlias multiple
+// @import github.com/ellisez/inject-golang/examples/model
 // @import github.com/ellisez/inject-golang/examples/handler
 // @handler handler.AfterRouterCreate
 func NewRouterAlias() *model.Router {

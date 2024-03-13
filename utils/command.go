@@ -67,19 +67,14 @@ Options:
 			switch s {
 			case "all":
 				FlagAll = true
-				break
 			case "singleton":
 				FlagSingleton = true
-				break
 			case "multiple":
 				FlagMultiple = true
-				break
 			case "func":
 				FlagFunc = true
-				break
 			case "web":
 				FlagWeb = true
-				break
 			default:
 				return fmt.Errorf("Options -m \"%s\" unknown\nUsage: %s", s, flag.Lookup("m").Usage)
 			}

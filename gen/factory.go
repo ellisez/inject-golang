@@ -35,8 +35,8 @@ func genFactoryImportAst(ctx *model.Ctx, astFile *ast.File) {
 	addImport(astFile, ctx, "", path.Join(Mod.Package, GenPackage, "internal"))
 }
 
-func genFactoryNewAst(_ *model.Ctx, astFile *ast.File) {
-	addDecl(astFile, astFuncDecl(
+func genFactoryNewAst(ctx *model.Ctx, astFile *ast.File) {
+	funcDecl := astFuncDecl(
 		nil,
 		"New",
 		nil,
@@ -50,5 +50,9 @@ func genFactoryNewAst(_ *model.Ctx, astFile *ast.File) {
 				},
 			}},
 		},
-	))
+	)
+	if ctx.Doc != nil {
+		funcDecl.Doc = &ast.CommentGroup{List: ctx.Doc}
+	}
+	addDecl(astFile, funcDecl)
 }

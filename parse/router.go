@@ -41,18 +41,14 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 			}
 
 			router.Comment = comment.Comment
-			break
 		case "@param":
 			webParamParse(router.WebParam, commonFunc, comment)
-			break
 		case "@injectWebCtx":
 			injectWebCtxParse(commonFunc, comment)
-			break
 		case "@webApp":
 			if argsLen >= 2 {
 				router.WebApp = args[1]
 			}
-			break
 		}
 	}
 
@@ -80,10 +76,4 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 	}
 
 	p.Ctx.HasWebInstance = true
-
-	if funcDecl.Recv == nil {
-		p.Ctx.FuncInstances = append(p.Ctx.FuncInstances, router.Proxy)
-	} else {
-		p.Ctx.MethodInstances = append(p.Ctx.MethodInstances, router.Proxy)
-	}
 }

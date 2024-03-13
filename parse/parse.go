@@ -39,11 +39,9 @@ func annotateParse(text string) []string {
 			case '"':
 				mode = "endOfDoubleQuote"
 				lastIndex = index
-				break
 			case '`':
 				mode = "endOfBackQuote"
 				lastIndex = index
-				break
 			default:
 				mode = "endOfSpace"
 				lastIndex = index
@@ -52,29 +50,20 @@ func annotateParse(text string) []string {
 			switch char {
 			case ' ', '\t':
 				add(index)
-				break
 			default:
-
 			}
-			break
 		case "endOfDoubleQuote":
 			switch char {
 			case '"':
 				add(index + 1)
-				break
 			default:
-
 			}
-			break
 		case "endOfBackQuote":
 			switch char {
 			case '`':
 				add(index + 1)
-				break
 			default:
-
 			}
-			break
 		}
 	}
 	if mode != "seek" {
@@ -193,7 +182,7 @@ func (p *Parser) DoParse(filename string) error {
 			case *ast.FuncDecl:
 				funcDecl := decl.(*ast.FuncDecl)
 				p.FuncParse(funcDecl, packageName, importPath)
-				break
+
 			}
 		}
 

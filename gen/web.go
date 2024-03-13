@@ -89,48 +89,6 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File) {
 	}
 }
 
-func paramConvStmts(strCall *ast.CallExpr, convCall *ast.CallExpr) []ast.Stmt {
-	return []ast.Stmt{
-		astDefineStmt(ast.NewIdent("str"), strCall),
-		// [code] if str == "" && defaultValue != nil
-		&ast.IfStmt{
-			Cond: &ast.BinaryExpr{
-				Op: token.LAND,
-				X: &ast.BinaryExpr{
-					Op: token.EQL,
-					X:  ast.NewIdent("str"),
-					Y:  astStringExpr(""),
-				},
-				Y: &ast.BinaryExpr{
-					Op: token.NEQ,
-					X:  ast.NewIdent("defaultValue"),
-					Y:  ast.NewIdent("nil"),
-				},
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					// [code] return defaultValue[0], nil
-					&ast.ReturnStmt{
-						Results: []ast.Expr{
-							&ast.IndexExpr{
-								Index: astIntExpr("0"),
-								X:     ast.NewIdent("defaultValue"),
-							},
-							ast.NewIdent("nil"),
-						},
-					},
-				},
-			},
-		},
-		// [code] return strconv.ParseBool(str)
-		&ast.ReturnStmt{
-			Results: []ast.Expr{
-				convCall,
-			},
-		},
-	}
-}
-
 func errorReturnStmts() *ast.IfStmt {
 	return &ast.IfStmt{
 		Cond: &ast.BinaryExpr{
@@ -167,18 +125,6 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				// [code] {{ParamInstance}} {{ParamType}},
 				proxyParams = astInstanceProxyParams(instance.GetFunc())
 			}
-
-			proxyFuncDecl := astFuncDecl(
-				[]*ast.Field{
-					astField(instanceVar, astStarExpr(ast.NewIdent(CtxType))),
-				},
-				instanceName+"Startup",
-				proxyParams,
-				[]*ast.Field{
-					astField("", ast.NewIdent("error")),
-				},
-				nil,
-			)
 
 			var stmts []ast.Stmt
 
@@ -305,16 +251,20 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				},
 			})
 
-			genDoc := &ast.Comment{
-				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
-			}
-
-			proxyFuncDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-				{
-					Text: fmt.Sprintf("// %s", instanceName),
+			proxyFuncDecl := astFuncDecl(
+				[]*ast.Field{
+					astField(instanceVar, astStarExpr(ast.NewIdent(CtxType))),
 				},
-				genDoc,
-			}}
+				instanceName+"Startup",
+				proxyParams,
+				[]*ast.Field{
+					astField("", ast.NewIdent("error")),
+				},
+				stmts,
+			)
+			proxyFuncDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
+			}}}
 			addDecl(astFile, proxyFuncDecl)
 			ctx.Methods = append(ctx.Methods, proxyFuncDecl)
 		}
@@ -323,30 +273,32 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 }
 
 func defineParamStmt(convFunc string, param *model.Field) ast.Stmt {
+	paramVar := utils.FirstToLower(param.Instance)
 	return astDefineStmt(
-		ast.NewIdent(param.Instance),
+		ast.NewIdent(paramVar),
 		&ast.CallExpr{
 			Fun: astSelectorExpr("utils", convFunc),
 			Args: []ast.Expr{
 				ast.NewIdent("webCtx"),
-				astStringExpr(param.Instance),
+				astStringExpr(paramVar),
 			},
 		},
 	)
 }
 
 func defineParamWithError(convFunc string, param *model.Field) []ast.Stmt {
+	paramVar := utils.FirstToLower(param.Instance)
 	return []ast.Stmt{
 		astDefineStmtMany(
 			[]ast.Expr{
-				ast.NewIdent(param.Instance),
+				ast.NewIdent(paramVar),
 				ast.NewIdent("err"),
 			},
 			&ast.CallExpr{
 				Fun: astSelectorExpr("utils", convFunc),
 				Args: []ast.Expr{
 					ast.NewIdent("webCtx"),
-					astStringExpr(param.Instance),
+					astStringExpr(paramVar),
 				},
 			},
 		),
@@ -355,10 +307,11 @@ func defineParamWithError(convFunc string, param *model.Field) []ast.Stmt {
 }
 
 func defineParamByParser(convFunc string, param *model.Field, packageName string) []ast.Stmt {
+	paramVar := utils.FirstToLower(param.Instance)
 	return []ast.Stmt{
 		// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
 		astDefineStmt(
-			ast.NewIdent(param.Instance),
+			ast.NewIdent(paramVar),
 			astDeclareRef(
 				utils.AccessType(
 					param.Type,
@@ -375,7 +328,7 @@ func defineParamByParser(convFunc string, param *model.Field, packageName string
 				Fun: astSelectorExpr("utils", convFunc),
 				Args: []ast.Expr{
 					ast.NewIdent("webCtx"),
-					ast.NewIdent(param.Instance),
+					ast.NewIdent(paramVar),
 				},
 			},
 		),
@@ -385,13 +338,14 @@ func defineParamByParser(convFunc string, param *model.Field, packageName string
 func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model.Func) []ast.Stmt {
 	if bodyParam != nil {
 		bodyAstType := bodyParam.Type
+		paramVar := utils.FirstToLower(bodyParam.Instance)
 		switch bodyAstType.(type) {
 		case *ast.ArrayType:
 			byteArr := bodyAstType.(*ast.ArrayType)
 			if byteArr.Elt.(*ast.Ident).String() == "byte" {
 				return []ast.Stmt{
 					astDefineStmt(
-						ast.NewIdent(bodyParam.Instance),
+						ast.NewIdent(paramVar),
 						&ast.CallExpr{
 							Fun: astSelectorExpr("utils", "Body"),
 							Args: []ast.Expr{
@@ -401,13 +355,12 @@ func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model
 					),
 				}
 			}
-			break
 		case *ast.Ident:
 			typeIdent := bodyAstType.(*ast.Ident).String()
 			if typeIdent == "string" {
 				return []ast.Stmt{
 					astDefineStmt(
-						ast.NewIdent(bodyParam.Instance),
+						ast.NewIdent(paramVar),
 						&ast.CallExpr{
 							Fun: astSelectorExpr("utils", "BodyString"),
 							Args: []ast.Expr{
@@ -419,7 +372,6 @@ func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model
 			} else if utils.IsFirstLower(typeIdent) {
 				utils.Failuref("%s %s, unsupport type %s", funcNode.Loc.String(), bodyParam.Comment, utils.TypeToString(bodyAstType))
 			}
-			break
 		}
 		return defineParamByParser("BodyParser", bodyParam, packageName)
 	}
@@ -452,7 +404,6 @@ func genWebHeaderParams(headerParams []*model.Field, packageName string, funcNod
 						utils.Failuref("%s %s, unsupport type %s", funcNode.Loc.String(), param.Comment, utils.TypeToString(paramType))
 					}
 				}
-				break
 			}
 			stmts = append(stmts, defineParamByParser("HeaderParser", param, packageName)...)
 		}
@@ -486,7 +437,6 @@ func genWebQueryParams(queryParams []*model.Field, packageName string, funcNode 
 						utils.Failuref("%s %s, unsupport type %s", funcNode.Loc.String(), param.Comment, utils.TypeToString(paramType))
 					}
 				}
-				break
 			}
 			stmts = append(stmts, defineParamByParser("QueryParser", param, packageName)...)
 		}
@@ -521,7 +471,6 @@ func genWebPathParams(pathParams []*model.Field, packageName string, funcNode *m
 						utils.Failuref("%s %s, unsupport type %s", funcNode.Loc.String(), param.Comment, utils.TypeToString(paramType))
 					}
 				}
-				break
 			}
 			stmts = append(stmts, defineParamByParser("ParamsParser", param, packageName)...)
 		}
@@ -555,7 +504,6 @@ func genWebFormParams(formParams []*model.Field, packageName string, funcNode *m
 						utils.Failuref("%s %s, unsupport type %s", funcNode.Loc.String(), param.Comment, utils.TypeToString(paramType))
 					}
 				}
-				break
 			case *ast.StarExpr:
 				// [code] *multipart.FileHeader
 				starX := paramType.(*ast.StarExpr).X
@@ -569,7 +517,6 @@ func genWebFormParams(formParams []*model.Field, packageName string, funcNode *m
 						}
 					}
 				}
-				break
 			}
 			stmts = append(stmts, defineParamByParser("FormParser", param, packageName)...)
 		}

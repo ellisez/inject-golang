@@ -25,7 +25,6 @@ func (p *Parser) ProxyParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc
 				}
 			}
 			proxy.Comment = comment.Comment
-			break
 		}
 	}
 

@@ -6,11 +6,12 @@ type Provide struct {
 	*CommonFunc
 	Mode string
 
-	Order    string
-	Instance string
-	Type     ast.Expr
-	Handler  string
-	Comment  string
+	Order       string
+	Instance    string
+	Constructor ast.Expr
+	Type        ast.Expr
+	Handler     string
+	Comment     string
 }
 
 func NewProvide() *Provide {
@@ -44,6 +45,9 @@ func (provide *Provide) GetType() ast.Expr {
 func (provide *Provide) GetHandler() string {
 	return provide.Handler
 }
+func (provide *Provide) GetConstructor() ast.Expr {
+	return provide.Constructor
+}
 
 type Instance interface {
 	GetOrder() string
@@ -55,4 +59,5 @@ type Instance interface {
 	GetType() ast.Expr
 	GetMode() string
 	GetHandler() string
+	GetConstructor() ast.Expr
 }

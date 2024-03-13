@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // gen_multiple.go
@@ -77,12 +78,28 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 			astDeclareRef(instanceType, nil),
 		))
 
-		// [code] {{Package}}.{{FuncName}}(...)
-		instanceCallExpr := astInstanceCallExpr(ast.NewIdent(handler), instance.GetFunc(), ctx, ctxVar)
+		if handler != "" {
 
-		stmts = append(stmts, &ast.ExprStmt{
-			X: instanceCallExpr,
-		})
+			var instanceCallExpr *ast.CallExpr
+			if strings.Contains(handler, ".") {
+				// [code] {{Handler}}(ctx.{{}})
+				instanceCallExpr = &ast.CallExpr{
+					Fun:  ast.NewIdent(handler),
+					Args: []ast.Expr{ast.NewIdent(instanceVar)},
+				}
+			} else {
+				// [code] ctx.{{Handler}}(ctx.{{}})
+				instanceCallExpr = &ast.CallExpr{
+					Fun:  astSelectorExpr(ctxVar, handler),
+					Args: []ast.Expr{ast.NewIdent(instanceVar)},
+				}
+			}
+
+			// [code] {{Package}}.{{FunName}}(...)
+			stmts = append(stmts, &ast.ExprStmt{
+				X: instanceCallExpr,
+			})
+		}
 
 		// [code] return {{Provide}}
 		stmts = append(stmts, &ast.ReturnStmt{
@@ -94,11 +111,7 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 		// [code] func (ctx *Ctx) New{{Provide}}(
 		constructor := "New" + instanceName
 
-		genDoc := &ast.Comment{
-			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
-		}
-
-		resultType := astStarExpr(instanceType)
+		resultType := instanceType
 		funcDecl := astFuncDecl(
 			[]*ast.Field{
 				astField(ctxVar, astStarExpr(ast.NewIdent(CtxType))),
@@ -112,12 +125,9 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 			},
 			stmts,
 		)
-		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-			{
-				Text: fmt.Sprintf("// %s", constructor),
-			},
-			genDoc,
-		}}
+		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
+			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
+		}}}
 		addDecl(astFile, funcDecl)
 		ctx.Methods = append(ctx.Methods, funcDecl)
 	}

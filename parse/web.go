@@ -30,7 +30,6 @@ func (p *Parser) WebParse(_ *ast.FuncDecl, commonFunc *model.CommonFunc, comment
 			}
 			webApp.Instance = instance
 			webApp.Comment = comment.Comment
-			break
 		case "@static":
 			if argsLen < 2 {
 				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Comment)
@@ -69,7 +68,6 @@ func (p *Parser) WebParse(_ *ast.FuncDecl, commonFunc *model.CommonFunc, comment
 				resource.MaxAge = maxAge
 			}
 			resource.Comment = comment.Comment
-			break
 		}
 	}
 
@@ -130,22 +128,17 @@ func addWebParam(webParam *model.WebParam, param *model.Field, commonFunc *model
 	switch param.Source {
 	case "query":
 		webParam.QueryParams = append(webParam.QueryParams, param)
-		break
 	case "path":
 		webParam.PathParams = append(webParam.PathParams, param)
-		break
 	case "header":
 		webParam.HeaderParams = append(webParam.HeaderParams, param)
-		break
 	case "body":
 		if webParam.BodyParam != nil {
 			utils.Failuref("%s %s, body cannot define multiple", commonFunc.Loc.String(), param.Comment)
 		}
 		webParam.BodyParam = param
-		break
 	case "formData":
 		webParam.FormParams = append(webParam.FormParams, param)
-		break
 	default:
 		utils.Failuref("%s %s, %s can not support", commonFunc.Loc.String(), param.Comment, param.Source)
 	}

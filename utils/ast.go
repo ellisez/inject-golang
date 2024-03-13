@@ -14,19 +14,15 @@ func TypeToString(astType ast.Expr) string {
 	switch astType.(type) {
 	case *ast.Ident:
 		str = astType.(*ast.Ident).String()
-		break
 	case *ast.StarExpr:
 		starExpr := astType.(*ast.StarExpr)
 		str = "*" + TypeToString(starExpr.X)
-		break
 	case *ast.SelectorExpr:
 		selectorExpr := astType.(*ast.SelectorExpr)
 		str = TypeToString(selectorExpr.X) + "." + selectorExpr.Sel.String()
-		break
 	case *ast.ChanType:
 		chanType := astType.(*ast.ChanType)
 		str = "chan " + TypeToString(chanType.Value)
-		break
 	case *ast.FuncType:
 		funcType := astType.(*ast.FuncType)
 		params := ""
@@ -72,19 +68,15 @@ func TypeShortName(astType ast.Expr) string {
 	switch astType.(type) {
 	case *ast.Ident:
 		str = astType.(*ast.Ident).String()
-		break
 	case *ast.StarExpr:
 		starExpr := astType.(*ast.StarExpr)
 		str = TypeShortName(starExpr.X)
-		break
 	case *ast.SelectorExpr:
 		selectorExpr := astType.(*ast.SelectorExpr)
 		str = selectorExpr.Sel.String()
-		break
 	case *ast.ChanType:
 		chanType := astType.(*ast.ChanType)
 		str = "chan" + FirstToUpper(TypeShortName(chanType.Value))
-		break
 	case *ast.FuncType:
 		str = ""
 	}
@@ -124,13 +116,11 @@ func selectorTypeWithNoPackage(selectorExpr *ast.SelectorExpr, packageName strin
 	case *ast.SelectorExpr:
 		subSelectorExpr := selectorExpr.X.(*ast.SelectorExpr)
 		selectorExpr.X = selectorTypeWithNoPackage(subSelectorExpr, packageName)
-		break
 	case *ast.Ident:
 		ident := selectorExpr.X.(*ast.Ident).String()
 		if ident == packageName {
 			return selectorExpr.Sel
 		}
-		break
 	}
 	return selectorExpr
 }
@@ -190,6 +180,14 @@ func FieldName(field *model.Field) string {
 	return TypeShortName(field.Type)
 }
 
+func FieldVar(field *model.Field) string {
+	fieldVar := field.Name
+	if fieldVar == "" {
+		fieldVar = field.Instance
+	}
+	return FirstToLower(fieldVar)
+}
+
 func FindParam(funcInfo *model.Func, fieldName string) *model.Field {
 	for _, field := range funcInfo.Params {
 		if fieldName == field.Name {
@@ -207,7 +205,7 @@ func ToFile(field *ast.Field) *model.Field {
 		Name: fieldName,
 		Type: field.Type,
 	}
-	f.Instance = FieldName(f)
+	f.Instance = FirstToUpper(FieldName(f))
 	return f
 }
 
@@ -302,20 +300,4 @@ func UnusedImports(astFile *ast.File) {
 		}
 		break
 	}
-}
-
-func FieldSetter(fieldInfo *model.Field) string {
-	fieldSetter := fieldInfo.Instance
-	if fieldSetter == "" {
-		fieldSetter = FieldName(fieldInfo)
-	}
-	return "Set" + fieldSetter
-}
-
-func FieldGetter(fieldInfo *model.Field) string {
-	fieldGetter := fieldInfo.Instance
-	if fieldGetter == "" {
-		fieldGetter = FieldName(fieldInfo)
-	}
-	return fieldGetter
 }

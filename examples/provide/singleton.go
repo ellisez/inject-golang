@@ -16,6 +16,7 @@ func ProvideIsReady() bool {
 // NewConfig example for default singleton
 // @provide Config
 // @order "step 2: Load config"
+// @import github.com/ellisez/inject-golang/examples/model
 func NewConfig() *model.Config {
 	fmt.Println("call Config.NewConfig")
 	return &model.Config{
@@ -27,6 +28,7 @@ func NewConfig() *model.Config {
 // PrepareDatabase example for explicit singleton
 // @provide Database singleton
 // @order "step 3: Setting Database"
+// @import github.com/ellisez/inject-golang/examples/model
 // @import github.com/ellisez/inject-golang/examples/handler
 // @handler provide.DatabaseLoaded
 func PrepareDatabase() *model.Database {
@@ -47,6 +49,7 @@ func DatabaseLoaded(database *model.Database) {
 // PrepareWebAppAlias example for proxy handler
 // @provide WebAppAlias
 // @order "step 4: Setting WebApp"
+// @import github.com/ellisez/inject-golang/examples/model
 // @handler WebAppAliasLoaded
 func PrepareWebAppAlias() *model.WebApp {
 	fmt.Println("call WebAppAlias.PrepareWebAppAlias")

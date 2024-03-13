@@ -10,7 +10,6 @@ import (
 // @proxy
 // @injectParam database Database
 // @injectCtx appCtx
-// @injectParam webApp WebAppAlias
 // @injectParam isReady IsReady &
 // @injectParam middleware MiddleWare
 // @injectParam router RouterAlias
