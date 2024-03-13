@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
@@ -89,9 +88,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -129,9 +126,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -170,9 +165,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -212,9 +205,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -249,9 +240,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -288,9 +277,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -329,9 +316,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -370,9 +355,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -412,9 +395,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -449,9 +430,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -488,9 +467,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -529,9 +506,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -570,9 +545,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -612,9 +585,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -650,9 +621,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -689,9 +658,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -726,9 +693,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -767,9 +732,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -808,9 +771,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -850,9 +811,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		),
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -1164,9 +1123,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -1198,9 +1155,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -1238,9 +1193,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
@@ -1274,9 +1227,7 @@ func genWebUtilsFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		},
 	)
 	funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{
-		{
-			Text: fmt.Sprintf("// %s", funcName),
-		},
+
 		funcDoc,
 	}}
 	addDecl(astFile, funcDecl)
