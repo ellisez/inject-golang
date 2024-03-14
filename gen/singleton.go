@@ -157,7 +157,7 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 
 		if constructor == nil {
 			if instanceFunc.FuncName == "" {
-				// [code] ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
+				// [code] ctx.{{PrivateName}} = &{{Package}}.{{EventName}}{}
 				constructor = astDeclareRef(
 					instanceType,
 					nil,

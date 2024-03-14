@@ -62,36 +62,15 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
 	for _, instance := range ctx.MethodInstances {
-		params := make([]*ast.Field, 0)
+		var recvParam *ast.Field
+		recvParamVar := utils.FieldVar(instance.Recv)
 		if instance.Recv.Source == "" {
-			params = append(params,
-				astField(instance.Recv.Instance, utils.AccessType(
-					instance.Recv.Type,
-					instance.Package,
-					GenPackage,
-				),
-				),
-			)
-		}
-		for _, paramInfo := range instance.Params {
-			if paramInfo.Source == "" {
-				// [code] {{ParamInstance}} {{ParamType}},
-				paramInstance := paramInfo.Instance
-				params = append(params,
-					astField(paramInstance,
-						utils.AccessType(
-							paramInfo.Type,
-							instance.Package,
-							GenPackage,
-						),
-					),
-				)
-			}
+			recvParam = astField(recvParamVar, instance.Recv.Type)
 		}
 
 		stmts := make([]ast.Stmt, 0)
 
-		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(recvParamVar, instance.FuncName), instance.Func, ctx, ctxVar)
 		if instance.Results == nil {
 			stmts = append(stmts, &ast.ExprStmt{
 				X: instanceCallExpr,
@@ -109,7 +88,10 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 			results = append(results, astField(result.Name, result.Type))
 		}
 
-		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance)
+		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance, recvParam)
+		funcDecl.Body = &ast.BlockStmt{
+			List: stmts,
+		}
 		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
 		}}}

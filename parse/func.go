@@ -1,6 +1,7 @@
 package parse
 
 import (
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -21,9 +22,9 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 
 	if astRec != nil {
 		fieldRec := astRec.List[0]
-		param := utils.ToFile(fieldRec)
+		param := utils.ToFile(fieldRec, packageName, GenPackage)
 		funcNode.Recv = param
-		funcNode.Params = append(funcNode.Params, param)
+		//funcNode.Params = append(funcNode.Params, param)
 	}
 
 	fillEmptyParam(funcDecl.Type, funcNode)
@@ -32,7 +33,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 
 	if funcDecl.Type.Results != nil {
 		for _, result := range funcDecl.Type.Results.List {
-			funcNode.Results = append(funcNode.Results, utils.ToFile(result))
+			funcNode.Results = append(funcNode.Results, utils.ToFile(result, packageName, GenPackage))
 		}
 	}
 
@@ -158,6 +159,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 }
 func fillEmptyParam(funcType *ast.FuncType, funcNode *model.Func) {
 	for _, field := range funcType.Params.List {
-		funcNode.Params = append(funcNode.Params, utils.ToFile(field))
+		funcNode.Params = append(funcNode.Params, utils.ToFile(field, funcNode.Package, GenPackage))
 	}
 }

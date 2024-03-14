@@ -115,7 +115,9 @@ func selectorTypeWithNoPackage(selectorExpr *ast.SelectorExpr, packageName strin
 	switch selectorExpr.X.(type) {
 	case *ast.SelectorExpr:
 		subSelectorExpr := selectorExpr.X.(*ast.SelectorExpr)
-		selectorExpr.X = selectorTypeWithNoPackage(subSelectorExpr, packageName)
+		newSelectorExpr := *subSelectorExpr
+		selectorExpr.X = selectorTypeWithNoPackage(&newSelectorExpr, packageName)
+		return &newSelectorExpr
 	case *ast.Ident:
 		ident := selectorExpr.X.(*ast.Ident).String()
 		if ident == packageName {
@@ -140,7 +142,27 @@ func TypeWithNoPackage(astType ast.Expr, packageName string) ast.Expr {
 		chanType.Value = TypeWithNoPackage(chanType.Value, packageName)
 		return chanType
 	case *ast.FuncType:
-		return astType
+		funcType := astType.(*ast.FuncType)
+		newFuncType := *funcType
+		if newFuncType.Params != nil {
+			var params []*ast.Field
+			for _, param := range newFuncType.Params.List {
+				newParam := *param
+				newParam.Type = TypeWithNoPackage(param.Type, packageName)
+				params = append(params, &newParam)
+			}
+			newFuncType.Params = &ast.FieldList{List: params}
+		}
+		if newFuncType.Results != nil {
+			var results []*ast.Field
+			for _, result := range newFuncType.Results.List {
+				newParam := *result
+				newParam.Type = TypeWithNoPackage(result.Type, packageName)
+				results = append(results, &newParam)
+			}
+			newFuncType.Results = &ast.FieldList{List: results}
+		}
+		return &newFuncType
 	}
 	return astType
 }
@@ -161,14 +183,36 @@ func TypeWithPackage(astType ast.Expr, packageName string) ast.Expr {
 		}
 	case *ast.StarExpr:
 		starExpr := astType.(*ast.StarExpr)
-		starExpr.X = TypeWithPackage(starExpr.X, packageName)
-		return starExpr
+		newStarExpr := *starExpr
+		newStarExpr.X = TypeWithPackage(newStarExpr.X, packageName)
+		return &newStarExpr
 	case *ast.ChanType:
 		chanType := astType.(*ast.ChanType)
-		chanType.Value = TypeWithPackage(chanType.Value, packageName)
-		return chanType
+		newChanType := *chanType
+		newChanType.Value = TypeWithPackage(newChanType.Value, packageName)
+		return &newChanType
 	case *ast.FuncType:
-		return astType
+		funcType := astType.(*ast.FuncType)
+		newFuncType := *funcType
+		if newFuncType.Params != nil {
+			var params []*ast.Field
+			for _, param := range newFuncType.Params.List {
+				newParam := *param
+				newParam.Type = TypeWithPackage(param.Type, packageName)
+				params = append(params, &newParam)
+			}
+			newFuncType.Params = &ast.FieldList{List: params}
+		}
+		if newFuncType.Results != nil {
+			var results []*ast.Field
+			for _, result := range newFuncType.Results.List {
+				newParam := *result
+				newParam.Type = TypeWithPackage(result.Type, packageName)
+				results = append(results, &newParam)
+			}
+			newFuncType.Results = &ast.FieldList{List: results}
+		}
+		return &newFuncType
 	}
 	return astType
 }
@@ -196,14 +240,15 @@ func FindParam(funcInfo *model.Func, fieldName string) *model.Field {
 	}
 	return nil
 }
-func ToFile(field *ast.Field) *model.Field {
+func ToFile(field *ast.Field, definePackage string, accessPackage string) *model.Field {
 	var fieldName string
 	if field.Names != nil {
 		fieldName = field.Names[0].String()
 	}
+	t := AccessType(field.Type, definePackage, accessPackage)
 	f := &model.Field{
 		Name: fieldName,
-		Type: field.Type,
+		Type: t,
 	}
 	f.Instance = FirstToUpper(FieldName(f))
 	return f

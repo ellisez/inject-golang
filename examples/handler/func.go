@@ -6,25 +6,27 @@ import (
 	"github.com/ellisez/inject-golang/examples/model"
 )
 
-// WebAppAliasLoaded example for injection proxy
+// ServerAliasLoaded example for injection proxy
 // @proxy
 // @injectParam database Database
 // @injectCtx appCtx
-// @injectParam isReady IsReady &
-// @injectParam middleware MiddleWare
-// @injectParam router RouterAlias
-func WebAppAliasLoaded(appCtx ctx.Ctx, webApp *model.WebApp, database *model.Database, isReady *bool, middleware *model.MiddleWare, router *model.Router) {
-	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", webApp, database, isReady)
-	webApp.Database = database
-	webApp.Config = appCtx.Config()
-	webApp.MiddleWares = append(webApp.MiddleWares, middleware, appCtx.NewMiddleWare())
-	antherRouter := appCtx.NewRouterAlias()
-	antherRouter.Path = "/logout"
-	webApp.Routers = append(webApp.Routers, router, antherRouter)
-	appCtx.TestLogin(webApp)
+// @injectParam isReady _ &
+// @injectParam event
+// @injectParam listener
+func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
+	server.Startup()
 	*isReady = true
+	appCtx.TestServer(server, appCtx.FindAccountByName)
+	// custom
+	server.AddListener("register", func(data map[string]any) {
+		fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
+	})
+	server.AddListener("login", func(data map[string]any) {
+		fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
+	})
 }
 
-func AfterRouterCreate(router *model.Router) {
-	fmt.Printf("call Router.postConstruct: %v\n", router)
+func AfterRouterCreate(router *model.Listener) {
+	fmt.Printf("call Listener.postConstruct: %v\n", router)
 }

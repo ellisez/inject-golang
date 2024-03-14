@@ -46,12 +46,12 @@ func DatabaseLoaded(database *model.Database) {
 	fmt.Printf("call Database.DatabaseLoaded: %v\n", database)
 }
 
-// PrepareWebAppAlias example for proxy handler
-// @provide WebAppAlias
-// @order "step 4: Setting WebApp"
+// PrepareServerAlias example for proxy handler
+// @provide ServerAlias
+// @order "step 4: Setting Server"
 // @import github.com/ellisez/inject-golang/examples/model
-// @handler WebAppAliasLoaded
-func PrepareWebAppAlias() *model.WebApp {
+// @handler ServerAliasLoaded
+func PrepareServerAlias() *model.Server {
 	fmt.Println("call WebAppAlias.PrepareWebAppAlias")
-	return &model.WebApp{}
+	return &model.Server{}
 }

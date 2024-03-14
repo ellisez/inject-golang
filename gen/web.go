@@ -313,11 +313,7 @@ func defineParamByParser(convFunc string, param *model.Field, packageName string
 		astDefineStmt(
 			ast.NewIdent(paramVar),
 			astDeclareRef(
-				utils.AccessType(
-					param.Type,
-					packageName,
-					GenPackage,
-				),
+				param.Type,
 				nil,
 			),
 		),

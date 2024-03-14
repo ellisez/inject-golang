@@ -61,28 +61,6 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
 	for _, instance := range ctx.FuncInstances {
-		var params []*ast.Field
-		for _, paramInfo := range instance.Params {
-			if paramInfo.Source == "" {
-				// [code] {{ParamInstance}} {{ParamType}},
-				paramInstance := paramInfo.Instance
-				if paramInstance == "" {
-					paramInstance = paramInfo.Name
-					if paramInfo.Name == "" {
-						paramInstance = utils.TypeShortName(paramInfo.Type)
-					}
-				}
-				params = append(params,
-					astField(paramInstance,
-						utils.AccessType(
-							paramInfo.Type,
-							instance.Package,
-							GenPackage,
-						),
-					),
-				)
-			}
-		}
 
 		var stmts []ast.Stmt
 		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)

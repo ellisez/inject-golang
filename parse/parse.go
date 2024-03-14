@@ -9,6 +9,7 @@ import (
 	"golang.org/x/mod/modfile"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func annotateParse(text string) []string {
@@ -147,7 +148,7 @@ func ModParse(dirname string) (*model.Module, error) {
 func (p *Parser) DoParse(filename string) error {
 	// exclude gen dir
 	dirname := filepath.Dir(filename)
-	if dirname == filepath.Join(p.Path, GenPackage) {
+	if strings.HasPrefix(dirname, filepath.Join(p.Path, GenPackage)) {
 		return nil
 	}
 

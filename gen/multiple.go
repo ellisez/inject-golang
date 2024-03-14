@@ -72,7 +72,7 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 
 		var stmts []ast.Stmt
 
-		// [code] {{Provide}} := &{{Package}}.{{Name}}{}
+		// [code] {{Provide}} := &{{Package}}.{{EventName}}{}
 		stmts = append(stmts, astDefineStmt(
 			ast.NewIdent(instanceVar),
 			astDeclareRef(instanceType, nil),

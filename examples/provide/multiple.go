@@ -5,28 +5,28 @@ import (
 	"github.com/ellisez/inject-golang/examples/model"
 )
 
-// NewMiddleWare example for multiple default
-// @provide MiddleWare multiple
+// NewEvent example for multiple default
+// @provide Event multiple
 // @import github.com/ellisez/inject-golang/examples/model
 // @injectParam Database
-func NewMiddleWare(Database *model.Database) *model.MiddleWare {
-	return &model.MiddleWare{
+// @injectParam config
+func NewEvent(Database *model.Database, config *model.Config) *model.Event {
+	fmt.Println("call Event.NewEvent")
+	return &model.Event{
+		Config:   config,
 		Database: Database,
 	}
 }
 
-// NewRouterAlias example for multiple injection
-// @provide RouterAlias multiple
+// NewListener example for multiple injection
+// @provide Listener multiple
 // @import github.com/ellisez/inject-golang/examples/model
 // @import github.com/ellisez/inject-golang/examples/handler
 // @handler handler.AfterRouterCreate
-func NewRouterAlias() *model.Router {
-	fmt.Println("call Router.NewRouterAlias")
-	return &model.Router{
-		Path: "/login",
-		Handle: func() error {
-			fmt.Println("call Router.Handle")
-			return nil
+func NewListener() *model.Listener {
+	fmt.Println("call Listener.NewListener")
+	return &model.Listener{
+		Func: func(_ map[string]any) {
 		},
 	}
 }

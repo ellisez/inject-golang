@@ -1,6 +1,8 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Config struct {
 	Host string
@@ -15,25 +17,78 @@ type Database struct {
 	Password string
 }
 
-type WebApp struct {
-	Config      *Config
-	Database    *Database
-	MiddleWares []*MiddleWare
-	Routers     []*Router
+type Server struct {
+	Config    *Config
+	Database  *Database
+	Events    []*Event
+	Listeners []*Listener
+	idle      chan bool
 }
 
-// TestLogin example for inject method with uninjected recv
+func (s *Server) Startup() {
+	go func() {
+		for {
+			for _, event := range s.Events {
+				for _, handler := range s.Listeners {
+					if event.EventName == handler.EventName {
+						handler.Func(event.Data)
+					}
+				}
+			}
+			if !<-s.idle {
+				break
+			}
+		}
+	}()
+}
+
+func (s *Server) Shutdown() {
+	s.idle <- false
+}
+
+func (s *Server) TriggerEvent(eventName string, data map[string]any) {
+	e := &Event{
+		EventName: eventName,
+		Data:      data,
+	}
+	s.Events = append(s.Events, e)
+	s.idle <- true
+}
+
+func (s *Server) AddListener(eventName string, handler func(map[string]any)) {
+	s.Listeners = append(s.Listeners, &Listener{
+		EventName: eventName,
+		Func:      handler,
+	})
+}
+
+func (s *Server) EmptyListener() {
+	s.Listeners = nil
+}
+
+// TestServer example for inject method with uninjected recv
 // @proxy
 // @injectParam database Database
-func (w *WebApp) TestLogin(database *Database) {
-	fmt.Printf("call TestLogin: %v, %v\n", w, database)
-	for _, router := range w.Routers {
-		if router.Path == "/login" {
-			err := router.Handle()
-			if err != nil {
-				return
-			}
-			break
+// @injectFunc FindAccountByName
+func (s *Server) TestServer(FindAccountByName func(string) *Account, database *Database) {
+	fmt.Printf("call TestServer: %v, %v\n", s, database)
+	s.AddListener("login", func(data map[string]any) {
+		username := data["username"].(string)
+		password := data["password"]
+		account := FindAccountByName(username)
+		if account == nil {
+			fmt.Printf(`account "%s" is not found`, username)
+			return
 		}
-	}
+		if account.Password != password {
+			fmt.Printf(`account "%s" password is incorrect`, username)
+			return
+		}
+		fmt.Printf(`account "%s" login succeeded`, username)
+	})
+	s.TriggerEvent("login", map[string]any{
+		"username": "ellis",
+		"password": "123456",
+	})
+	s.EmptyListener()
 }
