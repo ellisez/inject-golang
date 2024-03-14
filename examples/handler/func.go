@@ -17,7 +17,7 @@ func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Dat
 	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
 	server.Startup()
 	*isReady = true
-	appCtx.TestServer(server, appCtx.FindAccountByName)
+	appCtx.TestServer(server)
 	// custom
 	server.AddListener("register", func(data map[string]any) {
 		fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
