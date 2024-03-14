@@ -112,6 +112,25 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				}
 				param.Comment = comment.Text
 				param.Source = "inject"
+			case "@injectFunc":
+				if argsLen < 2 {
+					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
+				}
+				paramName := annotateArgs[1]
+				param := utils.FindParam(funcNode, paramName)
+				if param == nil {
+					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
+				}
+
+				if argsLen >= 3 {
+					paramInstance := annotateArgs[2]
+					if paramInstance != "" && paramInstance != "_" {
+						param.Instance = paramInstance
+					}
+				}
+
+				param.Comment = comment.Text
+				param.Source = "func"
 			case "@injectRecv":
 				if argsLen < 2 {
 					utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)

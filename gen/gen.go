@@ -332,9 +332,15 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 		case "inject":
 			paramInstance := ctx.InstanceOf(param.Instance)
 			if paramInstance == nil {
-				utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), param.Comment, param.Instance)
+				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
 			}
 			argExpr = astNewInstance(paramInstance, ctxVar)
+		case "func":
+			method := ctx.MethodOf(param.Instance)
+			if method == nil {
+				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
+			}
+			argExpr = astSelectorExpr(ctxVar, param.Instance)
 		case "":
 			fallthrough
 		default:
