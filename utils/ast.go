@@ -246,8 +246,9 @@ func ToFile(field *ast.Field, definePackage string, accessPackage string) *model
 	}
 	t := AccessType(field.Type, definePackage, accessPackage)
 	f := &model.Field{
-		Name: fieldName,
-		Type: t,
+		Package: definePackage,
+		Name:    fieldName,
+		Type:    t,
 	}
 	f.Instance = FirstToUpper(FieldName(f))
 	return f

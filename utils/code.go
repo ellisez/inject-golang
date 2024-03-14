@@ -151,11 +151,11 @@ func unusedImports(astFile *ast.File) {
 
 func circularDependency(astFile *ast.File, ctx *model.Ctx) {
 	for _, spec := range astFile.Imports {
-		for key, commonFuncArr := range ctx.InjectCtxImportPath {
+		for key, ctxFields := range ctx.InjectCtxMap {
 			if StringLit(spec.Path) == key {
 				var fails []string
-				for _, commonFunc := range commonFuncArr {
-					fails = append(fails, fmt.Sprintf(`%s %s, "@injectCtx" is not allowed due to circular dependency`, commonFunc.Loc.String(), commonFunc.Comment))
+				for _, ctxField := range ctxFields {
+					fails = append(fails, fmt.Sprintf(`%s %s, "@injectCtx" is not allowed due to circular dependency`, ctxField.Loc.String(), ctxField.Comment))
 				}
 				Failure(fails...)
 			}

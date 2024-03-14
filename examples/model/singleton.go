@@ -82,7 +82,8 @@ func (s *Server) EmptyListener() {
 // @proxy
 // @injectParam database Database
 // @injectFunc FindAccountByName
-func (s *Server) TestServer(FindAccountByName func(string) *Account, database *Database) {
+// !@injectCtx appCtx
+func (s *Server) TestServer( /*appCtx ctx.Ctx, */ FindAccountByName func(string) *Account, database *Database) {
 	fmt.Printf("call TestServer: %v, %v\n", s, database)
 	s.AddListener("login", func(data map[string]any) {
 		username := data["username"].(string)

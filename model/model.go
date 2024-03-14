@@ -54,10 +54,10 @@ type Method struct {
 }
 
 type Gen struct {
-	Doc                 []*ast.Comment
-	Imports             []*ast.ImportSpec
-	Methods             []*ast.FuncDecl
-	InjectCtxImportPath map[string][]*CommonFunc
+	Doc          []*ast.Comment
+	Imports      []*ast.ImportSpec
+	Methods      []*ast.FuncDecl
+	InjectCtxMap map[string][]*Field
 }
 type Ctx struct {
 	FileSet *token.FileSet
@@ -75,7 +75,7 @@ func NewCtx() *Ctx {
 	return &Ctx{
 		FileSet: token.NewFileSet(),
 		Gen: &Gen{
-			InjectCtxImportPath: map[string][]*CommonFunc{},
+			InjectCtxMap: map[string][]*Field{},
 		},
 	}
 }

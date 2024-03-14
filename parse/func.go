@@ -18,22 +18,30 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 	commonFunc.Func = funcNode
 	commonFunc.Imports = append(commonFunc.Imports, &model.Import{Path: importPath})
 
-	astRec := funcDecl.Recv
+	astRecs := funcDecl.Recv
 
-	if astRec != nil {
-		fieldRec := astRec.List[0]
-		param := utils.ToFile(fieldRec, packageName, GenPackage)
-		funcNode.Recv = param
-		//funcNode.Params = append(funcNode.Params, param)
+	if astRecs != nil {
+		astRec := astRecs.List[0]
+		rec := utils.ToFile(astRec, packageName, GenPackage)
+		rec.Loc = p.Ctx.FileSet.Position(astRecs.Pos())
+		funcNode.Recv = rec
 	}
 
-	fillEmptyParam(funcDecl.Type, funcNode)
+	if funcDecl.Type.Params != nil {
+		for _, astParam := range funcDecl.Type.Params.List {
+			param := utils.ToFile(astParam, funcNode.Package, GenPackage)
+			param.Loc = p.Ctx.FileSet.Position(astParam.Pos())
+			funcNode.Params = append(funcNode.Params, param)
+		}
+	}
 
 	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
 
 	if funcDecl.Type.Results != nil {
-		for _, result := range funcDecl.Type.Results.List {
-			funcNode.Results = append(funcNode.Results, utils.ToFile(result, packageName, GenPackage))
+		for _, asrResult := range funcDecl.Type.Results.List {
+			result := utils.ToFile(asrResult, packageName, GenPackage)
+			result.Loc = p.Ctx.FileSet.Position(asrResult.Pos())
+			funcNode.Results = append(funcNode.Results, result)
 		}
 	}
 
@@ -99,7 +107,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					case "", "&", "*":
 						param.Pointer = pointer
 					default:
-						utils.Failuref(`%s %s, Pointer "%s" not supported, only ["", "&", "*"] are allowed`, commonFunc.Loc.String(), comment.Text, pointer)
+						utils.Failuref(`%s %s, Pointer "%s" not supported, only ["", "&", "*"] are allowed`, param.Loc.String(), comment.Text, pointer)
 					}
 				}
 				param.Comment = comment.Text
@@ -127,14 +135,14 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 				}
 				paramName := annotateArgs[1]
-				paramInfo := utils.FindParam(funcNode, paramName)
-				if paramInfo == nil {
+				param := utils.FindParam(funcNode, paramName)
+				if param == nil {
 					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 				}
 
-				p.Ctx.InjectCtxImportPath[importPath] = append(p.Ctx.InjectCtxImportPath[importPath], commonFunc)
-				paramInfo.Comment = comment.Text
-				paramInfo.Source = "ctx"
+				p.Ctx.InjectCtxMap[importPath] = append(p.Ctx.InjectCtxMap[importPath], param)
+				param.Comment = comment.Text
+				param.Source = "ctx"
 			default:
 				comments = append(comments, &model.Comment{
 					Comment: comment.Text,
@@ -156,10 +164,5 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 		p.MiddlewareParse(funcDecl, commonFunc, comments)
 	case "@router":
 		p.RouterParse(funcDecl, commonFunc, comments)
-	}
-}
-func fillEmptyParam(funcType *ast.FuncType, funcNode *model.Func) {
-	for _, field := range funcType.Params.List {
-		funcNode.Params = append(funcNode.Params, utils.ToFile(field, funcNode.Package, GenPackage))
 	}
 }
