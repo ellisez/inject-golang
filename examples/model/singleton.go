@@ -26,6 +26,10 @@ type Server struct {
 }
 
 func (s *Server) Startup() {
+	if s.IsRunning() {
+		return
+	}
+	s.idle = make(chan bool)
 	go func() {
 		for {
 			for _, event := range s.Events {
@@ -39,11 +43,19 @@ func (s *Server) Startup() {
 				break
 			}
 		}
+		close(s.idle)
+		s.idle = nil
 	}()
 }
 
 func (s *Server) Shutdown() {
-	s.idle <- false
+	if s.IsRunning() {
+		s.idle <- false
+	}
+}
+
+func (s *Server) IsRunning() bool {
+	return s.idle != nil
 }
 
 func (s *Server) TriggerEvent(eventName string, data map[string]any) {
