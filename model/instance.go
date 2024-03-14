@@ -11,7 +11,6 @@ type Provide struct {
 	Constructor ast.Expr
 	Type        ast.Expr
 	Handler     string
-	Comment     string
 }
 
 func NewProvide() *Provide {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
-	"go/token"
 	"regexp"
 	"strings"
 )
@@ -300,49 +299,8 @@ func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath st
 	return imports
 }
 
-func UnusedImports(astFile *ast.File) {
-	var imports []*ast.ImportSpec
-	addImport := func(spec *ast.ImportSpec) {
-		for _, importSpec := range imports {
-			if importSpec.Path == spec.Path {
-				return
-			}
-		}
-		imports = append(imports, spec)
-	}
-	for _, spec := range astFile.Imports {
-		for _, ident := range astFile.Unresolved {
-			specName := spec.Name
-			if specName != nil {
-				if ident.String() == specName.String() {
-					addImport(spec)
-				}
-			} else {
-				specPath := spec.Path.Value
-				importPath := specPath[1 : len(specPath)-1]
-				if ok, _ := IsAllowedPackageName(importPath, ident.String()); ok {
-					addImport(spec)
-				}
-			}
-		}
-	}
-	astFile.Imports = imports
-
-	// copy to genDecl
-	specs := make([]ast.Spec, len(imports))
-	for i, spec := range imports {
-		specs[i] = spec
-	}
-
-	// find import genDecl
-	for _, decl := range astFile.Decls {
-		genDecl, ok := decl.(*ast.GenDecl)
-		if !ok {
-			continue
-		}
-		if genDecl.Tok == token.IMPORT {
-			genDecl.Specs = specs
-		}
-		break
-	}
+func StringLit(lit *ast.BasicLit) string {
+	return strings.TrimFunc(lit.Value, func(r rune) bool {
+		return r == '"' || r == '`'
+	})
 }

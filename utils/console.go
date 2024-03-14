@@ -18,8 +18,10 @@ var (
 	//disableColor = false
 )
 
-func Failure(text string) {
-	fmt.Println(red + text + reset)
+func Failure(text ...string) {
+	for _, s := range text {
+		fmt.Println(red + s + reset)
+	}
 	os.Exit(1)
 }
 

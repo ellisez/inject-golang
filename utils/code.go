@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
 	"go/format"
@@ -11,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-func OptimizeCode(filename string, astFile *ast.File, ctx *model.Ctx, doc string) (*ast.File, error) {
+func GenerateCode(filename string, astFile *ast.File, ctx *model.Ctx, doc string) error {
 	if astFile.Imports != nil {
 		specs := make([]ast.Spec, len(astFile.Imports))
 		for i, importSpec := range astFile.Imports {
@@ -36,27 +38,39 @@ func OptimizeCode(filename string, astFile *ast.File, ctx *model.Ctx, doc string
 		}, astFile.Decls...)
 	}
 
-	err := GenerateCode(filename, astFile, ctx)
+	/// write code
+	err := generateCode(filename, astFile, ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	///////////
+	// format code
 	buffer := &bytes.Buffer{}
 	err = format.Node(buffer, ctx.FileSet, astFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	newAstFile, err := parser.ParseFile(ctx.FileSet, filename, buffer, parser.ParseComments)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	/// remove unused imports
-	UnusedImports(newAstFile)
-	return newAstFile, nil
+	unusedImports(newAstFile)
+
+	if newAstFile.Name.String() == GenPackage {
+		/// circular dependency
+		circularDependency(newAstFile, ctx)
+	}
+
+	// write again
+	err = generateCode(filename, newAstFile, ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func GenerateCode(filename string, astFile *ast.File, ctx *model.Ctx) error {
+func generateCode(filename string, astFile *ast.File, ctx *model.Ctx) error {
 	fileDir := filepath.Dir(filename)
 	err := CreateDirectoryIfNotExists(fileDir)
 	if err != nil {
@@ -76,6 +90,79 @@ func GenerateCode(filename string, astFile *ast.File, ctx *model.Ctx) error {
 	return nil
 }
 
+func unusedImports(astFile *ast.File) {
+	var imports []*ast.ImportSpec
+	addImport := func(spec *ast.ImportSpec) {
+		for _, importSpec := range imports {
+			if importSpec.Path == spec.Path {
+				return
+			}
+		}
+		imports = append(imports, spec)
+	}
+	for _, spec := range astFile.Imports {
+		for _, ident := range astFile.Unresolved {
+			specName := spec.Name
+			if specName != nil {
+				if ident.String() == specName.String() {
+					addImport(spec)
+				}
+			} else {
+				specPath := spec.Path.Value
+				importPath := specPath[1 : len(specPath)-1]
+				if ok, _ := IsAllowedPackageName(importPath, ident.String()); ok {
+					addImport(spec)
+				}
+			}
+		}
+	}
+	astFile.Imports = imports
+
+	// copy to genDecl
+	var specs []ast.Spec
+	for _, spec := range imports {
+		specs = append(specs, spec)
+	}
+
+	// find import genDecl
+	var importDecl *ast.GenDecl
+	if len(astFile.Decls) > 0 {
+		genDecl, ok := astFile.Decls[0].(*ast.GenDecl)
+		if ok && genDecl.Tok == token.IMPORT {
+			if specs == nil {
+				astFile.Decls = astFile.Decls[1:]
+			} else {
+				genDecl.Specs = specs
+			}
+			importDecl = genDecl
+		}
+	}
+
+	// if no import decl
+	if importDecl == nil {
+		astFile.Decls = append([]ast.Decl{
+			&ast.GenDecl{
+				Tok:   token.IMPORT,
+				Specs: specs,
+			},
+		}, astFile.Decls...)
+	}
+}
+
+func circularDependency(astFile *ast.File, ctx *model.Ctx) {
+	for _, spec := range astFile.Imports {
+		for key, commonFuncArr := range ctx.InjectCtxImportPath {
+			if StringLit(spec.Path) == key {
+				var fails []string
+				for _, commonFunc := range commonFuncArr {
+					fails = append(fails, fmt.Sprintf(`%s %s, "@injectCtx" is not allowed due to circular dependency`, commonFunc.Loc.String(), commonFunc.Comment))
+				}
+				Failure(fails...)
+			}
+		}
+	}
+
+}
 func GetterOf(instance string) string {
 	return FirstToUpper(instance)
 }

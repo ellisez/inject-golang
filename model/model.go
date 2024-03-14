@@ -22,6 +22,8 @@ type CommonFunc struct {
 	Imports []*Import
 
 	*Func
+
+	Comment string
 }
 
 func NewCommonFunc() *CommonFunc {
@@ -38,7 +40,6 @@ type Comment struct {
 type Proxy struct {
 	*CommonFunc
 	Instance string
-	Comment  string
 }
 
 func NewProxy() *Proxy {
@@ -53,9 +54,10 @@ type Method struct {
 }
 
 type Gen struct {
-	Doc     []*ast.Comment
-	Imports []*ast.ImportSpec
-	Methods []*ast.FuncDecl
+	Doc                 []*ast.Comment
+	Imports             []*ast.ImportSpec
+	Methods             []*ast.FuncDecl
+	InjectCtxImportPath map[string][]*CommonFunc
 }
 type Ctx struct {
 	FileSet *token.FileSet
@@ -72,7 +74,9 @@ type Ctx struct {
 func NewCtx() *Ctx {
 	return &Ctx{
 		FileSet: token.NewFileSet(),
-		Gen:     &Gen{},
+		Gen: &Gen{
+			InjectCtxImportPath: map[string][]*CommonFunc{},
+		},
 	}
 }
 

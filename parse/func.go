@@ -132,6 +132,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 				}
 
+				p.Ctx.InjectCtxImportPath[importPath] = append(p.Ctx.InjectCtxImportPath[importPath], commonFunc)
 				paramInfo.Comment = comment.Text
 				paramInfo.Source = "ctx"
 			default:
