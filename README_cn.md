@@ -57,14 +57,14 @@ inject-glang --clean
 ## 2. 注解
 
 ### 2.1. 不启用的注解
-以`// !@`开头, 表示该注解不会被系统识别和解析
+以`// !@`开头, 也就是注解前面多加个感叹号, 该注解不会被系统识别和解析
 ```go
-// !@xxx
+// !@proxy
 ```
 
-### 2.1. 代理函数注解
+### 2.2. 代理函数注解
 
-`代理函数注解`指的是普通函数上定义的依赖注入注解
+`代理函数注解`是让普通函数上支持依赖注入
 ```
 // @proxy <代理方法名，默认同方法名>
 // @import *<模块加载路径，必填> <模块名>
@@ -74,41 +74,37 @@ inject-glang --clean
 // @injectFunc *<参数名, 必填>
 ```
 
-> `@proxy`用于标记该函数支持依赖注入, 最终系统会自动生成一个与函数名同名代理函数, 可通过容器对象访问代理函数.
+> `@proxy`让系统生成一个代理函数, 默认与原函数名同名. 代理函数可通过容器对象访问.
 >
 > `@injectParam`用于参数的依赖注入;
 >
-> `@injectRecv`用于成员函数的结构体参数依赖注入;
+> `@injectRecv`用于成员函数的结构体依赖注入;
 >
 > `@injectCtx`用于注入容器对象本身;
 > 
-> `@injectFunc`用于注入函数类型参数;
+> `@injectFunc`用于注入函数类型的参数;
 > 
-> `@injectPara`支持指针运算, `&`表示取值的地址, `*`表示取地址对应的值, 两者互为反操作; 默认是""表示不进行指针运算.
+> `@injectPara`支持指针运算, `&`表示取值的地址, `*`表示取地址对应的值, 两者互为反运算; 默认是""表示不进行指针运算.
 
-> 未被依赖注入的参数则会保留到生成代理函数中;
+> 注意: 未被依赖注入的参数则会保留到生成代理函数中;
 >
 
-### 2.2. 实例注解
-`实例注解`指的是定义在构造函数上用于声明实例的注解
+### 2.3. 实例注解
+`实例注解`指的是通过构造函数标记注解的方式来声明实例
 ```
 // @provide <实例名，默认同类名> <singleton默认|multiple>
 // @order <创建顺序，数字或字符串>
 // @import *<模块加载路径，必填> <模块名>
-// @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, ""|&|*>
-// @injectRecv *<参数名，必填> <实例名，默认同参数名>
-// @injectCtx *<参数名, 必填>
-// @injectFunc *<参数名, 必填>
 // @handler *<处理函数, 必填>
 ```
 
 > 系统默认会加载容器包以及注解所在代码的包, 但如果有额外的包, 则需要使用`@import`声明.
 > 
-> `@provide`所标记的构造函数必须有且只有一个返回类型并且不能有任务参数. 它不支持依赖注入;
+> `@provide`所标记的构造函数必须有且只有一个返回类型并且不能有任何参数, 而且不支持依赖注入;
 > 
-> `@handler`可支持依赖注入, 但需要`order`定义创建顺序, 以免注入时还未进行初始化;
+> `@handler`所指向的函数必须是一个有且只有一个结构体类型参数的函数. 它支持依赖注入, 但需要`@order`定义创建顺序, 以免还未完成初始化的实例被注入;
 > 
-> `@handler`可以携带包名, 表示调用原始函数, 但如果不带包名, 则表示调用代理函数.
+> `@handler`可以携带包名, 例如: *model.Database, 它表示调用原始函数. 但如果不带包名, 则表示它是代理函数.
 > 
 > 一般我们不推荐直接使用原始函数, 而是使用它的代理函数, 这样能帮我们扩充其他依赖注入的参数; 
 > 代理函数用法, 请参照[方法上注解](#23-方法上的注解-适用于所有方法)
@@ -116,13 +112,17 @@ inject-glang --clean
 
 ### 2.4. WebApp注解 (提供了web服务器)
 ```
-// @webProvide <WebApp，默认名为WebApp>
+// @webProvide <instance，默认名为WebApp>
 // @static *<访问路径，必填> *<匹配目录，必填> [特征: Compress|Download|Browse] <目录的Index文件> <过期时间MaxAge>
 ```
 
-> `@webProvide`配置webApp, 不进行配置时系统默认会生成一个名为WebApp的实例. 
+> `@webProvide`配置web应用实例, 不进行配置时系统默认会生成一个名为`WebApp`的实例.
 > 
-> 如果webApp未被代码中使用, 则系统不会生成WebApp实例, 这也是为了适配与非web项目.
+> 如果web应用实例未被代码中使用, 则系统不会生成WebApp实例, 这也是为了适配与非web项目.
+> 
+> web应用的启动函数, 格式为`instance + "Startup""`, 默认为`WebAppStartup`.
+> 
+> `@webProvide`所标记的原函数必须返回`host`,`port`,`err`三个参数.
 > 
 > `@static`用于配置静态资源文件, 如png,css,js,html等
 
@@ -166,86 +166,77 @@ inject-glang --clean
 
 ## 3. 生成模板
 
-### 3.1. PreConstruct & PostConstruct
-原结构体
+### 3.1. 创建实例
+构建函数上的注解
 ```go
-// WebApp
-// @provide WebCtxAlias
-// @injectField Database
-// @preConstruct model.PrepareWebCtxAlias
-// @postConstruct model.WebCtxAliasLoaded
-type WebApp struct {
-	// @inject
-	*Config
-	*Database
-	MiddleWares []*MiddleWare
-	Routers     []*Router
+// PrepareServerAlias example for proxy handler
+// @provide ServerAlias
+// @order "step 4: Setting Server"
+// @import github.com/ellisez/inject-golang/examples/model
+// @handler ServerAliasLoaded
+func PrepareServerAlias() *model.Server {
+    fmt.Println("call WebAppAlias.PrepareWebAppAlias")
+    return &model.Server{}
 }
 ```
-> preConstruct函数, 要求必须是无参并且返回类型必须和结构体类型一样
+> 构造函数, 要求必须是无参并且只有一个返回类型
 
+原函数上的注解
 ```go
-func PrepareWebCtxAlias() *WebApp {
-// preConstruct function
-    return &WebApp{}
-}
-```
-
-> postConstruct函数, 要求参数必须是结构体类型
-
-```go
-func WebCtxAliasLoaded(webApp *WebApp) {
-// postConstruct function
-}
-```
-
-### 3.2. 方法代理
-
-原函数
-```go
-// WebCtxAliasLoaded
+// ServerAliasLoaded example for injection proxy
 // @proxy
 // @injectParam database Database
-// @injectParam ctx
-func WebCtxAliasLoaded(ctx *ctx.Ctx/*特殊注入*/, webApp *WebApp/*未注入*/, database *Database/*属性注入*/) {
-	fmt.Printf("WebCtxAliasLoaded: %v\n%v\n", webApp, database)
-	ctx.TestLogin(webApp)
+// @injectCtx appCtx
+// @injectParam isReady _ &
+// @injectParam event
+// @injectParam listener
+func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+    fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
+    server.Startup()
+    *isReady = true
+    appCtx.TestServer(server)
+    // custom
+    server.AddListener("register", func(data map[string]any) {
+        fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
+    })
+    server.AddListener("login", func(data map[string]any) {
+        fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
+    })
 }
 ```
-生成的目标函数
+
+> handler函数, 要求有且只有一个结构体类型参数, 上例中由于原函数完成特定的功能需要注入其他实例, 所以使用了代理函数.
+
+生成的代理函数如下:
 ```go
-func (ctx *Ctx/*属于容器的同名函数*/) WebCtxAliasLoaded(WebApp *model.WebApp/*保留未注入*/) {
-	model.WebCtxAliasLoaded(ctx/*特殊注入*/, WebApp, ctx.Database/*属性注入*/)
+// Generate by annotations from handler.ServerAliasLoaded
+func (ctx *Ctx) ServerAliasLoaded(server *model.Server) {
+    handler.ServerAliasLoaded(ctx, server, ctx.database, &ctx.isReady, ctx.NewEvent(), ctx.NewListener())
 }
 ```
+> 生成的代理函数会保留那些未被注入的参数, 上例中原函数故意保留server参数未进行依赖注入, 使得代理函数满足了`@handler`的格式要求.
 
-> 许多时候, 某些函数有严格的格式, 如`@preConstruct`, `@postConstruct`等, 但我们又希望能依赖注入一些额外的参数, 以方便完成后续业务, 这个时候我们就可以考虑使用`@proxy`.
-> 
-> `@proxy`生成的代理函数, 只会保留未注入的参数, 利用这一点就能够生成符合一定格式的函数.
-> 
-> 以postConstruct函数为例, 它需要一个结构体类型的参数, 所以我们只需要在原函数中保留一个结构体类型参数让它不进行注入即可.
-> 
-> 而代理函数内部又会根据注入规则, 组装所需数据并最终调用原函数.
-> 
-> 此时原函数就获得了, 已经被注入后的参数.
-
-
-### 3.3. web生成代码
+### 3.2. web生成代码
 注解配置
 ```go
 // ConfigureWebApp
-// @webProvide WebApp
+// @webAppProvide instance
+// @import github.com/ellisez/inject-golang/examples/model
 // @proxy WebAppStartup1
 // @injectParam config Config
 // @static /images /images
 // @static /css /css [Compress,Browse]
 // @static /js /js [Compress,Download,Browse] index.html 86400
-func ConfigureWebApp(config *model.Config, extraParam int) (string, uint, error) {
-	return config.Host, config.Port, nil
+func ConfigureWebApp(config *model.Config, defaultPort uint) (string, uint, error) {
+    if config.Port == 0 {
+        defaultPort = config.Port
+    }
+    return config.Host, defaultPort, nil
 }
 
 // CorsMiddleware
 // @middleware /api
+// @import github.com/ellisez/inject-golang/examples/model
 // @injectWebCtx c
 // @injectCtx appCtx
 // @param body body
@@ -253,75 +244,87 @@ func ConfigureWebApp(config *model.Config, extraParam int) (string, uint, error)
 // @param paramsInt path
 // @param queryBool query
 // @param formFloat formData
-func CorsMiddleware(appCtx *ctx.Ctx, c *fiber.Ctx,
+func CorsMiddleware(appCtx ctx.Ctx, c *fiber.Ctx,
     body *model.Config,
     header string,
     paramsInt int,
     queryBool bool,
-    formFloat float64) error {
-        return cors.New(cors.Config{
-            AllowOrigins:     "*",
-            AllowCredentials: true,
-        })(c)
+    formFloat float64,
+) error {
+    fmt.Printf("call CorsMiddleware: %v, %v, %v, %s, %d, %t, %f\n", appCtx, c, body, header, paramsInt, queryBool, formFloat)
+    return cors.New(cors.Config{
+        AllowOrigins:     "*",
+        AllowCredentials: true,
+    })(c)
 }
 
 // LoginController
 // @router /api/login [post]
+// @import github.com/ellisez/inject-golang/examples/model
 // @param username query string true 用户名
 // @param password query string true 密码
-func LoginController(username string, password string) error {
-return nil
+// @injectParam server ServerAlias
+func LoginController(username string, password string, server *model.Server) error {
+    fmt.Printf("call LoginController: %s, %s\n", username, password)
+    server.TriggerEvent("login", map[string]any{
+        "username": username,
+        "password": password,
+    })
+    return nil
 }
 ```
 生成代码
 ```go
-func (ctx *Ctx) WebAppStartup1(extraParam int) error {
-    ctx.WebApp.Static("/images", "")
-    ctx.WebApp.Static("/css", "", fiber.Static{Compress: true, Browse: true})
-    ctx.WebApp.Static("/js", "", fiber.Static{Compress: true, Download: true, Browse: true, Index: "index.html", MaxAge: 86400})
-    /// middleware register
-	ctx.WebApp.Group("/api", ctx.CorsMiddleware)
-    /// router register
-    ctx.WebApp.Post("/api/login", ctx.LoginController)
-    host, port, err := init.ConfigureWebApp(webApp, ctx.Config, extraParam)
+// Generate by annotations from provide.ConfigureWebApp
+func (ctx *Ctx) WebAppStartup(defaultPort uint) error {
+    ctx.WebApp().Static("/images", "/images")
+    ctx.WebApp().Static("/css", "/css", fiber.Static{Compress: true, Browse: true})
+    ctx.WebApp().Static("/js", "/js", fiber.Static{Compress: true, Download: true, Browse: true, Index: "index.html", MaxAge: 86400})
+    ctx.WebApp().Group("/api", ctx.CorsMiddleware)
+    ctx.WebApp().Post("/api/register", ctx.RegisterController)
+    ctx.WebApp().Post("/api/login", ctx.LoginController)
+    host, port, err := provide.ConfigureWebApp(ctx.config, defaultPort)
     if err != nil {
         return err
     }
-    return ctx.WebApp.Listen(fmt.Sprintf("%s:%d", host, port))
+    return ctx.WebApp().Listen(fmt.Sprintf("%s:%d", host, port))
 }
 
+// Generate by annotations from middleware.CorsMiddleware
 func (ctx *Ctx) CorsMiddleware(webCtx *fiber.Ctx) (err error) {
     body := &model.Config{}
-    err = BodyParser(webCtx, body)
+    err = utils.BodyParser(webCtx, body)
     if err != nil {
         return err
     }
-    header := Header(webCtx, "header")
-    queryBool, err := QueryBool(webCtx, "queryBool")
+    header := utils.Header(webCtx, "header")
+    queryBool, err := utils.QueryBool(webCtx, "queryBool")
     if err != nil {
         return err
     }
-    paramsInt, err := ParamsInt(webCtx, "paramsInt")
+    paramsInt, err := utils.ParamsInt(webCtx, "paramsInt")
     if err != nil {
         return err
     }
-    formFloat, err := FormFloat(webCtx, "formFloat")
+    formFloat, err := utils.FormFloat(webCtx, "formFloat")
     if err != nil {
         return err
     }
     return middleware.CorsMiddleware(ctx, webCtx, body, header, paramsInt, queryBool, formFloat)
 }
 
+// Generate by annotations from router.LoginController
 func (ctx *Ctx) LoginController(webCtx *fiber.Ctx) (err error) {
-    username := Query(webCtx, "username")
-    password := Query(webCtx, "password")
-    return router.LoginController(username, password)
+    username := utils.Query(webCtx, "username")
+    password := utils.Query(webCtx, "password")
+    return router.LoginController(username, password, ctx.serverAlias)
 }
 ```
-外部启动web
+调用web的启动函数
 ```go
 func main() {
-    err := ctx.New().WebAppStartup1(100)
+    c := factory.New()
+    err := c.WebAppStartup(3001)
     if err != nil {
         return
     }
@@ -330,7 +333,7 @@ func main() {
 
 > `@webProvide`用于定义web应用实例，不配置时系统默认会创建名为`WebApp`的实例，以及名为`WebAppStartup`的启动函数,
 >
-> 实例名通过`@webProvide`修改, 启动函数名通过`@proxy`来修改.
+> 实例名通过`@webProvide`修改, 启动函数也会随着更改.
 >
 > `@router`与`@middleware`通过`@webApp`关联实例, 默认关联`WebApp`的实例名.
 >
@@ -343,581 +346,25 @@ func main() {
 > webCtx更多使用技巧, 可阅读`*fiber.Ctx`相关文档
 >
 
-### 3.4. 目录结构
+### 3.4. 推荐目录结构
 ```
-/ctx
-    |- gen_singleton.go
-        --------------------------------
-        # gen segment: Struct #
-        --------------------------------
-        type Ctx struct {
-            {{range SingletonInstances}}
-            {{PrivateName}} {{Name}}
-            {{end}}
-            {{range WebAppInstances}}
-            {{WebApp}} *fiber.App
-            {{end}}
-        }
-      
-        -----------------------------------
-        # gen segment: Singleton instance #
-        -----------------------------------
-        func New() *Ctx {
-            ctx := &Ctx{}
-            {{range SingletonInstances}}
-                {{if PreConstruct}}
-                    ctx.{{PrivateName}} := {{PreConstruct}}()
-                {{else}}
-                    ctx.{{PrivateName}} = &{{Package}}.{{Name}}{}
-                {{end}}
-            {{end}}
-            {{range WebAppInstances}}
-                ctx.{{PrivateName}} := fiber.New()
-            {{end}}
-            
-            {{range SingletonInstances}}
-                {{range Fields}}
-                    {{if Field.Source == "ctx"}}
-                        {{if IsPrivate}}
-                        ctx.{{PrivateName}}.{{Field.Setter}}(ctx)
-                        {{else}}
-                        ctx.{{PrivateName}}.{{Field.Name}} = ctx
-                        {{end}}
-                    {{else if Field.Source == "inject"}}
-                        {{if IsSingleton}}
-                            {{if IsPrivate}}
-                            ctx.{{PrivateName}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
-                            {{else}}
-                            ctx.{{PrivateName}}.{{Field.Name}} = ctx.{{Field.Instance}}()
-                            {{end}}
-                        {{else if IsMultiple}}
-                            {{if IsPrivate}}
-                            ctx.{{PrivateName}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
-                            {{else}}
-                            ctx.{{PrivateName}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
-                            {{end}}
-                        {{end}}
-                    {{end}}
-                {{end}}
-            {{end}}
-            
-            {{range SingletonInstances}}
-                {{if PostConstruct}}
-                    {{PostConstruct}}(
-                        ctx.{{Instance}},
-                    )
-                {{end}}
-            {{end}}
-            return ctx
-        }
-    |- gen_multiple.go
-        ------------------------------------
-        # gen segment: Multiple instance #
-        ------------------------------------
-        {{range MultipleInstances}}
-            func (ctx *Ctx) New{{Instance}}() *{{Type}} {
-                {{if PreConstruct}}
-                    {{Instance}} := {{PreConstruct}}()
-                {{else}}
-                    {{Instance}} := &{{Package}}.{{Name}}{}
-                {{end}}
-                {{range Fields}}
-                    {{if Field.Source == "ctx"}}
-                        {{if IsPrivate}}
-                        {{Instance}}.{{Field.Setter}}(ctx)
-                        {{else}}
-                        {{Instance}}.{{Field.Name}} = ctx
-                        {{end}}
-                    {{else if Field.Source == "inject"}}
-                        {{if IsSingleton}}
-                            {{if IsPrivate}}
-                            {{Instance}}.{{Field.Setter}}(ctx.{{Field.Instance}}())
-                            {{else}}
-                            {{Instance}}.{{Field.Name}} = ctx.{{Field.Instance}}()
-                            {{end}}
-                        {{else if IsMultiple}}
-                            {{if IsPrivate}}
-                            {{Instance}}.{{Field.Setter}}(ctx.New{{Field.Instance}}())
-                            {{else}}
-                            {{Instance}}.{{Field.Name}} = ctx.New{{Field.Instance}}()
-                            {{end}}
-                        {{end}}
-                    {{end}}
-                {{end}}
-                
-                {{if PostConstruct}}
-                    {{PostConstruct}}(
-                        {{Instance}},
-                    )
-                {{end}}
-                return {{Instance}}
-            }
-        {{end}}
-        
-    |- gen_func.go
-        ------------------------------------
-        # gen segment: Func inject #
-        ------------------------------------
-        {{range FuncInstances}}
-            func (ctx *Ctx) {{Proxy}}(
-                {{range NormalParams}}
-                {{ParamInstance}} {{ParamType}},
-                {{end}}
-            ) (
-                {{range Results}}
-                {{ResultName}} {{ResultType}},
-                {{end}}
-            ) {
-                return {{Package}}.{{FuncName}}(
-                    {{range Params}}
-                        {{if IsInject}}
-                            {{if ParamInstance == "Ctx"}}
-                            ctx,
-                            {{else}}
-                                {{if IsSingleton}}
-                                ctx.{{ParamInstance}}(),
-                                {{else if IsMultiple}}
-                                ctx.New{{ParamInstance}}(),
-                                {{end}}
-                            {{end}}
-                        {{else}}
-                            {{ParamInstance}},
-                        {{end}}
-                    {{end}}
-                )
-            }
-        {{end}}
-        
-    |- gen_method.go
-        ------------------------------------
-        # gen segment: Method inject #
-        ------------------------------------
-        func (ctx *Ctx) {{Proxy}}(
-            {{if !Recv.IsInject}}
-            {{Recv.Name}} {{Recv.Type}},
-            {{end}}
-            {{range NormalParams}}
-            {{ParamInstance}} {{ParamType}},
-            {{end}}
-        ) (
-            {{range Results}}
-            {{ResultName}} {{ResultType}},
-            {{end}}
-        ) {
-            return {{Recv.Name}}.{{FuncName}}(
-                {{if !Recv.IsInject}}
-                {{Recv.Name}},
-                {{end}}
-                {{range Params}}
-                    {{if IsInject}}
-                        {{if ParamInstance == "Ctx"}}
-                        ctx,
-                        {{else}}
-                            {{if IsSingleton}}
-                            ctx.{{ParamInstance}}(),
-                            {{else if IsMultiple}}
-                            ctx.New{{ParamInstance}}(),
-                            {{end}}
-                        {{end}}
-                    {{else}}
-                        {{ParamInstance}},
-                    {{end}}
-                {{end}}
-            )
-        }
-    |- gen_web.go
-        ------------------------------------
-        # gen segment: WebApp startup #
-        ------------------------------------
-        {{range WebAppInstances}}
-        func (ctx *Ctx) {{Proxy |default "WebAppStartup"}}(
-            {{if FuncName != ""}}
-                {{if !Recv.IsInject}}
-                {{Recv.Name}} {{Recv.Type}},
-                {{end}}
-                {{range NormalParams}}
-                {{ParamInstance}} {{ParamType}},
-                {{end}}
-            {{else}}
-                host string,
-                port uint,
-            {{end}}
-        ) error {
-            {{range Statics}}
-            ctx.{{WebApp}}().Static({{Path}}, {{Dirname}}, 
-                {{if Features || Index || MaxAge}}
-                fiber.Static{
-                    {{range Features}}
-                    {{Feature}}: true,
-                    {{end}}
-                    {{if Index}}
-                    Index: {{Index}},
-                    {{end}}
-                    {{if MaxAge}}
-                    MaxAge: {{MaxAge}},
-                    {{end}}
-                }
-                {{end}}
-            )
-            {{end}}
-            {{range Middlewares}}
-            ctx.{{WebApp}}().Group({{Path}}, ctx.{{Proxy}})
-            {{end}}
-            
-            {{range Routers}}
-                {{range Methods}}
-                ctx.{{WebApp}}().{{Method}}({{Path}}, ctx.{{Proxy}})
-                {{end}}
-            {{end}}
-            
-            {{if FuncName != ""}}
-            host, port, err := {{Package}}.{{FuncName}}(
-                {{range Params}}
-                    {{if param.Source == "ctx"}}
-                        ctx,
-                    {{else if param.Source == "inject"}}
-                        {{if IsSingleton}}
-                        ctx.{{ParamInstance}}(),
-                        {{else if IsMultiple}}
-                        ctx.New{{ParamInstance}}(),
-                        {{end}}
-                    {{else}}
-                        {{ParamInstance}},
-                    {{end}}
-                {{end}}
-            )
-            if err != nil {
-                return err
-            }
-            {{end}}
-            return ctx.{{WebApp}}().Listen(fmt.Sprintf("%s:%d", host, port))
-        }
-        {{end}}
-        
-        ------------------------------------
-        # gen segment: Middleware #
-        ------------------------------------
-        {{range WebAppInstances}}
-            {{range Middlewares}}
-            func (ctx *Ctx) {{Proxy}}(
-                webCtx *fiber.Ctx,
-                {{if !Recv.IsInject}}
-                {{Recv.Name}} {{Recv.Type}},
-                {{end}}
-                {{range NormalParams}}
-                {{ParamInstance}} {{ParamType}},
-                {{end}}
-            ) (err error) {
-                {{if BodyParam}}
-                    {{if Type == "[]btye"}}
-                        {{ParamInstance}} := utils.Body(webCtx)
-                    {{else if Type == "string"}}
-                        {{ParamInstance}} := utils.BodyString(webCtx)
-                    {{else}}
-                        {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
-                        err := utils.BodyParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := HeaderParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Header(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.HeaderInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.HeaderBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.HeaderFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.HeaderParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := QueryParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Query(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.QueryInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.QueryBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.QueryFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.QueryParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := PathParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Params(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.ParamsInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.ParamsBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.ParamsFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.ParamsParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := FormParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.FormString(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.FormInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.FormBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.FormFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "file"}}
-                        {{ParamInstance}}, err := utils.FormFile(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.FormParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                return {{Package}}.{{FuncName}}(
-                    {{range _, param := Params}}
-                        {{if param.Source == "ctx"}}
-                            ctx,
-                        {{else if param.Source == "webCtx"}}
-                            webCtx,
-                        {{else if param.Source == "inject"}}
-                            {{if IsSingleton}}
-                            ctx.{{ParamInstance}}(),
-                            {{else if IsMultiple}}
-                            ctx.New{{ParamInstance}}(),
-                            {{end}}
-                        {{else}}
-                            {{param.Instance}},
-                        {{end}}
-                    {{end}}
-                )
-            }
-            {{end}}
-        {{end}}
-        
-        ------------------------------------
-        # gen segment: Router #
-        ------------------------------------
-        {{range WebAppInstances}}
-            {{range Routers}}
-            func (ctx *Ctx) {{Proxy}}(
-                webCtx *fiber.Ctx,
-                {{if !Recv.IsInject}}
-                {{Recv.Name}} {{Recv.Type}},
-                {{end}}
-                {{range NormalParams}}
-                {{ParamInstance}} {{ParamType}},
-                {{end}}
-            ) (err error) {
-                {{if BodyParam}}
-                    {{if Type == "[]btye"}}
-                        {{ParamInstance}} := utils.Body(webCtx)
-                    {{else if Type == "string"}}
-                        {{ParamInstance}} := utils.BodyString(webCtx)
-                    {{else}}
-                        {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
-                        err := utils.BodyParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := HeaderParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Header(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.HeaderInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.HeaderBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.HeaderFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.HeaderParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := QueryParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Query(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.QueryInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.QueryBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.QueryFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.QueryParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := PathParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.Params(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.ParamsInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.ParamsBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.ParamsFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.ParamsParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                {{range _, param := FormParams}}
-                    {{if Type == "string"}}
-                        {{ParamInstance}} := utils.FormString(webCtx, {{ParamInstance}})
-                    {{else if Type == "int"}}
-                        {{ParamInstance}}, err := utils.FormInt(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "bool"}}
-                        {{ParamInstance}}, err := utils.FormBool(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "float64"}}
-                        {{ParamInstance}}, err := utils.FormFloat(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else if Type == "file"}}
-                        {{ParamInstance}}, err := utils.FormFile(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{else}}
-                        {{ParamInstance}} := &model.Config{}
-                        err := utils.FormParser(webCtx, {{ParamInstance}})
-                        if err != nil {
-                            return err
-                        }
-                    {{end}}
-                {{end}}
-                
-                return {{Package}}.{{FuncName}}(
-                    {{range _, param := Params}}
-                        {{if param.Source == "ctx"}}
-                            ctx,
-                        {{else if param.Source == "webCtx"}}
-                            webCtx,
-                        {{else if param.Source == "inject"}}
-                            {{if IsSingleton}}
-                            ctx.{{ParamInstance}}(),
-                            {{else if IsMultiple}}
-                            ctx.New{{ParamInstance}}(),
-                            {{end}}
-                        {{else}}
-                            {{param.Instance}},
-                        {{end}}
-                    {{end}}
-                )
-            }
-            {{end}}
-        {{end}}
+/----
+    /ctx                    生成代码,请不要修改
+        |- gen_ctx.go       上下文接口
+    /model                  定义结构体
+    /provide                实例注解
+    /middleware             web中间件的注解
+    /router                 web路由的注解
+    /controller             web请求的处理函数
+    /service                服务与事务的处理函数
+    /handler                未分类的处理函数
+    |- main.go              启动函数
 ```
+
+> 不推荐`global`目录, 应当使用ctx来完成全局变量访问, 避免代码臃肿.
+> 
+> 不推荐`main.go`编写大量启动顺序代码, 应当通过实例的`@order`顺序优雅的完成.
+
 ## 4. 使用规范
 
 ### 4.1. 包名规范
@@ -936,18 +383,9 @@ golang禁止两个包互相import导入, 为了避免它, 在设计上我们应�
 * 声明包应当包含`@provide`,`@webProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
 * 调用包应当包含`@postConstruct`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
 
-> 注意: 声明包是禁止`@injectCtx`注入的. 
+> 注意: 声明包是禁止使用`@injectCtx`注解的. 
 > 
-> 例如: 声明包的成员函数使用`@proxy`时, 对`Ctx`上下文的注入, 应当考虑替换为值注入和函数注入.
+> 例如: 声明包的成员函数使用`@proxy`时, 不应注入`Ctx`上下文, 而是考虑替换成值注入和函数注入.
 > 
-> 值类型注入有`@injectParam`与`@injectRecv`等, 函数类型注入有`@injectFunc`.
+> 值注入有`@injectParam`与`@injectRecv`等, 函数注入有`@injectFunc`.
 
-### 4.3. 私有属性注入规范
-
-> 系统支持对结构体私有属性进行依赖注入, 也就是`@inject`与`@injectField`注解标记的字符段是私有字段;
-> 
-> 默认匹配规则为: Getter函数为属性名首字母大写, Setter函数为`Set`前缀加属性名.
-> 
-> 如: `@injectField fieldA`, Getter为`Field()`, Setter为`SetField()`.
-> 
-> 系统还允许自定义Getter与Setter函数, 只需要在`@inject`或`@injectField`注解上配置即可.

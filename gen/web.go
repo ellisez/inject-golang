@@ -246,6 +246,11 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				},
 			})
 
+			doc := "// Generate by system"
+			if instanceFunc.FuncName != "" {
+				doc = fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName)
+			}
+
 			proxyFuncDecl := astFuncDecl(
 				[]*ast.Field{
 					astField(instanceVar, astStarExpr(ast.NewIdent(CtxType))),
@@ -258,7 +263,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				stmts,
 			)
 			proxyFuncDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
-				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
+				Text: doc,
 			}}}
 			addDecl(astFile, proxyFuncDecl)
 			ctx.Methods = append(ctx.Methods, proxyFuncDecl)

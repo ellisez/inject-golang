@@ -5,9 +5,8 @@ import (
 )
 
 // ConfigureWebApp
-// @webAppProvide instance
+// @webProvide
 // @import github.com/ellisez/inject-golang/examples/model
-// @proxy WebAppStartup1
 // @injectParam config Config
 // @static /images /images
 // @static /css /css [Compress,Browse]

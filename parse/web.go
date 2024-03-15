@@ -21,14 +21,15 @@ func (p *Parser) WebParse(_ *ast.FuncDecl, commonFunc *model.CommonFunc, comment
 		annotateName := args[0]
 		switch annotateName {
 		case "@webProvide":
-			if argsLen < 2 {
-				utils.Failuref(`%s %s, Instance must be specified`, commonFunc.Loc.String(), webApp.Comment)
+			if argsLen >= 2 {
+				instance := args[1]
+				if instance != "" && instance != "_" {
+					if utils.IsFirstLower(instance) {
+						utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), webApp.Comment, instance)
+					}
+					webApp.Instance = instance
+				}
 			}
-			instance := args[1]
-			if utils.IsFirstLower(instance) {
-				utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), webApp.Comment, instance)
-			}
-			webApp.Instance = instance
 			webApp.Comment = comment.Comment
 		case "@static":
 			if argsLen < 2 {

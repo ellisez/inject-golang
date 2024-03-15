@@ -23,7 +23,8 @@ func CorsMiddleware(appCtx ctx.Ctx, c *fiber.Ctx,
 	header string,
 	paramsInt int,
 	queryBool bool,
-	formFloat float64) error {
+	formFloat float64,
+) error {
 	fmt.Printf("call CorsMiddleware: %v, %v, %v, %s, %d, %t, %f\n", appCtx, c, body, header, paramsInt, queryBool, formFloat)
 	return cors.New(cors.Config{
 		AllowOrigins:     "*",
