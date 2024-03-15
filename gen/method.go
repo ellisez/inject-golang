@@ -78,11 +78,6 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 			})
 		}
 
-		results := make([]*ast.Field, 0)
-		for _, result := range instance.Results {
-			results = append(results, astField(result.Name, result.Type))
-		}
-
 		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance, recvParam)
 		funcDecl.Body = &ast.BlockStmt{
 			List: stmts,

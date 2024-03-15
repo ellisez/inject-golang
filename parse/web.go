@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
-func (p *Parser) WebParse(_ *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
-	webFormatCheck(commonFunc)
+func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
 	webApp := model.NewWebInstance()
 	webApp.CommonFunc = commonFunc
 
+	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
+
+	webValidate(webApp)
 	for _, comment := range comments {
 		args := comment.Args
 		argsLen := len(args)
@@ -89,32 +91,32 @@ func (p *Parser) WebParse(_ *ast.FuncDecl, commonFunc *model.CommonFunc, comment
 	p.Ctx.HasWebInstance = true
 }
 
-func webFormatCheck(commonFunc *model.CommonFunc) {
-	if len(commonFunc.Results) == 3 {
-		utils.Failuref(`%s %s, Illegal webProvide function, the number of returns is not 3`, commonFunc.Loc.String(), commonFunc.Comment)
+func webValidate(webInstance *model.WebInstance) {
+	if len(webInstance.Results) != 3 {
+		utils.Failuref(`%s %s, Illegal webProvide function, returns [host, port, err]`, webInstance.Loc.String(), webInstance.Comment)
 	}
-	host, ok := commonFunc.Results[0].Type.(*ast.Ident)
+	host, ok := webInstance.Results[0].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 	if host.String() != "string" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 
-	port, ok := commonFunc.Results[1].Type.(*ast.Ident)
+	port, ok := webInstance.Results[1].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 	if port.String() != "uint" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 
-	err, ok := commonFunc.Results[2].Type.(*ast.Ident)
+	err, ok := webInstance.Results[2].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 	if err.String() != "error" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, commonFunc.Loc.String(), commonFunc.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, webInstance.Loc.String(), webInstance.Comment)
 	}
 
 }

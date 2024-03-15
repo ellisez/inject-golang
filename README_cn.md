@@ -92,17 +92,22 @@ inject-glang --clean
 ### 2.3. 实例注解
 `实例注解`指的是通过构造函数标记注解的方式来声明实例
 ```
-// @provide <实例名，默认同类名> <singleton默认|multiple>
+// @provide <实例名，默认同返回类型> <singleton默认|multiple> <实例type, 默认同返回类型>
 // @order <创建顺序，数字或字符串>
 // @import *<模块加载路径，必填> <模块名>
+// @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, 默认""|&|*>
+// @injectCtx *<参数名, 必填>
+// @injectFunc *<参数名, 必填>
 // @handler *<处理函数, 必填>
 ```
 
 > 系统默认会加载容器包以及注解所在代码的包, 但如果有额外的包, 则需要使用`@import`声明.
 > 
-> `@provide`所标记的构造函数必须有且只有一个返回类型并且不能有任何参数, 而且不支持依赖注入;
+> `@provide`所标记的构造函数必须有且只有一个返回类型, 支持依赖注入, 但必须每个参数都要注入. 
 > 
-> `@handler`所指向的函数必须是一个有且只有一个结构体类型参数的函数. 它支持依赖注入, 但需要`@order`定义创建顺序, 以免还未完成初始化的实例被注入;
+> `@provide`需要`@order`定义创建顺序, 以免还未完成初始化的实例被注入;
+> 
+> `@handler`所指向的函数会在实例创建后调用;
 > 
 > `@handler`可以携带包名, 例如: *model.Database, 它表示调用原始函数. 但如果不带包名, 则表示它是代理函数.
 > 
@@ -170,16 +175,23 @@ inject-glang --clean
 构建函数上的注解
 ```go
 // PrepareServerAlias example for proxy handler
-// @provide ServerAlias
+// @provide ServerAlias _ model.ServerInterface
 // @order "step 4: Setting Server"
 // @import github.com/ellisez/inject-golang/examples/model
+// @injectParam config
+// @injectParam database
 // @handler ServerAliasLoaded
-func PrepareServerAlias() *model.Server {
-    fmt.Println("call WebAppAlias.PrepareWebAppAlias")
-    return &model.Server{}
+func PrepareServerAlias(config *model.Config, database *model.Database) *model.Server {
+fmt.Println("call WebAppAlias.PrepareWebAppAlias")
+    return &model.Server{
+        Config:   config,
+        Database: database,
+    }
 }
 ```
-> 构造函数, 要求必须是无参并且只有一个返回类型
+> 构造函数, 要求必须只有一个返回类型
+> 
+> 范例中, 指定了实例类型`model.ServerInterface`, 它是个接口类型, 而真实创建类型为返回类型`*model.Server`.
 
 原函数上的注解
 ```go
@@ -190,11 +202,11 @@ func PrepareServerAlias() *model.Server {
 // @injectParam isReady _ &
 // @injectParam event
 // @injectParam listener
-func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+func ServerAliasLoaded(appCtx ctx.Ctx, server model.ServerInterface, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
     fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
     server.Startup()
     *isReady = true
-    appCtx.TestServer(server)
+    appCtx.TestServer(server.(*model.Server))
     // custom
     server.AddListener("register", func(data map[string]any) {
         fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)

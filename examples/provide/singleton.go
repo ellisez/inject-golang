@@ -47,11 +47,16 @@ func DatabaseLoaded(database *model.Database) {
 }
 
 // PrepareServerAlias example for proxy handler
-// @provide ServerAlias
+// @provide ServerAlias _ model.ServerInterface
 // @order "step 4: Setting Server"
 // @import github.com/ellisez/inject-golang/examples/model
+// @injectParam config
+// @injectParam database
 // @handler ServerAliasLoaded
-func PrepareServerAlias() *model.Server {
+func PrepareServerAlias(config *model.Config, database *model.Database) *model.Server {
 	fmt.Println("call WebAppAlias.PrepareWebAppAlias")
-	return &model.Server{}
+	return &model.Server{
+		Config:   config,
+		Database: database,
+	}
 }

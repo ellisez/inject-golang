@@ -9,10 +9,11 @@ import (
 
 func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
 	instanceNode := model.NewProvide()
-	instanceNode.Mode = "singleton"
 	instanceNode.CommonFunc = commonFunc
 
 	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
+
+	instanceValidate(instanceNode)
 	for _, comment := range comments {
 		args := comment.Args
 		argsLen := len(args)
@@ -22,21 +23,35 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 		annotateName := args[0]
 		switch annotateName {
 		case "@provide":
-			if argsLen < 2 {
-				utils.Failuref(`%s %s, Instance must be specified`, commonFunc.Loc.String(), instanceNode.Comment)
+			if argsLen >= 2 {
+				instance := args[1]
+				if instance != "" && instance != "_" {
+					if utils.IsFirstLower(instance) {
+						utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), instanceNode.Comment, instance)
+					}
+					instanceNode.Instance = instance
+				}
 			}
-			instance := args[1]
-			if utils.IsFirstLower(instance) {
-				utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), instanceNode.Comment, instance)
-			}
-			instanceNode.Instance = instance
 
 			if argsLen >= 3 {
 				mode := args[2]
 				if mode != "" && mode != "_" {
+					switch mode {
+					case "singleton", "multiple":
+					default:
+						utils.Failuref(`%s %s, Mode "%s" is invalid`, commonFunc.Loc.String(), instanceNode.Comment, instanceNode.Mode)
+					}
 					instanceNode.Mode = mode
 				}
 			}
+
+			if argsLen >= 4 {
+				typeStr := args[3]
+				if typeStr != "" && typeStr != "_" {
+					instanceNode.Type = utils.TypeToAst(typeStr)
+				}
+			}
+
 			instanceNode.Comment = comment.Comment
 		case "@order":
 			if argsLen >= 2 {
@@ -55,21 +70,18 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 		}
 	}
 
-	if funcDecl.Type.Results == nil {
-		utils.Failuref("%s %s.%s() is not a valid constructor, missing return.", commonFunc.Loc.String(), commonFunc.Package, commonFunc.FuncName)
-	}
-	if len(funcDecl.Type.Results.List) > 1 {
-		utils.Failuref("%s %s.%s() is not a valid constructor, It should only one return.", commonFunc.Loc.String(), commonFunc.Package, commonFunc.FuncName)
-	}
-	instanceNode.Type = funcDecl.Type.Results.List[0].Type
-
 	switch instanceNode.Mode {
 	case "singleton":
 		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, instanceNode)
 	case "multiple":
 		p.Ctx.MultipleInstances = append(p.Ctx.MultipleInstances, instanceNode)
-	default:
-		utils.Failuref(`%s %s, Mode "%s" is invalid`, commonFunc.Loc.String(), instanceNode.Comment, instanceNode.Mode)
 	}
+}
 
+func instanceValidate(instance *model.Provide) {
+	if len(instance.Results) > 1 {
+		utils.Failuref("%s %s.%s() is not a valid constructor, It should only one return.", instance.Loc.String(), instance.Package, instance.FuncName)
+	}
+	instance.Type = instance.Results[0].Type
+	instance.Instance = utils.TypeShortName(instance.Type)
 }

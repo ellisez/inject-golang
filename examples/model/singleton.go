@@ -16,7 +16,15 @@ type Database struct {
 	UserName string
 	Password string
 }
+type ServerInterface interface {
+	Startup()
+	Shutdown()
+	IsRunning() bool
+	TriggerEvent(eventName string, data map[string]any)
+	AddListener(eventName string, handler func(map[string]any))
 
+	EmptyListener()
+}
 type Server struct {
 	Config    *Config
 	Database  *Database

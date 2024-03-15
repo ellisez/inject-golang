@@ -71,11 +71,6 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 			})
 		}
 
-		var results []*ast.Field
-		for _, result := range instance.Results {
-			results = append(results, astField(result.Name, result.Type))
-		}
-
 		// [code] func (ctx *Container) {{Proxy}}(
 		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance)
 		funcDecl.Body = &ast.BlockStmt{

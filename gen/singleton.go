@@ -38,6 +38,8 @@ func genSingletonFile(ctx *model.Ctx, dir string) error {
 
 	genSingletonGetterAndSetterAst(ctx, astFile)
 
+	genCtxNewAst(ctx, astFile)
+
 	genSingletonNewAst(ctx, astFile)
 
 	return utils.GenerateCode(filename, astFile, ctx,
@@ -128,7 +130,7 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 }
 
 // # gen segment: Singleton instance #
-func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
+func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := "ctx"
 
 	var docs []*ast.Comment
@@ -158,8 +160,8 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 					nil,
 				)
 			} else {
-				// [code] ctx.{{PrivateName}} = {{Package}}.{{FuncName}}()
-				constructor = &ast.CallExpr{Fun: astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName)}
+				// [code] ctx.{{PrivateName}} = ctx.New{{Instance}}()
+				constructor = &ast.CallExpr{Fun: astSelectorExpr(ctxVar, "New"+instanceName)}
 			}
 		}
 
@@ -233,4 +235,34 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	}
 
 	addDecl(astFile, funcDecl)
+}
+
+func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
+	ctxVar := "ctx"
+
+	for _, instance := range ctx.SingletonInstances {
+		if _, ok := instance.(*model.Provide); ok {
+			instanceName := instance.GetInstance()
+			instanceFunc := instance.GetFunc()
+
+			var stmts []ast.Stmt
+			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName), instanceFunc, ctx, ctxVar)
+			stmts = append(stmts, &ast.ReturnStmt{
+				Results: []ast.Expr{
+					instanceCallExpr,
+				},
+			})
+
+			// [code] func (ctx *Container) {{Proxy}}(
+			funcDecl := astInstanceProxyFunc(instanceFunc, "New"+instanceName)
+			funcDecl.Body = &ast.BlockStmt{
+				List: stmts,
+			}
+			funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
+			}}}
+			addDecl(astFile, funcDecl)
+			ctx.Methods = append(ctx.Methods, funcDecl)
+		}
+	}
 }

@@ -93,17 +93,22 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 ### 2.3. Instance Annotations
 `Instance annotations` refers to declaring an instance by marking annotations with a constructor
 ```
-// @provide <Instance, default structName> <singleton default|multiple>
+// @provide <Instance, default ReturnType> <singleton default|multiple> <type, default ReturnType>
 // @order <Instance creation order, numbers or strings>
 // @import *<Path, required> <Alias>
+// @injectParam *<ParamName, required> <Instance，default paramName> <pointer operator, ""|&|*>
+// @injectCtx *<ParamName, required>
+// @injectFunc *<ParamName, required>
 // @handler *<called after creation, required>
 ```
 
 > The system will load the container package and the package where the annotation is located by default, but if there are additional packages, they need to be declared with `@import`;
 >
-> The constructor marked by `@provide` must have only one return type and cannot have any parameters, and does not support dependency injection.
+> The constructor marked by `@provide` must have and only have one return type, support dependency injection, but must inject each parameter.
+> 
+> `@provide` requires `@order` to define the creation order to prevent instances that have not yet been initialized from being injected;
 >
-> The function pointed to by `@handler` must be a function with only one structural type parameter It supports dependency injection, but requires `@order` to define the creation order to prevent instances that have not yet been initialized from being injected.
+> The function pointed to by `@handler` will be called after the instance is created.
 > 
 > `@handler` can carry the package name, for example: `*model.Database`, which represents calling the original function.But if it does not include a package name, it is a proxy function.
 >
@@ -175,16 +180,23 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 Annotations on Construct Functions
 ```go
 // PrepareServerAlias example for proxy handler
-// @provide ServerAlias
+// @provide ServerAlias _ model.ServerInterface
 // @order "step 4: Setting Server"
 // @import github.com/ellisez/inject-golang/examples/model
+// @injectParam config
+// @injectParam database
 // @handler ServerAliasLoaded
-func PrepareServerAlias() *model.Server {
+func PrepareServerAlias(config *model.Config, database *model.Database) *model.Server {
     fmt.Println("call WebAppAlias.PrepareWebAppAlias")
-    return &model.Server{}
+    return &model.Server{
+        Config:   config,
+        Database: database,
+    }
 }
 ```
-> Constructor, must be parameter free and have only one return type.
+> Constructor, must have only one return type.
+> 
+> In the example, the instance type specified `model.ServerInterface` is an interface type, while the actual creation type is the return type `*model.Server`.
 
 `@handle` Annotations on the original function
 ```go
@@ -195,11 +207,11 @@ func PrepareServerAlias() *model.Server {
 // @injectParam isReady _ &
 // @injectParam event
 // @injectParam listener
-func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+func ServerAliasLoaded(appCtx ctx.Ctx, server model.ServerInterface, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
     fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
     server.Startup()
     *isReady = true
-    appCtx.TestServer(server)
+    appCtx.TestServer(server.(*model.Server))
     // custom
     server.AddListener("register", func(data map[string]any) {
         fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
@@ -341,7 +353,7 @@ func main() {
 > 
 > The instance name is modified through `@webProvider`, and the startup function will also change accordingly;
 >
-> ``@router` and `@middleware` are associated with an instance through `@webApp`, which defaults to the instance name associated with 'WebApp';
+> `@router` and `@middleware` are associated with an instance through `@webApp`, which defaults to the instance name associated with 'WebApp';
 >
 > The instance names of `@webProvide` and `@webApp` must be consistent to ensure their association;
 

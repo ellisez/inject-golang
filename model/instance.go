@@ -14,7 +14,9 @@ type Provide struct {
 }
 
 func NewProvide() *Provide {
-	return &Provide{CommonFunc: NewCommonFunc()}
+	return &Provide{
+		Mode:       "singleton",
+		CommonFunc: NewCommonFunc()}
 }
 
 func (provide *Provide) GetOrder() string {

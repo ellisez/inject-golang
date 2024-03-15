@@ -31,6 +31,7 @@ func annotateParse(text string) []string {
 		lastIndex = index
 	}
 
+	textLen := len(text)
 	for index, char := range text {
 		switch mode {
 		case "seek":
@@ -39,10 +40,16 @@ func annotateParse(text string) []string {
 				continue
 			case '"':
 				mode = "endOfDoubleQuote"
-				lastIndex = index
+				lastIndex = index + 1
+				if lastIndex > textLen-1 {
+					lastIndex = textLen - 1
+				}
 			case '`':
 				mode = "endOfBackQuote"
-				lastIndex = index
+				lastIndex = index + 1
+				if lastIndex > textLen-1 {
+					lastIndex = textLen - 1
+				}
 			default:
 				mode = "endOfSpace"
 				lastIndex = index
@@ -56,13 +63,13 @@ func annotateParse(text string) []string {
 		case "endOfDoubleQuote":
 			switch char {
 			case '"':
-				add(index + 1)
+				add(index)
 			default:
 			}
 		case "endOfBackQuote":
 			switch char {
 			case '`':
-				add(index + 1)
+				add(index)
 			default:
 			}
 		}
