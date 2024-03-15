@@ -348,7 +348,7 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 			argExpr = ast.NewIdent(paramVar)
 		}
 
-		switch param.Convertor {
+		switch param.Operator {
 		case "&":
 			argExpr = &ast.UnaryExpr{Op: token.AND, X: argExpr}
 		case "*":
@@ -357,6 +357,10 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 			argExpr = &ast.TypeAssertExpr{
 				X:    argExpr,
 				Type: param.Type,
+			}
+		case "call":
+			argExpr = &ast.CallExpr{
+				Fun: argExpr,
 			}
 		}
 		args = append(args, argExpr)

@@ -102,12 +102,12 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				}
 
 				if argsLen >= 4 {
-					pointer := annotateArgs[3]
-					switch pointer {
+					operator := annotateArgs[3]
+					switch operator {
 					case "", "&", "*", "cast":
-						param.Convertor = pointer
+						param.Operator = operator
 					default:
-						utils.Failuref(`%s %s, Convertor "%s" not supported, only ["", "&", "*", "cast"] are allowed`, param.Loc.String(), comment.Text, pointer)
+						utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "&", "*", "cast"] are allowed`, param.Loc.String(), comment.Text, operator)
 					}
 				}
 				param.Comment = comment.Text
@@ -126,6 +126,16 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					paramInstance := annotateArgs[2]
 					if paramInstance != "" && paramInstance != "_" {
 						param.Instance = paramInstance
+					}
+				}
+
+				if argsLen >= 4 {
+					operator := annotateArgs[3]
+					switch operator {
+					case "", "call":
+						param.Operator = operator
+					default:
+						utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "call"] are allowed`, param.Loc.String(), comment.Text, operator)
 					}
 				}
 

@@ -69,10 +69,10 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 ```
 // @proxy <Instance，default funcName>
 // @import *<Path, required> <Alias>
-// @injectParam *<ParamName, required> <Instance，default paramName> <TypeConvertor, ""|&|*|cast>
+// @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
 // @injectRecv *<ParamName, required> <Instance，default paramName>
 // @injectCtx *<ParamName, required>
-// @injectFunc *<ParamName, required>
+// @injectFunc *<ParamName, required> <Instance，default paramName> <operator, ""|call>
 ```
 
 > `@proxy ` causes the system to generate a proxy function with the same name as the original function by default.
@@ -98,9 +98,9 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 // @provide <Instance, default ReturnType> <singleton default|multiple> <type, default ReturnType>
 // @order <Instance creation order, numbers or strings>
 // @import *<Path, required> <Alias>
-// @injectParam *<ParamName, required> <Instance，default paramName> <pointer operator, ""|&|*>
+// @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
 // @injectCtx *<ParamName, required>
-// @injectFunc *<ParamName, required>
+// @injectFunc *<ParamName, required> <Instance，default paramName> <operator, ""|call>
 // @handler *<called after creation, required>
 ```
 
@@ -237,9 +237,9 @@ func (ctx *Ctx) ServerAliasLoaded() {
 ```
 > The generated proxy function will retain the parameters that have not been injected, and only when all parameters are injected can a parameterized proxy function be generated, which is the format requirement for `handler`.
 > 
-> The parameter `server` uses a `cast` conversion, so strong conversion was automatically performed in the generated code `cast` is commonly used for converting interfaces to structures.
+> The parameter `server` uses a `cast` operator, so strong conversion was automatically performed in the generated code `cast` is commonly used for converting interfaces to structures.
 > 
-> The parameter `isReady` uses a `&` conversion, so the address retrieval operation is automatically performed in the generated code. 
+> The parameter `isReady` uses a `&` operator, so the address retrieval operation is automatically performed in the generated code. 
 > `IsReady` is a basic type that takes a pointer to allow it to be modified.
 
 ### 3.2. Web Generated Codes
