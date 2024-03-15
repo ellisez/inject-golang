@@ -220,7 +220,7 @@ func (ctx *Ctx) ServerAliasLoaded(server *model.Server) {
 注解配置
 ```go
 // ConfigureWebApp
-// @webAppProvide instance
+// @webProvide instance
 // @import github.com/ellisez/inject-golang/examples/model
 // @proxy WebAppStartup1
 // @injectParam config Config
@@ -380,8 +380,8 @@ golang禁止两个包互相import导入, 为了避免它, 在设计上我们应�
 
 具体做法如下:
 * 应当准备两类包, 一类负责声明, 另一类负责调用; 调用包可以import依赖导入声明包, 但声明包禁止导入调用包;
-* 声明包应当包含`@provide`,`@webProvide`,`@preConstruct`这些注解代码, 它们提供了实例的创建规则; 推荐包名为`model`; 
-* 调用包应当包含`@postConstruct`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
+* 声明包应当包含`@provide`,`@webProvide`这些注解声明的结构体, 它们提供了实例的创建规则; 推荐包名为`model`; 
+* 调用包应当包含`@handler`,`@proxy`,`@middleware`,`@router`这些注解代码, 它们提供了依赖注入的函数回调; 推荐包名为`handler`;
 
 > 注意: 声明包是禁止使用`@injectCtx`注解的. 
 > 

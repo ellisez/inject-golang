@@ -141,7 +141,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 
 > `@router` will cause the system to generate a proxy function with the same name as the function to complete parameter parsing and injection, which can also be changed through `@proxy`;
 >
-> `@webApp` is used to associate webApp instances. WebApp instance is provided by `@webAppProvide` and the default instance name is "WebApp";
+> `@webApp` is used to associate webApp instances. WebApp instance is provided by `@webProvide` and the default instance name is "WebApp";
 >
 > `@injectWebCtx` is used to inject the webCtx of the current request, and can only be used for `@router` and `@middleware`;
 >
@@ -226,7 +226,7 @@ func (ctx *Ctx) ServerAliasLoaded(server *model.Server) {
 Annotation configuration
 ```go
 // ConfigureWebApp
-// @webAppProvide instance
+// @webProvide instance
 // @import github.com/ellisez/inject-golang/examples/model
 // @proxy WebAppStartup1
 // @injectParam config Config
@@ -397,8 +397,8 @@ The specific actions are as follows:
 * Two types of packages should be prepared, one for declaration and the other for calling; 
 <br/>Call packages can import dependent import declaration packages, but declaration packages prohibit the import of call packages;
 
-* The `declaration package` should include annotation codes such as `@provide`, `@webAppProvide`, and `@preConstruct`, which can provide the rules for creating instances; <br/>Recommend the package name as `model`;
-* The `call package` should include annotation codes such as `@postConstruct`, `@proxy`, `@middleware`, and `@router`, which can provide function callbacks for dependency injection; <br/>Recommended package name is `handler`;
+* The `declaration package` should include the structures of annotation declarations such as `@provide`, `@webProvide`, which can provide the rules for creating instances; <br/>Recommend the package name as `model`;
+* The `call package` should include the functions of annotation declarations such as `@handler`, `@proxy`, `@middleware`, and `@router`, which can provide function callbacks for dependency injection; <br/>Recommended package name is `handler`;
 
 
 
