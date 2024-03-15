@@ -68,7 +68,7 @@ inject-glang --clean
 ```
 // @proxy <代理方法名，默认同方法名>
 // @import *<模块加载路径，必填> <模块名>
-// @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, 默认""|&|*>
+// @injectParam *<参数名，必填> <实例名，默认同参数名> <类型转换, 默认""|&|*|cast>
 // @injectRecv *<参数名，必填> <实例名，默认同参数名>
 // @injectCtx *<参数名, 必填>
 // @injectFunc *<参数名, 必填>
@@ -84,7 +84,7 @@ inject-glang --clean
 > 
 > `@injectFunc`用于注入函数类型的参数;
 > 
-> `@injectPara`支持指针运算, `&`表示取值的地址, `*`表示取地址对应的值, 两者互为反运算; 默认是""表示不进行指针运算.
+> `@injectParam`支持类型转换, `&`表示取值的地址, `*`表示取地址对应的值, `cast`表示类型强转, 默认是""表示不进行转换.
 
 > 注意: 未被依赖注入的参数则会保留到生成代理函数中;
 >
@@ -107,7 +107,7 @@ inject-glang --clean
 > 
 > `@provide`需要`@order`定义创建顺序, 以免还未完成初始化的实例被注入;
 > 
-> `@handler`所指向的函数会在实例创建后调用;
+> `@handler`所指向的函数要求必须无参数, 它会在实例创建后调用;
 > 
 > `@handler`可以携带包名, 例如: *model.Database, 它表示调用原始函数. 但如果不带包名, 则表示它是代理函数.
 > 
@@ -182,7 +182,7 @@ inject-glang --clean
 // @injectParam database
 // @handler ServerAliasLoaded
 func PrepareServerAlias(config *model.Config, database *model.Database) *model.Server {
-fmt.Println("call WebAppAlias.PrepareWebAppAlias")
+    fmt.Println("call WebAppAlias.PrepareWebAppAlias")
     return &model.Server{
         Config:   config,
         Database: database,
@@ -197,16 +197,18 @@ fmt.Println("call WebAppAlias.PrepareWebAppAlias")
 ```go
 // ServerAliasLoaded example for injection proxy
 // @proxy
+// @import "github.com/ellisez/inject-golang/examples/model"
 // @injectParam database Database
 // @injectCtx appCtx
+// @injectParam server ServerAlias cast
 // @injectParam isReady _ &
 // @injectParam event
 // @injectParam listener
-func ServerAliasLoaded(appCtx ctx.Ctx, server model.ServerInterface, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
     fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
     server.Startup()
     *isReady = true
-    appCtx.TestServer(server.(*model.Server))
+    appCtx.TestServer(server)
     // custom
     server.AddListener("register", func(data map[string]any) {
         fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)
@@ -217,16 +219,21 @@ func ServerAliasLoaded(appCtx ctx.Ctx, server model.ServerInterface, database *m
 }
 ```
 
-> handler函数, 要求有且只有一个结构体类型参数, 上例中由于原函数完成特定的功能需要注入其他实例, 所以使用了代理函数.
+> handler函数要求必须无参数, 上例中由于原函数完成特定的功能需要注入其他实例, 所以使用了代理函数.
+> 
 
 生成的代理函数如下:
 ```go
 // Generate by annotations from handler.ServerAliasLoaded
-func (ctx *Ctx) ServerAliasLoaded(server *model.Server) {
-    handler.ServerAliasLoaded(ctx, server, ctx.database, &ctx.isReady, ctx.NewEvent(), ctx.NewListener())
+func (ctx *Ctx) ServerAliasLoaded() {
+    handler.ServerAliasLoaded(ctx, ctx.serverAlias.(*model.Server), ctx.database, &ctx.isReady, ctx.NewEvent(), ctx.NewListener())
 }
 ```
-> 生成的代理函数会保留那些未被注入的参数, 上例中原函数故意保留server参数未进行依赖注入, 使得代理函数满足了`@handler`的格式要求.
+> 生成的代理函数会保留那些未被注入的参数, 只有当所有参数都注入时, 才能生成一个无参的代理函数, 也就是`handler`的格式要求.
+> 
+> 参数`server`使用了`cast`转换, 因此生成代码中自动进行了强转. `cast`常用于接口与结构体的转换.
+> 
+> 参数`isReady`使用了`&`转换, 因此生成代码中自动进行了取地址操作. `isReady`是基本类型取指针是为了允许修改它.
 
 ### 3.2. web生成代码
 注解配置

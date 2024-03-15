@@ -77,16 +77,14 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 
 			var instanceCallExpr *ast.CallExpr
 			if strings.Contains(handler, ".") {
-				// [code] {{Handler}}(ctx.{{}})
+				// [code] {{Handler}}()
 				instanceCallExpr = &ast.CallExpr{
-					Fun:  ast.NewIdent(handler),
-					Args: []ast.Expr{ast.NewIdent(instanceVar)},
+					Fun: ast.NewIdent(handler),
 				}
 			} else {
-				// [code] ctx.{{Handler}}(ctx.{{}})
+				// [code] ctx.{{Handler}}()
 				instanceCallExpr = &ast.CallExpr{
-					Fun:  astSelectorExpr(ctxVar, handler),
-					Args: []ast.Expr{ast.NewIdent(instanceVar)},
+					Fun: astSelectorExpr(ctxVar, handler),
 				}
 			}
 

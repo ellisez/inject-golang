@@ -11,14 +11,15 @@ import (
 // @import "github.com/ellisez/inject-golang/examples/model"
 // @injectParam database Database
 // @injectCtx appCtx
+// @injectParam server ServerAlias cast
 // @injectParam isReady _ &
 // @injectParam event
 // @injectParam listener
-func ServerAliasLoaded(appCtx ctx.Ctx, server model.ServerInterface, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
 	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
 	server.Startup()
 	*isReady = true
-	appCtx.TestServer(server.(*model.Server))
+	appCtx.TestServer(server)
 	// custom
 	server.AddListener("register", func(data map[string]any) {
 		fmt.Printf("call Event: '%s', Listener: %v\n", "register", data)

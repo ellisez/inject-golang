@@ -104,10 +104,10 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				if argsLen >= 4 {
 					pointer := annotateArgs[3]
 					switch pointer {
-					case "", "&", "*":
-						param.Pointer = pointer
+					case "", "&", "*", "cast":
+						param.Convertor = pointer
 					default:
-						utils.Failuref(`%s %s, Pointer "%s" not supported, only ["", "&", "*"] are allowed`, param.Loc.String(), comment.Text, pointer)
+						utils.Failuref(`%s %s, Convertor "%s" not supported, only ["", "&", "*", "cast"] are allowed`, param.Loc.String(), comment.Text, pointer)
 					}
 				}
 				param.Comment = comment.Text

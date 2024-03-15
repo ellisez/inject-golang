@@ -42,8 +42,8 @@ func PrepareDatabase() *model.Database {
 	}
 }
 
-func DatabaseLoaded(database *model.Database) {
-	fmt.Printf("call Database.DatabaseLoaded: %v\n", database)
+func DatabaseLoaded() {
+	fmt.Printf("call Database.DatabaseLoaded")
 }
 
 // PrepareServerAlias example for proxy handler

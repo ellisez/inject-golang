@@ -180,25 +180,20 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	// call func
 	for _, instance := range ctx.SingletonInstances {
 		if _, ok := instance.(*model.Provide); ok {
-			instanceName := instance.GetInstance()
-			fieldName := utils.FirstToLower(instanceName)
-			fieldExpr := astSelectorExpr(ctxVar, fieldName)
 
 			handler := instance.GetHandler()
 			if handler != "" {
 
 				var instanceCallExpr *ast.CallExpr
 				if strings.Contains(handler, ".") {
-					// [code] {{Handler}}(ctx.{{}})
+					// [code] {{Handler}}()
 					instanceCallExpr = &ast.CallExpr{
-						Fun:  ast.NewIdent(handler),
-						Args: []ast.Expr{fieldExpr},
+						Fun: ast.NewIdent(handler),
 					}
 				} else {
-					// [code] ctx.{{Handler}}(ctx.{{}})
+					// [code] ctx.{{Handler}}()
 					instanceCallExpr = &ast.CallExpr{
-						Fun:  astSelectorExpr(ctxVar, handler),
-						Args: []ast.Expr{fieldExpr},
+						Fun: astSelectorExpr(ctxVar, handler),
 					}
 				}
 
