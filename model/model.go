@@ -23,7 +23,8 @@ type CommonFunc struct {
 
 	*Func
 
-	Comment string
+	Override bool
+	Comment  string
 }
 
 func NewCommonFunc() *CommonFunc {

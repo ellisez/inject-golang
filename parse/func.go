@@ -67,6 +67,8 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 					Comment: comment.Text,
 					Args:    annotateArgs,
 				})
+			case "@override":
+				commonFunc.Override = true
 			case "@import":
 				importInfo := &model.Import{}
 				commonFunc.Imports = append(commonFunc.Imports, importInfo)

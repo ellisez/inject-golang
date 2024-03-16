@@ -68,6 +68,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 `Proxy Function Annotations` is to enable dependency injection on normal functions.
 ```
 // @proxy <Instance，default funcName>
+// @override
 // @import *<Path, required> <Alias>
 // @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
 // @injectRecv *<ParamName, required> <Instance，default paramName>
@@ -78,6 +79,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 > `@proxy ` causes the system to generate a proxy function with the same name as the original function by default.
 > Proxy functions can be accessed through container objects
 >
+> `@override` indicates support for overloading, and when encountering instances with the same name, the latter will overwrite the former; The default is to disable overloading, and an error will be reported when the same name is used.
+> 
 > `@injectParam` is used for dependency injection of parameters;
 >
 > `@injectRecv` is used for structural dependency injection of member functions;
@@ -96,6 +99,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 `Instance annotations` refers to declaring an instance by marking annotations with a constructor
 ```
 // @provide <Instance, default ReturnType> <singleton default|multiple> <type, default ReturnType>
+// @override
 // @order <Instance creation order, numbers or strings>
 // @import *<Path, required> <Alias>
 // @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
@@ -110,6 +114,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 > 
 > `@provide` requires `@order` to define the creation order to prevent instances that have not yet been initialized from being injected;
 >
+> `@override` indicates support for overloading, and when encountering instances with the same name, the latter will overwrite the former; The default is to disable overloading, and an error will be reported when the same name is used.
+> 
 > The function pointed to by `@handler` must have no parameters, and it will be called after the instance is created.
 > 
 > `@handler` can carry the package name, for example: `*model.Database`, which represents calling the original function.But if it does not include a package name, it is a proxy function.

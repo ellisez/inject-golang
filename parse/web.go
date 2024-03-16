@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -80,6 +81,9 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 		webInstance, ok := instance.(*model.WebInstance)
 		if !ok {
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), webApp.Comment, instance.GetComment())
+		}
+		if webInstance.FuncName != "" {
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", webApp.Instance, webApp.Package, webApp.FuncName)
 		}
 		webInstance.Comment = webApp.Comment
 		webInstance.Imports = append(webInstance.Imports, webApp.Imports...)

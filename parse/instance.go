@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -70,6 +71,10 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 		}
 	}
 
+	if instanceOverride(p.Ctx, instanceNode) {
+		return
+	}
+
 	switch instanceNode.Mode {
 	case "singleton":
 		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, instanceNode)
@@ -84,4 +89,38 @@ func instanceValidate(instance *model.Provide) {
 	}
 	instance.Type = instance.Results[0].Type
 	instance.Instance = utils.TypeShortName(instance.Type)
+}
+
+func instanceOverride(ctx *model.Ctx, provide *model.Provide) bool {
+	for i, instance := range ctx.SingletonInstances {
+		if instance.GetInstance() == provide.Instance {
+			if instance.GetOverride() {
+				if provide.Mode == "singleton" {
+					ctx.SingletonInstances[i] = provide
+				} else {
+					ctx.MultipleInstances = append(ctx.MultipleInstances, provide)
+				}
+				fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+				return true
+			} else {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
+			}
+		}
+	}
+	for i, instance := range ctx.MultipleInstances {
+		if instance.GetInstance() == provide.Instance {
+			if instance.GetOverride() {
+				if provide.Mode == "singleton" {
+					ctx.SingletonInstances = append(ctx.SingletonInstances, provide)
+				} else {
+					ctx.MultipleInstances[i] = provide
+				}
+				fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+				return true
+			} else {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
+			}
+		}
+	}
+	return false
 }

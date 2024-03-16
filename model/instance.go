@@ -49,6 +49,9 @@ func (provide *Provide) GetHandler() string {
 func (provide *Provide) GetConstructor() ast.Expr {
 	return provide.Constructor
 }
+func (provide *Provide) GetOverride() bool {
+	return provide.Override
+}
 
 type Instance interface {
 	GetOrder() string
@@ -61,4 +64,5 @@ type Instance interface {
 	GetMode() string
 	GetHandler() string
 	GetConstructor() ast.Expr
+	GetOverride() bool
 }
