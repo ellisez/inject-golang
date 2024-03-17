@@ -53,7 +53,7 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 				}
 			}
 
-			instanceNode.Comment = comment.Comment
+			instanceNode.Comment = comment.Text
 		case "@order":
 			if argsLen >= 2 {
 				order := args[1]

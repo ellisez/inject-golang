@@ -24,23 +24,23 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 		switch annotateName {
 		case "@router":
 			if argsLen < 2 {
-				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
 			}
 			router.Path = args[1]
 
 			if argsLen < 3 {
-				utils.Failuref("%s %s, Methods must be specified", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Methods must be specified", commonFunc.Loc.String(), comment.Text)
 			}
 			methods := args[2]
 			if !strings.HasPrefix(methods, "[") || !strings.HasSuffix(methods, "]") {
-				utils.Failuref("%s %s, Methods must be wrapped in []", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Methods must be wrapped in []", commonFunc.Loc.String(), comment.Text)
 			}
 			methods = methods[1 : len(methods)-1]
 			for _, method := range strings.Split(methods, ",") {
 				router.Methods = append(router.Methods, utils.FirstToUpper(method))
 			}
 
-			router.Comment = comment.Comment
+			router.Comment = comment.Text
 		case "@param":
 			webParamParse(router.WebParam, commonFunc, comment)
 		case "@injectWebCtx":

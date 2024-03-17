@@ -34,8 +34,8 @@ func NewCommonFunc() *CommonFunc {
 }
 
 type Comment struct {
-	Comment string
-	Args    []string
+	Text string
+	Args []string
 }
 
 type Proxy struct {
@@ -61,7 +61,8 @@ type Gen struct {
 	InjectCtxMap map[string][]*Field
 }
 type Ctx struct {
-	FileSet *token.FileSet
+	FileSet        *token.FileSet
+	PackageMapping map[string]string
 
 	SingletonInstances []Instance
 	MultipleInstances  []Instance
@@ -74,7 +75,8 @@ type Ctx struct {
 
 func NewCtx() *Ctx {
 	return &Ctx{
-		FileSet: token.NewFileSet(),
+		FileSet:        token.NewFileSet(),
+		PackageMapping: map[string]string{},
 		Gen: &Gen{
 			InjectCtxMap: map[string][]*Field{},
 		},

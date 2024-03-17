@@ -34,14 +34,14 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 					webApp.Instance = instance
 				}
 			}
-			webApp.Comment = comment.Comment
+			webApp.Comment = comment.Text
 		case "@static":
 			if argsLen < 2 {
-				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
 			}
 			path := args[1]
 			if argsLen < 3 {
-				utils.Failuref("%s %s, Dirname must be specified", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Dirname must be specified", commonFunc.Loc.String(), comment.Text)
 			}
 			dirname := args[2]
 
@@ -54,7 +54,7 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 			if argsLen >= 4 {
 				features := args[3]
 				if !strings.HasPrefix(features, "[") || !strings.HasSuffix(features, "]") {
-					utils.Failuref("%s %s, Features must be wrapped in []", commonFunc.Loc.String(), comment.Comment)
+					utils.Failuref("%s %s, Features must be wrapped in []", commonFunc.Loc.String(), comment.Text)
 				}
 				features = features[1 : len(features)-1]
 				splitStr := strings.Split(features, ",")
@@ -68,11 +68,11 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 			if argsLen >= 6 {
 				maxAge, err := strconv.Atoi(args[5])
 				if err != nil {
-					utils.Failuref("%s %s, MaxAge must be a number", commonFunc.Loc.String(), comment.Comment)
+					utils.Failuref("%s %s, MaxAge must be a number", commonFunc.Loc.String(), comment.Text)
 				}
 				resource.MaxAge = maxAge
 			}
-			resource.Comment = comment.Comment
+			resource.Comment = comment.Text
 		}
 	}
 
@@ -129,19 +129,19 @@ func webParamParse(webParam *model.WebParam, commonFunc *model.CommonFunc, comme
 	args := comment.Args
 	argsLen := len(args)
 	if argsLen < 2 {
-		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Comment)
+		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 	}
 	paramName := args[1]
 	paramInfo := utils.FindParam(commonFunc.Func, paramName)
 	if paramInfo == nil {
-		utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Comment)
+		utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 	}
 
 	if argsLen < 3 {
-		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Comment)
+		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 	}
 	paramSource := args[2]
-	paramInfo.Comment = comment.Comment
+	paramInfo.Comment = comment.Text
 	paramInfo.Source = paramSource
 	addWebParam(webParam, paramInfo, commonFunc)
 }
@@ -150,15 +150,15 @@ func injectWebCtxParse(commonFunc *model.CommonFunc, comment *model.Comment) {
 	args := comment.Args
 	argsLen := len(args)
 	if argsLen < 2 {
-		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Comment)
+		utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
 	}
 	paramName := args[1]
 	paramInfo := utils.FindParam(commonFunc.Func, paramName)
 	if paramInfo == nil {
-		utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Comment)
+		utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 	}
 
-	paramInfo.Comment = comment.Comment
+	paramInfo.Comment = comment.Text
 	paramInfo.Source = "webCtx"
 }
 

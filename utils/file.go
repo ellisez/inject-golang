@@ -131,20 +131,11 @@ func DirnameOfImportPath(importPath string) (string, error) {
 	return JoinPath(goModCache, importPath+"@"+version), nil
 }
 
-func IsAllowedPackageName(importPath string, packageName string) (bool, string) {
-	if packageName == "main" {
-		return true, "main"
-	}
+func GetPackageNameFromImport(importPath string) (string, bool) {
 	baseName := filepath.Base(importPath)
-	if packageName == baseName {
-		return true, "normal"
-	}
 	if regexp.MustCompile(`^v[\d.]+$`).MatchString(baseName) {
-		versionPackage := filepath.Base(filepath.Dir(importPath))
-		if packageName == versionPackage {
-			return true, "version"
-		}
-		return false, "version"
+		preDir := filepath.Base(filepath.Dir(importPath))
+		return preDir, true
 	}
-	return false, "normal"
+	return baseName, false
 }

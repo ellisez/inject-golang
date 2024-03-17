@@ -278,26 +278,48 @@ func IsBasicAstType(typeExpr ast.Expr) bool {
 	return true
 }
 
-func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath string) []*ast.ImportSpec {
-	importPath = fmt.Sprintf(`"%s"`, importPath)
+func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath string) ([]*ast.ImportSpec, error) {
+	relImport := importName
+	if relImport == "" || relImport == "_" {
+		relImport, _ = GetPackageNameFromImport(importPath)
+	}
+	importPathValue := fmt.Sprintf(`"%s"`, importPath)
 	var astImport *ast.ImportSpec
 	for _, aImport := range imports {
-		if importPath == aImport.Path.Value {
+		aImportPath := aImport.Path.Value
+		aImportPath = aImportPath[1 : len(aImportPath)-1]
+		aImportName := ""
+		if aImport.Name != nil {
+			aImportName = aImport.Name.String()
+		}
+		relAImport := aImportName
+		if relAImport == "" {
+			relAImport, _ = GetPackageNameFromImport(aImportPath)
+		}
+
+		if importPath == aImportPath {
+			if relImport != relAImport {
+				return nil, fmt.Errorf(`@import "%s" aliases "%s" and "%s" conflict`, importPath, aImportName, importName)
+			}
 			astImport = aImport
 			break
+		} else {
+			if relImport == relAImport {
+				return nil, fmt.Errorf(`@import %s "%s" conflicts with @import %s "%s", try to change alias`, importPath, importName, aImportPath, importName)
+			}
 		}
 	}
 	if astImport == nil {
 		astImport = &ast.ImportSpec{
 			Name: &ast.Ident{Name: importName},
 			Path: &ast.BasicLit{
-				Value: importPath,
+				Value: importPathValue,
 			},
 		}
 
-		return append(imports, astImport)
+		return append(imports, astImport), nil
 	}
-	return imports
+	return imports, nil
 }
 
 func StringLit(lit *ast.BasicLit) string {

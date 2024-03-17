@@ -374,9 +374,17 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 
 }
 
-func addImport(astFile *ast.File, ctx *model.Ctx, importName string, importPath string) {
-	astFile.Imports = utils.AddUniqueImport(astFile.Imports, importName, importPath)
-	ctx.Imports = utils.AddUniqueImport(ctx.Imports, importName, importPath)
+func addImport(astFile *ast.File, ctx *model.Ctx, importName string, importPath string) error {
+	var err error
+	astFile.Imports, err = utils.AddUniqueImport(astFile.Imports, importName, importPath)
+	if err != nil {
+		return err
+	}
+	ctx.Imports, err = utils.AddUniqueImport(ctx.Imports, importName, importPath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {

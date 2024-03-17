@@ -408,7 +408,7 @@ func main() {
 The following is the naming convention for special type packages:
 * `Version package`: The directory name format is `v[\d.]+`, with the letter v followed by a number; 
 <br/>It represents a package within a specified version range;
-<br/>The package name of the version package only allows the use of the version name and the previous directory name, such as `github.com/gofiber/fiber/v2`, and can only use `v2` or `fiber`;
+<br/>The package name of the version package should be the previous directory name, such as `fiber` in `github.com/gofiber/fiber/v2`;
 
 * `Application package`: The package is named main and serves as the program startup entry point, usually appearing in the root directory of the mod module.
 <br/>Golang stipulates that main cannot be imported, so even if global variables are defined in the main package, it cannot be accessed by other packages;

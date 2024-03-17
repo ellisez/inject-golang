@@ -23,11 +23,11 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 		switch annotateName {
 		case "@middleware":
 			if argsLen < 2 {
-				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Comment)
+				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
 			}
 			middleware.Path = args[1]
 
-			middleware.Comment = comment.Comment
+			middleware.Comment = comment.Text
 		case "@param":
 			webParamParse(middleware.WebParam, commonFunc, comment)
 		case "@injectWebCtx":

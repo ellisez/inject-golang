@@ -8,21 +8,87 @@ import (
 )
 
 func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPath string) {
+	if funcDecl.Doc == nil {
+		return
+	}
+
+	loc := p.Ctx.FileSet.Position(funcDecl.Pos())
+
+	// main annotations
+	var comments []*model.Comment
+	var imports []*model.Import
+	packageAlias := packageName
+	mode := "" // ""|@proxy|@provide|@webProvide|@middleware|@router
+	for _, comment := range funcDecl.Doc.List {
+		annotateArgs := annotateParse(comment.Text)
+		argsLen := len(annotateArgs)
+		if argsLen == 0 {
+			continue
+		}
+		annotateName := annotateArgs[0]
+
+		switch annotateName {
+		case "@proxy", "@provide", "@webProvide", "@middleware", "@router":
+			if mode != "" {
+				utils.Failuref("%s %s, conflict with %s", loc.String(), comment.Text, mode)
+			}
+			mode = annotateName
+
+			comments = append(comments, &model.Comment{
+				Text: comment.Text,
+				Args: annotateArgs,
+			})
+		case "@import":
+			importInfo := &model.Import{}
+			imports = append(imports, importInfo)
+
+			if argsLen < 2 {
+				utils.Failuref("%s %s, Path must be specified", loc.String(), comment.Text)
+			}
+			importInfo.Path = annotateArgs[1]
+			if argsLen >= 3 {
+				importName := annotateArgs[2]
+				if importName == "." {
+					utils.Failuref("%s %s, Cannot support DotImport", loc.String(), comment.Text)
+				}
+				if importName != "" {
+					importInfo.Name = importName
+				}
+			}
+			if importInfo.Path == importPath && (importInfo.Name != "" && importInfo.Name != "_") {
+				packageAlias = importInfo.Name
+			}
+		default:
+			comments = append(comments, &model.Comment{
+				Text: comment.Text,
+				Args: annotateArgs,
+			})
+		}
+	}
+	if mode == "" {
+		return
+	}
+
+	// default import if unset
+	if packageAlias == packageName {
+		imports = append(imports, &model.Import{Path: importPath})
+	}
+
+	/// parsing
 	funcName := funcDecl.Name.String()
 
 	funcNode := &model.Func{
-		Package:  packageName,
+		Package:  packageAlias,
 		FuncName: funcName,
 	}
 	commonFunc := model.NewCommonFunc()
+	commonFunc.Imports = imports
 	commonFunc.Func = funcNode
-	commonFunc.Imports = append(commonFunc.Imports, &model.Import{Path: importPath})
-
 	astRecs := funcDecl.Recv
 
 	if astRecs != nil {
 		astRec := astRecs.List[0]
-		rec := utils.ToFile(astRec, packageName, GenPackage)
+		rec := utils.ToFile(astRec, packageAlias, GenPackage)
 		rec.Loc = p.Ctx.FileSet.Position(astRecs.Pos())
 		funcNode.Recv = rec
 	}
@@ -35,165 +101,132 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 		}
 	}
 
-	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
+	commonFunc.Loc = loc
 
 	if funcDecl.Type.Results != nil {
 		for _, asrResult := range funcDecl.Type.Results.List {
-			result := utils.ToFile(asrResult, packageName, GenPackage)
+			result := utils.ToFile(asrResult, packageAlias, GenPackage)
 			result.Loc = p.Ctx.FileSet.Position(asrResult.Pos())
 			funcNode.Results = append(funcNode.Results, result)
 		}
 	}
 
-	var comments []*model.Comment
-	mode := "" // ""|@proxy|@provide|@webProvide|@middleware|@router
-	if funcDecl.Doc != nil {
-		for _, comment := range funcDecl.Doc.List {
-			annotateArgs := annotateParse(comment.Text)
-			argsLen := len(annotateArgs)
-			if argsLen == 0 {
-				continue
-			}
-			annotateName := annotateArgs[0]
-
-			switch annotateName {
-			case "@proxy", "@provide", "@webProvide", "@middleware", "@router":
-				if mode != "" {
-					utils.Failuref("%s %s, conflict with %s", commonFunc.Loc.String(), comment.Text, mode)
-				}
-				mode = annotateName
-
-				comments = append(comments, &model.Comment{
-					Comment: comment.Text,
-					Args:    annotateArgs,
-				})
-			case "@override":
-				commonFunc.Override = true
-			case "@import":
-				importInfo := &model.Import{}
-				commonFunc.Imports = append(commonFunc.Imports, importInfo)
-
-				if argsLen < 2 {
-					utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
-				}
-				importInfo.Path = annotateArgs[1]
-				if argsLen >= 3 {
-					importName := annotateArgs[2]
-					if importName == "." {
-						utils.Failuref("%s %s, Cannot support DotImport", commonFunc.Loc.String(), comment.Text)
-					}
-					if importName != "" {
-						importInfo.Name = importName
-					}
-				}
-			case "@injectParam":
-				if argsLen < 2 {
-					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
-				}
-				paramName := annotateArgs[1]
-				param := utils.FindParam(funcNode, paramName)
-				if param == nil {
-					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
-				}
-
-				if argsLen >= 3 {
-					paramInstance := annotateArgs[2]
-					if paramInstance != "" && paramInstance != "_" {
-						param.Instance = paramInstance
-					}
-				}
-
-				if argsLen >= 4 {
-					operator := annotateArgs[3]
-					switch operator {
-					case "", "&", "*", "cast":
-						param.Operator = operator
-					default:
-						utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "&", "*", "cast"] are allowed`, param.Loc.String(), comment.Text, operator)
-					}
-				}
-				param.Comment = comment.Text
-				param.Source = "inject"
-			case "@injectFunc":
-				if argsLen < 2 {
-					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
-				}
-				paramName := annotateArgs[1]
-				param := utils.FindParam(funcNode, paramName)
-				if param == nil {
-					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
-				}
-
-				if argsLen >= 3 {
-					paramInstance := annotateArgs[2]
-					if paramInstance != "" && paramInstance != "_" {
-						param.Instance = paramInstance
-					}
-				}
-
-				if argsLen >= 4 {
-					operator := annotateArgs[3]
-					switch operator {
-					case "", "call":
-						param.Operator = operator
-					default:
-						utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "call"] are allowed`, param.Loc.String(), comment.Text, operator)
-					}
-				}
-
-				param.Comment = comment.Text
-				param.Source = "func"
-			case "@injectRecv":
-				if argsLen < 2 {
-					utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)
-				}
-				paramName := annotateArgs[1]
-				if funcNode.Recv.Name != paramName {
-					utils.Failuref("%s %s, RecvName not found", commonFunc.Loc.String(), comment.Text)
-				}
-
-				recv := funcNode.Recv
-				if argsLen >= 3 {
-					paramInstance := annotateArgs[2]
-					if paramInstance != "" && paramInstance != "_" {
-						recv.Instance = paramInstance
-					}
-				}
-				recv.Comment = comment.Text
-				recv.Source = "inject"
-			case "@injectCtx":
-				if argsLen < 2 {
-					utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
-				}
-				paramName := annotateArgs[1]
-				param := utils.FindParam(funcNode, paramName)
-				if param == nil {
-					utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
-				}
-
-				p.Ctx.InjectCtxMap[importPath] = append(p.Ctx.InjectCtxMap[importPath], param)
-				param.Comment = comment.Text
-				param.Source = "ctx"
-			default:
-				comments = append(comments, &model.Comment{
-					Comment: comment.Text,
-					Args:    annotateArgs,
-				})
-			}
-
+	var remainComments []*model.Comment
+	for _, comment := range comments {
+		annotateArgs := comment.Args
+		argsLen := len(annotateArgs)
+		if argsLen == 0 {
+			continue
 		}
+		annotateName := annotateArgs[0]
+
+		switch annotateName {
+		case "@override":
+			commonFunc.Override = true
+		case "@injectParam":
+			if argsLen < 2 {
+				utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			paramName := annotateArgs[1]
+			param := utils.FindParam(funcNode, paramName)
+			if param == nil {
+				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
+			}
+
+			if argsLen >= 3 {
+				paramInstance := annotateArgs[2]
+				if paramInstance != "" && paramInstance != "_" {
+					param.Instance = paramInstance
+				}
+			}
+
+			if argsLen >= 4 {
+				operator := annotateArgs[3]
+				switch operator {
+				case "", "&", "*", "cast":
+					param.Operator = operator
+				default:
+					utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "&", "*", "cast"] are allowed`, param.Loc.String(), comment.Text, operator)
+				}
+			}
+			param.Comment = comment.Text
+			param.Source = "inject"
+		case "@injectFunc":
+			if argsLen < 2 {
+				utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			paramName := annotateArgs[1]
+			param := utils.FindParam(funcNode, paramName)
+			if param == nil {
+				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
+			}
+
+			if argsLen >= 3 {
+				paramInstance := annotateArgs[2]
+				if paramInstance != "" && paramInstance != "_" {
+					param.Instance = paramInstance
+				}
+			}
+
+			if argsLen >= 4 {
+				operator := annotateArgs[3]
+				switch operator {
+				case "", "call":
+					param.Operator = operator
+				default:
+					utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "call"] are allowed`, param.Loc.String(), comment.Text, operator)
+				}
+			}
+
+			param.Comment = comment.Text
+			param.Source = "func"
+		case "@injectRecv":
+			if argsLen < 2 {
+				utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			paramName := annotateArgs[1]
+			if funcNode.Recv.Name != paramName {
+				utils.Failuref("%s %s, RecvName not found", commonFunc.Loc.String(), comment.Text)
+			}
+
+			recv := funcNode.Recv
+			if argsLen >= 3 {
+				paramInstance := annotateArgs[2]
+				if paramInstance != "" && paramInstance != "_" {
+					recv.Instance = paramInstance
+				}
+			}
+			recv.Comment = comment.Text
+			recv.Source = "inject"
+		case "@injectCtx":
+			if argsLen < 2 {
+				utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			paramName := annotateArgs[1]
+			param := utils.FindParam(funcNode, paramName)
+			if param == nil {
+				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
+			}
+
+			p.Ctx.InjectCtxMap[importPath] = append(p.Ctx.InjectCtxMap[importPath], param)
+			param.Comment = comment.Text
+			param.Source = "ctx"
+		default:
+			remainComments = append(remainComments, comment)
+		}
+
 	}
 
 	switch mode {
 	case "@proxy":
-		p.ProxyParse(funcDecl, commonFunc, comments)
+		p.ProxyParse(funcDecl, commonFunc, remainComments)
 	case "@provide":
-		p.InstanceParse(funcDecl, commonFunc, comments)
+		p.InstanceParse(funcDecl, commonFunc, remainComments)
 	case "@webProvide":
-		p.WebParse(funcDecl, commonFunc, comments)
+		p.WebParse(funcDecl, commonFunc, remainComments)
 	case "@middleware":
-		p.MiddlewareParse(funcDecl, commonFunc, comments)
+		p.MiddlewareParse(funcDecl, commonFunc, remainComments)
 	case "@router":
-		p.RouterParse(funcDecl, commonFunc, comments)
+		p.RouterParse(funcDecl, commonFunc, remainComments)
 	}
 }

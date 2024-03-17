@@ -110,7 +110,8 @@ func unusedImports(astFile *ast.File) {
 			} else {
 				specPath := spec.Path.Value
 				importPath := specPath[1 : len(specPath)-1]
-				if ok, _ := IsAllowedPackageName(importPath, ident.String()); ok {
+				defaultPackageName, _ := GetPackageNameFromImport(importPath)
+				if defaultPackageName == ident.String() {
 					addImport(spec)
 				}
 			}

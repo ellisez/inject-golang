@@ -178,10 +178,20 @@ func (p *Parser) DoParse(filename string) error {
 		// 解析包信息
 		packageName := astFile.Name.String()
 
-		isAllow, packageType := utils.IsAllowedPackageName(importPath, packageName)
-		if !isAllow {
-			utils.Failuref("Detected %s Package, Illegal package name \"%s\", at %s", packageType, packageName, dirname)
+		if packageName == "main" {
+			return nil
 		}
+
+		defaultPackageName, isVersion := utils.GetPackageNameFromImport(importPath)
+		packageType := "normal"
+		if isVersion {
+			packageType = "version"
+		}
+		if packageName != defaultPackageName {
+			utils.Failuref(`%s, Detected %s Package, Illegal package name "%s"`, dirname, packageType, packageName)
+		}
+
+		p.Ctx.PackageMapping[importPath] = packageName
 
 		decls := astFile.Decls
 
