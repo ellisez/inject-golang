@@ -15,7 +15,7 @@ func genFuncFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenFuncFilename)
 
-	if ctx.FuncInstances == nil {
+	if ctx.FuncInstances.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -40,7 +40,8 @@ func genFuncFile(ctx *model.Ctx, dir string) error {
 }
 func genFuncImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, instance := range ctx.FuncInstances {
+	for _, key := range ctx.FuncInstances.Keys {
+		instance := ctx.FuncInstances.Get(key)
 		for _, importInfo := range instance.Imports {
 			importName := importInfo.Name
 			if importName == "_" {
@@ -60,7 +61,8 @@ func genFuncImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, instance := range ctx.FuncInstances {
+	for _, key := range ctx.FuncInstances.Keys {
+		instance := ctx.FuncInstances.Get(key)
 
 		var stmts []ast.Stmt
 		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
@@ -85,7 +87,7 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
 		}}}
 		addDecl(astFile, funcDecl)
-		ctx.Methods = append(ctx.Methods, funcDecl)
+		ctx.Methods[funcDecl.Name.String()] = funcDecl
 	}
 
 }

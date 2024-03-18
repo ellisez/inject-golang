@@ -59,7 +59,8 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 		utils.Failuref("%s, %s", filename, err.Error())
 	}
 
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		if webInstance, ok := instance.(*model.WebInstance); ok {
 			for _, importInfo := range webInstance.Imports {
 				importName := importInfo.Name
@@ -121,7 +122,8 @@ func errorReturnStmts() *ast.IfStmt {
 func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		if webInstance, ok := instance.(*model.WebInstance); ok {
 			instanceName := webInstance.Instance
 			instanceFunc := webInstance.Func
@@ -281,7 +283,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				Text: doc,
 			}}}
 			addDecl(astFile, proxyFuncDecl)
-			ctx.Methods = append(ctx.Methods, proxyFuncDecl)
+			ctx.Methods[proxyFuncDecl.Name.String()] = proxyFuncDecl
 		}
 	}
 

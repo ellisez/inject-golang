@@ -71,16 +71,7 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 		}
 	}
 
-	if instanceOverride(p.Ctx, instanceNode) {
-		return
-	}
-
-	switch instanceNode.Mode {
-	case "singleton":
-		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, instanceNode)
-	case "multiple":
-		p.Ctx.MultipleInstances = append(p.Ctx.MultipleInstances, instanceNode)
-	}
+	addInstance(p.Ctx, instanceNode)
 }
 
 func instanceValidate(instance *model.Provide) {
@@ -91,36 +82,30 @@ func instanceValidate(instance *model.Provide) {
 	instance.Instance = utils.TypeShortName(instance.Type)
 }
 
-func instanceOverride(ctx *model.Ctx, provide *model.Provide) bool {
-	for i, instance := range ctx.SingletonInstances {
-		if instance.GetInstance() == provide.Instance {
-			if instance.GetOverride() {
-				if provide.Mode == "singleton" {
-					ctx.SingletonInstances[i] = provide
-				} else {
-					ctx.MultipleInstances = append(ctx.MultipleInstances, provide)
-				}
-				fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
-				return true
-			} else {
+func addInstance(ctx *model.Ctx, provide *model.Provide) {
+	switch provide.Mode {
+	case "singleton":
+		instance := ctx.SingletonOf(provide.Instance)
+		if instance != nil {
+			if !instance.GetOverride() {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+			ctx.SingletonInstances.Replace(provide)
+		} else {
+			ctx.SingletonInstances.Add(provide)
 		}
-	}
-	for i, instance := range ctx.MultipleInstances {
-		if instance.GetInstance() == provide.Instance {
-			if instance.GetOverride() {
-				if provide.Mode == "singleton" {
-					ctx.SingletonInstances = append(ctx.SingletonInstances, provide)
-				} else {
-					ctx.MultipleInstances[i] = provide
-				}
-				fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
-				return true
-			} else {
+	case "multiple":
+		instance := ctx.MultipleOf(provide.Instance)
+		if instance != nil {
+			if !instance.GetOverride() {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+			ctx.MultipleInstances.Replace(provide)
+			return
+		} else {
+			ctx.MultipleInstances.Add(provide)
 		}
 	}
-	return false
 }

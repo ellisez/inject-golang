@@ -7,6 +7,7 @@ import (
 	"github.com/ellisez/inject-golang/utils"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 func DoScan() (*model.Ctx, error) {
@@ -30,8 +31,8 @@ func DoScan() (*model.Ctx, error) {
 			return nil, err
 		}
 	}
-	utils.SortInstance(ctx.SingletonInstances)
-	utils.SortInstance(ctx.MultipleInstances)
+	sort.Sort(ctx.SingletonInstances)
+	sort.Sort(ctx.MultipleInstances)
 	return ctx, nil
 }
 func recurDirectory(filename string, handle func(filename string) error) error {

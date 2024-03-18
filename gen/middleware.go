@@ -10,7 +10,8 @@ import (
 
 func genMiddlewareAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
-	for _, webApp := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		webApp := ctx.SingletonOf(key)
 		if webInstance, ok := webApp.(*model.WebInstance); ok {
 			for _, instance := range webInstance.Middlewares {
 
@@ -44,7 +45,7 @@ func genMiddlewareAst(ctx *model.Ctx, astFile *ast.File) {
 					Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
 				}}}
 				addDecl(astFile, funcDecl)
-				ctx.Methods = append(ctx.Methods, funcDecl)
+				ctx.Methods[funcDecl.Name.String()] = funcDecl
 			}
 		}
 	}

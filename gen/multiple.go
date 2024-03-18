@@ -16,7 +16,7 @@ func genMultipleFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenMultipleFilename)
 
-	if ctx.MultipleInstances == nil {
+	if ctx.MultipleInstances.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -42,7 +42,8 @@ func genMultipleFile(ctx *model.Ctx, dir string) error {
 
 func genMultipleImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, instance := range ctx.MultipleInstances {
+	for _, key := range ctx.MultipleInstances.Keys {
+		instance := ctx.MultipleOf(key)
 		for _, importInfo := range instance.GetImports() {
 			importName := importInfo.Name
 			if importName == "_" {
@@ -60,7 +61,8 @@ func genMultipleImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, instance := range ctx.MultipleInstances {
+	for _, key := range ctx.MultipleInstances.Keys {
+		instance := ctx.MultipleOf(key)
 		instanceName := instance.GetInstance()
 		instanceType := instance.GetType()
 		instanceFunc := instance.GetFunc()
@@ -125,7 +127,7 @@ func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
 		}}}
 		addDecl(astFile, funcDecl)
-		ctx.Methods = append(ctx.Methods, funcDecl)
+		ctx.Methods[funcDecl.Name.String()] = funcDecl
 	}
 
 }

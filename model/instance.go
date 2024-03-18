@@ -6,7 +6,6 @@ type Provide struct {
 	*CommonFunc
 	Mode string
 
-	Order       string
 	Instance    string
 	Constructor ast.Expr
 	Type        ast.Expr
@@ -18,7 +17,6 @@ func NewProvide() *Provide {
 		Mode:       "singleton",
 		CommonFunc: NewCommonFunc()}
 }
-
 func (provide *Provide) GetOrder() string {
 	return provide.Order
 }

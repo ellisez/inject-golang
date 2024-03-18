@@ -51,15 +51,19 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 		if !ok {
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), middleware.Comment, instance.GetComment())
 		}
-		webInstance.Middlewares = append(webInstance.Middlewares, middleware)
+		old, ok := webInstance.Middlewares[middleware.Instance]
+		if ok && !old.Override {
+			utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, middleware.Loc.String(), middleware.Comment, middleware.Instance)
+		}
+		webInstance.Middlewares[middleware.Instance] = middleware
 	} else {
 		webInstance := model.NewWebInstance()
-		webInstance.Middlewares = []*model.Middleware{
-			middleware,
+		webInstance.Middlewares = map[string]*model.Middleware{
+			middleware.Path: middleware,
 		}
 		webInstance.Instance = middleware.WebApp
 
-		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, webInstance)
+		p.Ctx.SingletonInstances.Add(webInstance)
 	}
 	p.Ctx.HasWebInstance = true
 }

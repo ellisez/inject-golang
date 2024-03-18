@@ -46,13 +46,17 @@ type WebResource struct {
 
 type WebInstance struct {
 	*Provide
-	Resources   []*WebResource // 静态资源
-	Middlewares []*Middleware  // 组内中间件
-	Routers     []*Router      // 组内路由
+	Resources   map[string]*WebResource // 静态资源
+	Middlewares map[string]*Middleware  // 组内中间件
+	Routers     map[string]*Router      // 组内路由
 }
 
 func NewWebInstance() *WebInstance {
 	webInstance := &WebInstance{Provide: NewProvide()}
+	webInstance.Resources = map[string]*WebResource{}
+	webInstance.Middlewares = map[string]*Middleware{}
+	webInstance.Routers = map[string]*Router{}
+
 	webInstance.Mode = "singleton"
 	webInstance.Instance = "WebApp"
 	webInstance.Type = &ast.StarExpr{

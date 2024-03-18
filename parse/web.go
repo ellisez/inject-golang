@@ -49,7 +49,7 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 				Path:    path,
 				Dirname: dirname,
 			}
-			webApp.Resources = append(webApp.Resources, resource)
+			webApp.Resources[resource.Path] = resource
 
 			if argsLen >= 4 {
 				features := args[3]
@@ -83,14 +83,17 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), webApp.Comment, instance.GetComment())
 		}
 		if webInstance.FuncName != "" {
+			if !webInstance.Override {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, webApp.Loc.String(), webApp.Comment, webApp.Instance)
+			}
 			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", webApp.Instance, webApp.Package, webApp.FuncName)
 		}
 		webInstance.Comment = webApp.Comment
 		webInstance.Imports = append(webInstance.Imports, webApp.Imports...)
 		webInstance.Func = webApp.Func
-		webInstance.Resources = append(webInstance.Resources, webApp.Resources...)
+		webInstance.Resources = webApp.Resources
 	} else {
-		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, webApp)
+		p.Ctx.SingletonInstances.Add(webApp)
 	}
 	p.Ctx.HasWebInstance = true
 }

@@ -16,7 +16,7 @@ func genSingletonFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenSingletonFilename)
 
-	if ctx.SingletonInstances == nil {
+	if ctx.SingletonInstances.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -48,7 +48,8 @@ func genSingletonFile(ctx *model.Ctx, dir string) error {
 
 func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		if _, ok := instance.(*model.Provide); ok {
 			for _, importNode := range instance.GetImports() {
 				importName := importNode.Name
@@ -73,7 +74,8 @@ func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) 
 // # gen segment: Struct #
 func genSingletonStructAst(ctx *model.Ctx, astFile *ast.File) {
 	var fields []*ast.Field
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		instanceName := instance.GetInstance()
 		instanceType := instance.GetType()
 
@@ -98,7 +100,8 @@ func genSingletonStructAst(ctx *model.Ctx, astFile *ast.File) {
 
 func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 	/// Getter / Setter
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		instanceName := instance.GetInstance()
 		instanceType := instance.GetType()
 		instanceFunc := instance.GetFunc()
@@ -122,7 +125,7 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 			fieldType,
 		)
 		addDecl(astFile, getterDecl)
-		ctx.Methods = append(ctx.Methods, getterDecl)
+		ctx.Methods[fieldGetter] = getterDecl
 
 		setterDecl := astCtxSetter(
 			doc,
@@ -131,7 +134,7 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 			fieldType,
 		)
 		addDecl(astFile, setterDecl)
-		ctx.Methods = append(ctx.Methods, setterDecl)
+		ctx.Methods[fieldSetter] = setterDecl
 	}
 }
 
@@ -148,7 +151,8 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	))
 
 	// create instances
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		instanceOrder := instance.GetOrder()
 		instanceName := instance.GetInstance()
 		instanceFunc := instance.GetFunc()
@@ -184,7 +188,8 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	}
 
 	// call func
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		if _, ok := instance.(*model.Provide); ok {
 
 			handler := instance.GetHandler()
@@ -241,7 +246,8 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := "ctx"
 
-	for _, instance := range ctx.SingletonInstances {
+	for _, key := range ctx.SingletonInstances.Keys {
+		instance := ctx.SingletonOf(key)
 		if _, ok := instance.(*model.Provide); ok {
 			instanceName := instance.GetInstance()
 			instanceFunc := instance.GetFunc()
@@ -263,7 +269,7 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
 			}}}
 			addDecl(astFile, funcDecl)
-			ctx.Methods = append(ctx.Methods, funcDecl)
+			ctx.Methods[funcDecl.Name.String()] = funcDecl
 		}
 	}
 }

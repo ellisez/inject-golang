@@ -15,7 +15,7 @@ func genMethodFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenMethodFilename)
 
-	if ctx.MethodInstances == nil {
+	if ctx.MethodInstances.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -41,7 +41,8 @@ func genMethodFile(ctx *model.Ctx, dir string) error {
 
 func genMethodImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, instance := range ctx.MethodInstances {
+	for _, key := range ctx.MethodInstances.Keys {
+		instance := ctx.MethodInstances.Get(key)
 		for _, importInfo := range instance.Imports {
 			importName := importInfo.Name
 			if importName == "_" {
@@ -59,7 +60,8 @@ func genMethodImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, instance := range ctx.MethodInstances {
+	for _, key := range ctx.MethodInstances.Keys {
+		instance := ctx.MethodInstances.Get(key)
 		var recvParam *ast.Field
 		recvParamVar := utils.FieldVar(instance.Recv)
 		if instance.Recv.Source == "" {
@@ -89,7 +91,7 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
 		}}}
 		addDecl(astFile, funcDecl)
-		ctx.Methods = append(ctx.Methods, funcDecl)
+		ctx.Methods[funcDecl.Name.String()] = funcDecl
 	}
 
 }

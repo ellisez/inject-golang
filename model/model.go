@@ -1,10 +1,5 @@
 package model
 
-import (
-	"go/ast"
-	"go/token"
-)
-
 type Module struct {
 	Path    string            // the dir of go.mod
 	Package string            // go.mod mod
@@ -24,6 +19,7 @@ type CommonFunc struct {
 	*Func
 
 	Override bool
+	Order    string
 	Comment  string
 }
 
@@ -47,76 +43,16 @@ func NewProxy() *Proxy {
 	return &Proxy{CommonFunc: NewCommonFunc()}
 }
 
+func (proxy *Proxy) GetInstance() string {
+	return proxy.Instance
+}
+func (proxy *Proxy) GetOrder() string {
+	return proxy.Order
+}
+
 type Method struct {
 	From     *Func
 	FuncName string
 	Params   []*Field
 	Results  []*Field
-}
-
-type Gen struct {
-	Doc          []*ast.Comment
-	Imports      []*ast.ImportSpec
-	Methods      []*ast.FuncDecl
-	InjectCtxMap map[string][]*Field
-}
-type Ctx struct {
-	FileSet        *token.FileSet
-	PackageMapping map[string]string
-
-	SingletonInstances []Instance
-	MultipleInstances  []Instance
-	FuncInstances      []*Proxy
-	MethodInstances    []*Proxy
-
-	HasWebInstance bool
-	*Gen
-}
-
-func NewCtx() *Ctx {
-	return &Ctx{
-		FileSet:        token.NewFileSet(),
-		PackageMapping: map[string]string{},
-		Gen: &Gen{
-			InjectCtxMap: map[string][]*Field{},
-		},
-	}
-}
-
-func (ctx *Ctx) MethodOf(funcName string) *ast.FuncDecl {
-	for _, method := range ctx.Methods {
-		if method.Name.String() == funcName {
-			return method
-		}
-	}
-	return nil
-}
-
-func (ctx *Ctx) SingletonOf(name string) Instance {
-	for _, instance := range ctx.SingletonInstances {
-		if instance.GetInstance() == name {
-			return instance
-		}
-	}
-	return nil
-}
-func (ctx *Ctx) MultipleOf(name string) Instance {
-	for _, instance := range ctx.MultipleInstances {
-		if instance.GetInstance() == name {
-			return instance
-		}
-	}
-	return nil
-}
-
-func (ctx *Ctx) InstanceOf(name string) Instance {
-	instance := ctx.SingletonOf(name)
-	if instance != nil {
-		return instance
-	}
-	instance = ctx.MultipleOf(name)
-	if instance != nil {
-		return instance
-	}
-	return nil
 }

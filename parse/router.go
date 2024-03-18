@@ -64,15 +64,19 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 		if !ok {
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), router.Comment, instance.GetComment())
 		}
-		webInstance.Routers = append(webInstance.Routers, router)
+		old, ok := webInstance.Routers[router.Instance]
+		if ok && !old.Override {
+			utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, router.Loc.String(), router.Comment, router.Path)
+		}
+		webInstance.Routers[router.Instance] = router
 	} else {
 		webInstance := model.NewWebInstance()
-		webInstance.Routers = []*model.Router{
-			router,
+		webInstance.Routers = map[string]*model.Router{
+			router.Path: router,
 		}
 		webInstance.Instance = router.WebApp
 
-		p.Ctx.SingletonInstances = append(p.Ctx.SingletonInstances, webInstance)
+		p.Ctx.SingletonInstances.Add(webInstance)
 	}
 
 	p.Ctx.HasWebInstance = true
