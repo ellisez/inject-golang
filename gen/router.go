@@ -10,10 +10,10 @@ import (
 
 func genRouterAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
-	for _, key := range ctx.SingletonInstances.Keys {
-		webApp := ctx.SingletonOf(key)
-		if webInstance, ok := webApp.(*model.WebInstance); ok {
-			for _, instance := range webInstance.Routers {
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		_, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication != nil {
+			for _, instance := range webApplication.Routers {
 
 				stmts := make([]ast.Stmt, 0)
 				stmts = append(stmts, genWebBodyParam(

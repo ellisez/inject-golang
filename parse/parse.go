@@ -191,8 +191,6 @@ func (p *Parser) DoParse(filename string) error {
 			utils.Failuref(`%s, Detected %s Package, Illegal package name "%s"`, dirname, packageType, packageName)
 		}
 
-		p.Ctx.PackageMapping[importPath] = packageName
-
 		decls := astFile.Decls
 
 		for _, decl := range decls {

@@ -16,7 +16,7 @@ func genMultipleFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenMultipleFilename)
 
-	if ctx.MultipleInstances.Len() == 0 {
+	if ctx.MultipleInstance.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -42,9 +42,9 @@ func genMultipleFile(ctx *model.Ctx, dir string) error {
 
 func genMultipleImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, key := range ctx.MultipleInstances.Keys {
-		instance := ctx.MultipleOf(key)
-		for _, importInfo := range instance.GetImports() {
+	for i := 0; i < ctx.MultipleInstance.Len(); i++ {
+		instance := ctx.MultipleInstance.IndexOf(i)
+		for _, importInfo := range instance.Imports {
 			importName := importInfo.Name
 			if importName == "_" {
 				importName = ""
@@ -57,16 +57,16 @@ func genMultipleImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 	}
 }
 
-// # gen segment: Multiple instance #
+// # gen segment: MultipleInstance instance #
 func genMultipleNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, key := range ctx.MultipleInstances.Keys {
-		instance := ctx.MultipleOf(key)
-		instanceName := instance.GetInstance()
-		instanceType := instance.GetType()
-		instanceFunc := instance.GetFunc()
-		handler := instance.GetHandler()
+	for i := 0; i < ctx.MultipleInstance.Len(); i++ {
+		instance := ctx.MultipleInstance.IndexOf(i)
+		instanceName := instance.Instance
+		instanceType := instance.Type
+		instanceFunc := instance.Func
+		handler := instance.Handler
 
 		instanceVar := utils.FirstToLower(instanceName)
 

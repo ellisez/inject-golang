@@ -17,7 +17,7 @@ func genWebFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenWebFilename)
 
-	if !ctx.HasWebInstance {
+	if ctx.SingletonInstance.WebLen() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -59,10 +59,10 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 		utils.Failuref("%s, %s", filename, err.Error())
 	}
 
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		if webInstance, ok := instance.(*model.WebInstance); ok {
-			for _, importInfo := range webInstance.Imports {
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication != nil {
+			for _, importInfo := range instance.Imports {
 				importName := importInfo.Name
 				if importName == "_" {
 					importName = ""
@@ -73,7 +73,7 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 				}
 			}
 
-			for _, middleware := range webInstance.Middlewares {
+			for _, middleware := range webApplication.Middlewares {
 				for _, importInfo := range middleware.Imports {
 					importName := importInfo.Name
 					if importName == "_" {
@@ -86,7 +86,7 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 				}
 			}
 
-			for _, router := range webInstance.Routers {
+			for _, router := range webApplication.Routers {
 				for _, importInfo := range router.Imports {
 					importName := importInfo.Name
 					if importName == "_" {
@@ -122,11 +122,11 @@ func errorReturnStmts() *ast.IfStmt {
 func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		if webInstance, ok := instance.(*model.WebInstance); ok {
-			instanceName := webInstance.Instance
-			instanceFunc := webInstance.Func
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication != nil {
+			instanceName := instance.Instance
+			instanceFunc := instance.Func
 			instanceVar := utils.FirstToLower(instanceName)
 
 			webExpr := astSelectorExpr(ctxVar, instanceVar)
@@ -140,12 +140,12 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				}
 			} else {
 				// [code] {{ParamInstance}} {{ParamType}},
-				proxyParams = astInstanceProxyParams(instance.GetFunc())
+				proxyParams = astInstanceProxyParams(instance.Func)
 			}
 
 			var stmts []ast.Stmt
 
-			for _, resource := range webInstance.Resources {
+			for _, resource := range webApplication.Resources {
 				// [code] ctx.{{instance}}.Static({{Path}}, {{Path}}, {{...}})
 				args := []ast.Expr{
 					astStringExpr(resource.Path),
@@ -190,7 +190,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				})
 			}
 
-			for _, middleware := range webInstance.Middlewares {
+			for _, middleware := range webApplication.Middlewares {
 				// [code] ctx.{{instance}}.Group({{Path}}, {{Proxy}})
 				stmts = append(stmts, &ast.ExprStmt{
 					X: &ast.CallExpr{
@@ -206,7 +206,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				})
 			}
 
-			for _, router := range webInstance.Routers {
+			for _, router := range webApplication.Routers {
 				for _, method := range router.Methods {
 					// [code] ctx.{{instance}}.{{Method}}({{Path}}, {{Proxy}})
 					stmts = append(stmts, &ast.ExprStmt{
@@ -224,9 +224,9 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 				}
 			}
 
-			if webInstance.FuncName != "" {
+			if instance.FuncName != "" {
 				// [code] host, port, err := {{Package}}.{{FuncName}}(...)
-				instanceCallExpr := astInstanceCallExpr(astSelectorExpr(webInstance.Package, webInstance.FuncName), webInstance.Func, ctx, ctxVar)
+				instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
 
 				stmts = append(stmts, astDefineStmtMany(
 					[]ast.Expr{

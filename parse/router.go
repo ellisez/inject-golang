@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -58,26 +59,29 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 		}
 	}
 
-	instance := p.Ctx.SingletonOf(router.WebApp)
+	instance, webApplication := p.Ctx.SingletonOf(router.WebApp)
 	if instance != nil {
-		webInstance, ok := instance.(*model.WebInstance)
-		if !ok {
-			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), router.Comment, instance.GetComment())
+		if webApplication == nil {
+			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), router.Comment, instance.Comment)
 		}
-		old, ok := webInstance.Routers[router.Instance]
-		if ok && !old.Override {
-			utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, router.Loc.String(), router.Comment, router.Path)
+		old, ok := webApplication.Routers[router.Instance]
+		if ok {
+			if !old.Override {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, router.Loc.String(), router.Comment, router.Instance)
+			}
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", router.WebApp, router.Package, router.FuncName)
 		}
-		webInstance.Routers[router.Instance] = router
+		webApplication.Routers[router.Instance] = router
 	} else {
-		webInstance := model.NewWebInstance()
-		webInstance.Routers = map[string]*model.Router{
+		newProvide := model.NewWebProvide()
+		newProvide.Instance = router.WebApp
+
+		newWebApplication := model.NewWebApplication()
+		newWebApplication.Routers = map[string]*model.Router{
 			router.Path: router,
 		}
-		webInstance.Instance = router.WebApp
 
-		p.Ctx.SingletonInstances.Add(webInstance)
+		p.Ctx.SingletonInstance.AddWeb(newProvide, newWebApplication)
 	}
 
-	p.Ctx.HasWebInstance = true
 }

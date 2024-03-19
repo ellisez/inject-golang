@@ -15,7 +15,7 @@ func genFuncFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenFuncFilename)
 
-	if ctx.FuncInstances.Len() == 0 {
+	if ctx.FuncInstance.FuncLen() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -40,17 +40,19 @@ func genFuncFile(ctx *model.Ctx, dir string) error {
 }
 func genFuncImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, key := range ctx.FuncInstances.Keys {
-		instance := ctx.FuncInstances.Get(key)
-		for _, importInfo := range instance.Imports {
-			importName := importInfo.Name
-			if importName == "_" {
-				importName = ""
-			}
-			err := addImport(astFile, ctx, importName, importInfo.Path)
-			if err != nil {
+	for i := 0; i < ctx.FuncInstance.Len(); i++ {
+		instance := ctx.FuncInstance.IndexOf(i)
+		if instance.Recv == nil {
+			for _, importInfo := range instance.Imports {
+				importName := importInfo.Name
+				if importName == "_" {
+					importName = ""
+				}
+				err := addImport(astFile, ctx, importName, importInfo.Path)
 				if err != nil {
-					utils.Failuref("%s, %s", filename, err.Error())
+					if err != nil {
+						utils.Failuref("%s, %s", filename, err.Error())
+					}
 				}
 			}
 		}
@@ -61,33 +63,35 @@ func genFuncImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
-	for _, key := range ctx.FuncInstances.Keys {
-		instance := ctx.FuncInstances.Get(key)
+	for i := 0; i < ctx.FuncInstance.Len(); i++ {
+		instance := ctx.FuncInstance.IndexOf(i)
+		if instance.Recv == nil {
 
-		var stmts []ast.Stmt
-		instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
-		if len(instance.Results) == 0 {
-			stmts = append(stmts, &ast.ExprStmt{
-				X: instanceCallExpr,
-			})
-		} else {
-			stmts = append(stmts, &ast.ReturnStmt{
-				Results: []ast.Expr{
-					instanceCallExpr,
-				},
-			})
-		}
+			var stmts []ast.Stmt
+			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+			if len(instance.Results) == 0 {
+				stmts = append(stmts, &ast.ExprStmt{
+					X: instanceCallExpr,
+				})
+			} else {
+				stmts = append(stmts, &ast.ReturnStmt{
+					Results: []ast.Expr{
+						instanceCallExpr,
+					},
+				})
+			}
 
-		// [code] func (ctx *Container) {{Proxy}}(
-		funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance)
-		funcDecl.Body = &ast.BlockStmt{
-			List: stmts,
+			// [code] func (ctx *Container) {{Proxy}}(
+			funcDecl := astInstanceProxyFunc(instance.Func, instance.Instance)
+			funcDecl.Body = &ast.BlockStmt{
+				List: stmts,
+			}
+			funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+			}}}
+			addDecl(astFile, funcDecl)
+			ctx.Methods[funcDecl.Name.String()] = funcDecl
 		}
-		funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
-			Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
-		}}}
-		addDecl(astFile, funcDecl)
-		ctx.Methods[funcDecl.Name.String()] = funcDecl
 	}
 
 }

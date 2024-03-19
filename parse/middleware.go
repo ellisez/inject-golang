@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -45,25 +46,28 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 		}
 	}
 
-	instance := p.Ctx.SingletonOf(middleware.WebApp)
+	instance, webApplication := p.Ctx.SingletonOf(middleware.WebApp)
 	if instance != nil {
-		webInstance, ok := instance.(*model.WebInstance)
-		if !ok {
-			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), middleware.Comment, instance.GetComment())
+		if webApplication == nil {
+			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), middleware.Comment, instance.Comment)
 		}
-		old, ok := webInstance.Middlewares[middleware.Instance]
-		if ok && !old.Override {
-			utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, middleware.Loc.String(), middleware.Comment, middleware.Instance)
+		old, ok := webApplication.Middlewares[middleware.Instance]
+		if ok {
+			if !old.Override {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, middleware.Loc.String(), middleware.Comment, middleware.Instance)
+			}
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", middleware.Instance, middleware.Package, middleware.FuncName)
 		}
-		webInstance.Middlewares[middleware.Instance] = middleware
+		webApplication.Middlewares[middleware.Instance] = middleware
 	} else {
-		webInstance := model.NewWebInstance()
-		webInstance.Middlewares = map[string]*model.Middleware{
+		newProvide := model.NewWebProvide()
+		newProvide.Instance = middleware.WebApp
+
+		newWebApplication := model.NewWebApplication()
+		newWebApplication.Middlewares = map[string]*model.Middleware{
 			middleware.Path: middleware,
 		}
-		webInstance.Instance = middleware.WebApp
 
-		p.Ctx.SingletonInstances.Add(webInstance)
+		p.Ctx.SingletonInstance.AddWeb(newProvide, newWebApplication)
 	}
-	p.Ctx.HasWebInstance = true
 }

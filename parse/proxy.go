@@ -34,28 +34,14 @@ func (p *Parser) ProxyParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc
 }
 
 func addProxy(ctx *model.Ctx, proxy *model.Proxy) {
-	if proxy.Recv == nil {
-		instance := ctx.FuncInstances.Get(proxy.Instance)
-		if instance != nil {
-			if !instance.Override {
-				utils.Failuref(`%s %s, Proxy "%s" Duplicate declaration`, proxy.Loc.String(), proxy.Comment, proxy.Instance)
-			}
-			fmt.Printf(`Proxy "%s" is Overrided by %s.%s`+"\n", proxy.Instance, proxy.Package, proxy.FuncName)
-			ctx.FuncInstances.Replace(proxy)
-		} else {
-			ctx.FuncInstances.Add(proxy)
+	instance := ctx.FuncOf(proxy.Instance)
+	if instance != nil {
+		if !instance.Override {
+			utils.Failuref(`%s %s, Proxy "%s" Duplicate declaration`, proxy.Loc.String(), proxy.Comment, proxy.Instance)
 		}
+		fmt.Printf(`Proxy "%s" is Overrided by %s.%s`+"\n", proxy.Instance, proxy.Package, proxy.FuncName)
+		ctx.FuncInstance.Replace(proxy)
 	} else {
-		instance := ctx.MethodInstances.Get(proxy.Instance)
-		if instance != nil {
-			if !instance.Override {
-				utils.Failuref(`%s %s, Proxy "%s" Duplicate declaration`, proxy.Loc.String(), proxy.Comment, proxy.Instance)
-			}
-			fmt.Printf(`Proxy "%s" is Overrided by %s.%s`+"\n", proxy.Instance, proxy.Package, proxy.FuncName)
-			ctx.MethodInstances.Replace(proxy)
-		} else {
-			ctx.MethodInstances.Add(proxy)
-		}
+		ctx.FuncInstance.Add(proxy)
 	}
-
 }

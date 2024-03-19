@@ -34,22 +34,6 @@ type Comment struct {
 	Args []string
 }
 
-type Proxy struct {
-	*CommonFunc
-	Instance string
-}
-
-func NewProxy() *Proxy {
-	return &Proxy{CommonFunc: NewCommonFunc()}
-}
-
-func (proxy *Proxy) GetInstance() string {
-	return proxy.Instance
-}
-func (proxy *Proxy) GetOrder() string {
-	return proxy.Order
-}
-
 type Method struct {
 	From     *Func
 	FuncName string

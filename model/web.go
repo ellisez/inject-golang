@@ -44,37 +44,40 @@ type WebResource struct {
 	Comment  string
 }
 
-type WebInstance struct {
-	*Provide
+type WebApplication struct {
 	Resources   map[string]*WebResource // 静态资源
 	Middlewares map[string]*Middleware  // 组内中间件
 	Routers     map[string]*Router      // 组内路由
 }
 
-func NewWebInstance() *WebInstance {
-	webInstance := &WebInstance{Provide: NewProvide()}
+func NewWebApplication() *WebApplication {
+	webInstance := &WebApplication{}
 	webInstance.Resources = map[string]*WebResource{}
 	webInstance.Middlewares = map[string]*Middleware{}
 	webInstance.Routers = map[string]*Router{}
+	return webInstance
+}
 
-	webInstance.Mode = "singleton"
-	webInstance.Instance = "WebApp"
-	webInstance.Type = &ast.StarExpr{
+func NewWebProvide() *Provide {
+	provide := NewProvide()
+	provide.Mode = "singleton"
+	provide.Instance = "WebApp"
+	provide.Type = &ast.StarExpr{
 		X: &ast.SelectorExpr{
 			X:   ast.NewIdent("fiber"),
 			Sel: ast.NewIdent("App"),
 		}}
-	webInstance.Imports = []*Import{
+	provide.Imports = []*Import{
 		{
 			Name: "",
 			Path: "github.com/gofiber/fiber/v2",
 		},
 	}
-	webInstance.Constructor = &ast.CallExpr{
+	provide.Constructor = &ast.CallExpr{
 		Fun: &ast.SelectorExpr{
 			X:   ast.NewIdent("fiber"),
 			Sel: ast.NewIdent("New"),
 		},
 	}
-	return webInstance
+	return provide
 }

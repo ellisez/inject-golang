@@ -5,37 +5,38 @@ import (
 	"go/token"
 )
 
-type Gen struct {
+type Extra struct {
 	Doc          []*ast.Comment
 	Imports      []*ast.ImportSpec
 	Methods      map[string]*ast.FuncDecl
 	InjectCtxMap map[string][]*Field
 }
+
+type Key struct {
+	Instance string
+	Order    string
+	Type     string // singleton, multiple, webApplication, argument, func, method
+}
 type Ctx struct {
-	FileSet        *token.FileSet
-	PackageMapping map[string]string
+	FileSet *token.FileSet
 
-	SingletonInstances *InstanceMap
+	SingletonInstance *SingletonInstance
 
-	MultipleInstances *InstanceMap
+	MultipleInstance *MultipleInstance
 
-	FuncInstances *ProxyMap
+	FuncInstance *FuncInstance
 
-	MethodInstances *ProxyMap
-
-	HasWebInstance bool
-	*Gen
+	// other
+	*Extra
 }
 
 func NewCtx() *Ctx {
 	return &Ctx{
-		FileSet:            token.NewFileSet(),
-		PackageMapping:     map[string]string{},
-		SingletonInstances: NewInstanceMap(),
-		MultipleInstances:  NewInstanceMap(),
-		FuncInstances:      NewProxyMap(),
-		MethodInstances:    NewProxyMap(),
-		Gen: &Gen{
+		FileSet:           token.NewFileSet(),
+		SingletonInstance: newCtxSingletonInstance(),
+		MultipleInstance:  newCtxMultipleInstance(),
+		FuncInstance:      newCtxFuncInstance(),
+		Extra: &Extra{
 			Methods:      map[string]*ast.FuncDecl{},
 			InjectCtxMap: map[string][]*Field{},
 		},
@@ -46,21 +47,26 @@ func (ctx *Ctx) MethodOf(funcName string) *ast.FuncDecl {
 	return ctx.Methods[funcName]
 }
 
-func (ctx *Ctx) SingletonOf(name string) Instance {
-	return ctx.SingletonInstances.Get(name)
-}
-func (ctx *Ctx) MultipleOf(name string) Instance {
-	return ctx.MultipleInstances.Get(name)
+func (ctx *Ctx) SingletonOf(name string) (*Provide, *WebApplication) {
+	return ctx.SingletonInstance.Get(name)
 }
 
-func (ctx *Ctx) InstanceOf(name string) Instance {
-	instance := ctx.SingletonOf(name)
+func (ctx *Ctx) MultipleOf(name string) *Provide {
+	return ctx.MultipleInstance.Get(name)
+}
+
+func (ctx *Ctx) InstanceOf(name string) (*Provide, *WebApplication) {
+	instance, w := ctx.SingletonOf(name)
 	if instance != nil {
-		return instance
+		return instance, w
 	}
 	instance = ctx.MultipleOf(name)
 	if instance != nil {
-		return instance
+		return instance, nil
 	}
-	return nil
+	return nil, nil
+}
+
+func (ctx *Ctx) FuncOf(name string) *Proxy {
+	return ctx.FuncInstance.Get(name)
 }

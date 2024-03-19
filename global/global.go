@@ -15,6 +15,7 @@ var (
 var (
 	GenPackage     = "ctx"
 	CtxType        = "Ctx"
+	ArgumentVar    = "__args"
 	GenCtxFilename = "gen_ctx.go"
 
 	GenFactoryPackage  = "factory"

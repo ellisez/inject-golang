@@ -10,12 +10,14 @@ import (
 )
 
 func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
-	webApp := model.NewWebInstance()
-	webApp.CommonFunc = commonFunc
+	provide := model.NewWebProvide()
+	provide.CommonFunc = commonFunc
+
+	webApp := model.NewWebApplication()
 
 	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
 
-	webValidate(webApp)
+	webValidate(provide)
 	for _, comment := range comments {
 		args := comment.Args
 		argsLen := len(args)
@@ -29,12 +31,12 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 				instance := args[1]
 				if instance != "" && instance != "_" {
 					if utils.IsFirstLower(instance) {
-						utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), webApp.Comment, instance)
+						utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), provide.Comment, instance)
 					}
-					webApp.Instance = instance
+					provide.Instance = instance
 				}
 			}
-			webApp.Comment = comment.Text
+			provide.Comment = comment.Text
 		case "@static":
 			if argsLen < 2 {
 				utils.Failuref("%s %s, Path must be specified", commonFunc.Loc.String(), comment.Text)
@@ -76,54 +78,52 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 		}
 	}
 
-	instance := p.Ctx.SingletonOf(webApp.Instance)
+	instance, webApplication := p.Ctx.SingletonOf(provide.Instance)
 	if instance != nil {
-		webInstance, ok := instance.(*model.WebInstance)
-		if !ok {
-			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), webApp.Comment, instance.GetComment())
+		if webApplication == nil {
+			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), instance.Comment, instance.Comment)
 		}
-		if webInstance.FuncName != "" {
-			if !webInstance.Override {
-				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, webApp.Loc.String(), webApp.Comment, webApp.Instance)
+		if instance.FuncName != "" {
+			if !instance.Override {
+				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", webApp.Instance, webApp.Package, webApp.FuncName)
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
 		}
-		webInstance.Comment = webApp.Comment
-		webInstance.Imports = append(webInstance.Imports, webApp.Imports...)
-		webInstance.Func = webApp.Func
-		webInstance.Resources = webApp.Resources
+		instance.Comment = provide.Comment
+		instance.Imports = append(instance.Imports, provide.Imports...)
+		instance.Func = provide.Func
+		webApplication.Resources = webApp.Resources
 	} else {
-		p.Ctx.SingletonInstances.Add(webApp)
+		p.Ctx.SingletonInstance.AddWeb(provide, webApp)
 	}
-	p.Ctx.HasWebInstance = true
 }
 
-func webValidate(webInstance *model.WebInstance) {
-	if len(webInstance.Results) != 3 {
-		utils.Failuref(`%s %s, Illegal webProvide function, returns [host, port, err]`, webInstance.Loc.String(), webInstance.Comment)
+func webValidate(provide *model.Provide) {
+	if len(provide.Results) != 3 {
+		utils.Failuref(`%s %s, Illegal webProvide function, returns [host, port, err]`, provide.Loc.String(), provide.Comment)
 	}
-	host, ok := webInstance.Results[0].Type.(*ast.Ident)
+	host, ok := provide.Results[0].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
 	}
 	if host.String() != "string" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
 	}
 
-	port, ok := webInstance.Results[1].Type.(*ast.Ident)
+	port, ok := provide.Results[1].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, provide.Loc.String(), provide.Comment)
 	}
 	if port.String() != "uint" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, provide.Loc.String(), provide.Comment)
 	}
 
-	err, ok := webInstance.Results[2].Type.(*ast.Ident)
+	err, ok := provide.Results[2].Type.(*ast.Ident)
 	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, provide.Loc.String(), provide.Comment)
 	}
 	if err.String() != "error" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, webInstance.Loc.String(), webInstance.Comment)
+		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, provide.Loc.String(), provide.Comment)
 	}
 
 }

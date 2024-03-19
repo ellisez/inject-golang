@@ -52,8 +52,9 @@ func DatabaseLoaded() {
 // @import github.com/ellisez/inject-golang/examples/model
 // @injectParam config
 // @injectParam database
+// @injectParam argInt
 // @handler ServerAliasLoaded
-func PrepareServerAlias(config *model.Config, database *model.Database) *model.Server {
+func PrepareServerAlias(config *model.Config, database *model.Database, argInt bool) *model.Server {
 	fmt.Println("call WebAppAlias.PrepareWebAppAlias")
 	return &model.Server{
 		Config:   config,

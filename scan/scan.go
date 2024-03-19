@@ -31,8 +31,9 @@ func DoScan() (*model.Ctx, error) {
 			return nil, err
 		}
 	}
-	sort.Sort(ctx.SingletonInstances)
-	sort.Sort(ctx.MultipleInstances)
+	sort.Sort(ctx.SingletonInstance)
+	sort.Sort(ctx.MultipleInstance)
+	sort.Sort(ctx.FuncInstance)
 	return ctx, nil
 }
 func recurDirectory(filename string, handle func(filename string) error) error {

@@ -98,7 +98,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 ### 2.3. Instance Annotations
 `Instance annotations` refers to declaring an instance by marking annotations with a constructor
 ```
-// @provide <Instance, default ReturnType> <singleton default|multiple> <type, default ReturnType>
+// @provide <Instance, default ReturnType> <singleton default|multiple|argument> <type, default ReturnType>
 // @override
 // @order <Instance creation order, numbers or strings>
 // @import *<Path, required> <Alias>
@@ -114,6 +114,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 > 
 > `@provide` requires `@order` to define the creation order to prevent instances that have not yet been initialized from being injected;
 >
+> `@provide` modes include: `singleton` represents global uniqueness, `multiple` represents the ability to create multiple, and `argument` represents only existing during the startup process;
+> 
 > `@override` indicates support for overloading, and when encountering instances with the same name, the latter will overwrite the former; The default is to disable overloading, and an error will be reported when the same name is used.
 > 
 > The function pointed to by `@handler` must have no parameters, and it will be called after the instance is created.

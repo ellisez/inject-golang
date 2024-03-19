@@ -38,7 +38,7 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 				mode := args[2]
 				if mode != "" && mode != "_" {
 					switch mode {
-					case "singleton", "multiple":
+					case "singleton", "multiple", "argument":
 					default:
 						utils.Failuref(`%s %s, Mode "%s" is invalid`, commonFunc.Loc.String(), instanceNode.Comment, instanceNode.Mode)
 					}
@@ -84,28 +84,28 @@ func instanceValidate(instance *model.Provide) {
 
 func addInstance(ctx *model.Ctx, provide *model.Provide) {
 	switch provide.Mode {
-	case "singleton":
-		instance := ctx.SingletonOf(provide.Instance)
+	case "singleton", "argument":
+		instance, _ := ctx.SingletonOf(provide.Instance)
 		if instance != nil {
-			if !instance.GetOverride() {
+			if !instance.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
 			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
-			ctx.SingletonInstances.Replace(provide)
+			ctx.SingletonInstance.Replace(provide)
 		} else {
-			ctx.SingletonInstances.Add(provide)
+			ctx.SingletonInstance.Add(provide)
 		}
 	case "multiple":
 		instance := ctx.MultipleOf(provide.Instance)
 		if instance != nil {
-			if !instance.GetOverride() {
+			if !instance.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
 			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
-			ctx.MultipleInstances.Replace(provide)
+			ctx.MultipleInstance.Replace(provide)
 			return
 		} else {
-			ctx.MultipleInstances.Add(provide)
+			ctx.MultipleInstance.Add(provide)
 		}
 	}
 }

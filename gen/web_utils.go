@@ -14,7 +14,7 @@ func genWebUtilsFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenUtilsPackage)
 	filename := filepath.Join(fileDir, GenWebUtilsFilename)
 
-	if !ctx.HasWebInstance {
+	if ctx.SingletonInstance.WebLen() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {

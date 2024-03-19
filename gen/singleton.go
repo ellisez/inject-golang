@@ -16,7 +16,7 @@ func genSingletonFile(ctx *model.Ctx, dir string) error {
 	fileDir := filepath.Join(dir, GenInternalPackage)
 	filename := filepath.Join(fileDir, GenSingletonFilename)
 
-	if ctx.SingletonInstances.Len() == 0 {
+	if ctx.SingletonInstance.Len() == 0 {
 		err := os.Remove(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -48,10 +48,10 @@ func genSingletonFile(ctx *model.Ctx, dir string) error {
 
 func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		if _, ok := instance.(*model.Provide); ok {
-			for _, importNode := range instance.GetImports() {
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication == nil {
+			for _, importNode := range instance.Imports {
 				importName := importNode.Name
 				if importName == "_" {
 					importName = ""
@@ -63,7 +63,7 @@ func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) 
 			}
 		}
 	}
-	if ctx.HasWebInstance {
+	if ctx.SingletonInstance.WebLen() > 0 {
 		err := addImport(astFile, ctx, "", "github.com/gofiber/fiber/v2")
 		if err != nil {
 			utils.Failuref("%s, %s", filename, err.Error())
@@ -74,10 +74,10 @@ func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) 
 // # gen segment: Struct #
 func genSingletonStructAst(ctx *model.Ctx, astFile *ast.File) {
 	var fields []*ast.Field
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		instanceName := instance.GetInstance()
-		instanceType := instance.GetType()
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, _ := ctx.SingletonInstance.IndexOf(i)
+		instanceName := instance.Instance
+		instanceType := instance.Type
 
 		fieldName := utils.FirstToLower(instanceName)
 
@@ -90,6 +90,11 @@ func genSingletonStructAst(ctx *model.Ctx, astFile *ast.File) {
 		fields = append(fields, field)
 	}
 
+	fields = append(fields, astField(ArgumentVar, &ast.MapType{
+		Key:   ast.NewIdent("string"),
+		Value: ast.NewIdent("any"),
+	}))
+
 	structDecl := astStructDecl(
 		CtxType,
 		fields,
@@ -100,11 +105,11 @@ func genSingletonStructAst(ctx *model.Ctx, astFile *ast.File) {
 
 func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 	/// Getter / Setter
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		instanceName := instance.GetInstance()
-		instanceType := instance.GetType()
-		instanceFunc := instance.GetFunc()
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, _ := ctx.SingletonInstance.IndexOf(i)
+		instanceName := instance.Instance
+		instanceType := instance.Type
+		instanceFunc := instance.Func
 
 		fieldName := utils.FirstToLower(instanceName)
 		fieldGetter := utils.GetterOf(instanceName)
@@ -138,7 +143,7 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 	}
 }
 
-// # gen segment: Singleton instance #
+// # gen segment: SingletonInstance instance #
 func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := "ctx"
 
@@ -149,22 +154,39 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 		ast.NewIdent(ctxVar),
 		astDeclareRef(ast.NewIdent(CtxType), nil),
 	))
+	// create args
+	if ctx.SingletonInstance.ArgumentLen() > 0 {
+		// [code] ctx.__args = map[string]any{}
+		stmts = append(stmts, astAssignStmt(
+			astSelectorExpr(ctxVar, ArgumentVar),
+			astDeclareExpr(&ast.MapType{
+				Key:   ast.NewIdent("string"),
+				Value: ast.NewIdent("any"),
+			}, nil),
+		))
+	}
 
 	// create instances
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		instanceOrder := instance.GetOrder()
-		instanceName := instance.GetInstance()
-		instanceFunc := instance.GetFunc()
-		instanceType := instance.GetType()
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, _ := ctx.SingletonInstance.IndexOf(i)
+		instanceOrder := instance.Order
+		instanceName := instance.Instance
+		instanceFunc := instance.Func
+		instanceType := instance.Type
 
 		fieldName := utils.FirstToLower(instanceName)
-		fieldExpr := astSelectorExpr(ctxVar, fieldName)
-		constructor := instance.GetConstructor()
+		var fieldExpr ast.Expr = astSelectorExpr(ctxVar, fieldName)
+		constructor := instance.Constructor
 
+		if instance.Mode == "argument" {
+			fieldExpr = &ast.IndexExpr{
+				X:     astSelectorExpr(ctxVar, ArgumentVar),
+				Index: astStringExpr(instanceName),
+			}
+		}
 		if constructor == nil {
 			if instanceFunc.FuncName == "" {
-				// [code] ctx.{{PrivateName}} = &{{Package}}.{{EventName}}{}
+				// [code] ctx.{{PrivateName}} = &{{Package}}.{{TypeName}}{}
 				constructor = astDeclareRef(
 					instanceType,
 					nil,
@@ -188,11 +210,11 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 	}
 
 	// call func
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		if _, ok := instance.(*model.Provide); ok {
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication == nil {
 
-			handler := instance.GetHandler()
+			handler := instance.Handler
 			if handler != "" {
 
 				var instanceCallExpr *ast.CallExpr
@@ -214,6 +236,13 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 				})
 			}
 		}
+	}
+
+	if ctx.SingletonInstance.ArgumentLen() > 0 {
+		stmts = append(stmts, astAssignStmt(
+			astSelectorExpr(ctxVar, ArgumentVar),
+			ast.NewIdent("nil"),
+		))
 	}
 
 	// [code] return ctx
@@ -246,11 +275,11 @@ func genCtxNewAst(ctx *model.Ctx, astFile *ast.File) {
 func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := "ctx"
 
-	for _, key := range ctx.SingletonInstances.Keys {
-		instance := ctx.SingletonOf(key)
-		if _, ok := instance.(*model.Provide); ok {
-			instanceName := instance.GetInstance()
-			instanceFunc := instance.GetFunc()
+	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
+		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
+		if webApplication == nil {
+			instanceName := instance.Instance
+			instanceFunc := instance.Func
 
 			var stmts []ast.Stmt
 			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName), instanceFunc, ctx, ctxVar)

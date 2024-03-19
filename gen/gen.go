@@ -272,9 +272,9 @@ func astCtxSetter(doc string, getter string, privateName string, fieldType ast.E
 	return setterDecl
 }
 
-func astNewInstance(instance model.Instance, ctxVar string) ast.Expr {
-	instanceName := instance.GetInstance()
-	switch instance.GetMode() {
+func astNewInstance(instance *model.Provide, ctxVar string) ast.Expr {
+	instanceName := instance.Instance
+	switch instance.Mode {
 	case "singleton":
 		instanceVar := utils.FirstToLower(instanceName)
 		return astSelectorExpr(ctxVar, instanceVar)
@@ -282,6 +282,15 @@ func astNewInstance(instance model.Instance, ctxVar string) ast.Expr {
 		return &ast.CallExpr{
 			Fun: astSelectorExpr(ctxVar, "New"+instanceName),
 		}
+	case "argument":
+		return &ast.TypeAssertExpr{
+			X: &ast.IndexExpr{
+				X:     astSelectorExpr(ctxVar, ArgumentVar),
+				Index: astStringExpr(instanceName),
+			},
+			Type: instance.Type,
+		}
+
 	}
 	return nil
 }
@@ -330,7 +339,7 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 		case "webCtx":
 			argExpr = ast.NewIdent("webCtx")
 		case "inject":
-			paramInstance := ctx.InstanceOf(param.Instance)
+			paramInstance, _ := ctx.InstanceOf(param.Instance)
 			if paramInstance == nil {
 				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
 			}

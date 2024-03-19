@@ -95,7 +95,7 @@ inject-glang --clean
 ### 2.3. 实例注解
 `实例注解`指的是通过构造函数标记注解的方式来声明实例
 ```
-// @provide <实例名，默认同返回类型> <singleton默认|multiple> <实例type, 默认同返回类型>
+// @provide <实例名，默认同返回类型> <singleton默认|multiple|argument> <实例type, 默认同返回类型>
 // @override
 // @order <创建顺序，数字或字符串>
 // @import *<模块加载路径，必填> <模块名>
@@ -110,6 +110,8 @@ inject-glang --clean
 > `@provide`所标记的构造函数必须有且只有一个返回类型, 支持依赖注入, 但必须每个参数都要注入. 
 > 
 > `@provide`需要`@order`定义创建顺序, 以免还未完成初始化的实例被注入;
+> 
+> `@provide`模式有: `singleton`表示全局唯一, `multiple`表示可创建多个, `argument`表示仅在启动过程中存在;
 > 
 > `@override`表示支持重载, 当遇到实例名相同时, 后者会覆盖前者; 默认是重载是关闭的, 同名时会报错.
 > 
