@@ -380,13 +380,10 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
 /main_domain
 ├─/ctx                          生成代码,请不要修改
 │  ├─gen_ctx.go                 上下文接口
-    /application                应用层, 路由注解
-    /domain                     当前领域模型, 与/internal二选一, 但他是公开的
-        /entity                 实体数据结构
-        /vo                     值组合结构
-        /repository             数据存储层
-        /service                业务服务层
-    /internal                   当前领域模型, 与/domain二选一, 但外部无法访问
+    /application                应用层, 对interfaces的实现
+        /controller             路由注解, 外部可访问
+        /service                代理函数注解, 外部可访问
+    /internal                   当前领域模型, 但外部无法访问
         /entity                 实体数据结构
         /vo                     值组合结构
         /repository             数据存储层
@@ -405,15 +402,13 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
     |- go.work                  工程
     |- main.go                  启动函数
 /sub_domain                     子领域, 根据业务含义命名
+    /application                应用层, 对interfaces的实现
+        /controller             路由注解
+        /service                代理函数注解
     /interfaces                 对外提供接口层
         /dto                    传输数据结构
         /service                手动服务接口
-    /domain                     当前领域模型, 与/internal二选一, 但他是公开的
-        /entity                 实体数据结构
-        /vo                     值组合结构
-        /repository             数据存储层
-        /service                业务服务层
-    /internal                   当前领域模型, 与/domain二选一, 但外部无法访问
+    /internal                   当前领域模型, 但外部无法访问
         /entity                 实体数据结构
         /vo                     值组合结构
         /repository             数据存储层
@@ -428,29 +423,32 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
 > <br/>其中`/web`, `/rpc`, `/startup`提供的运行环境, 而`/interfaces`则作为外部引入类库使用, 它只提供接口不给予实现.
 > <br/>一般而言运行环境与类库不会同时出现, 如提供微服务调用(http request方式), 就不会提供源码类库引用.
 > <br/>`/interfaces`包只允许依赖自身及其子包(dto, service等), 不允许依赖外部包, 防止循环依赖.
-> <br/>`/interfaces/service`已经被`/ctx`实现了, 无需定义.
-> * `Application`应用层: 对应`/application`包, 它组织多个domain完成业务功能, 应当保持它的代码简洁. 
+> * `Application`应用层: 对应`/application`包, 它组织多个domain完成业务功能, 它是用户接口层的实现, 应当保持它的代码简洁. 
 > <br/>应当通过依赖注入仅加载所需的数据, 避免与运行环境耦合.
+> <br/>`/application`下有`controller`, `service`, 它们都是注解实现代理函数, 会对外公开.
 > * `Domain`领域层: golang使用`go.work`分模块来实现, 每个子领域就是一个子模块, 应根据业务含义命名. 
-> <br/>就单个模块而言, 对应`/internal`和`domain`, 表示当前业务领域的功能实现. 当项目规模越来越大时, 可以考虑迁移到子领域中.
+> <br/>就单个模块而言, 对应`/internal`, 表示当前业务领域的功能实现. 当项目规模越来越大时, 可以考虑迁移到子领域中.
 > * `Infrastructure`基础建设层: 对应`/component`包, 提供给domain复用的功能. 
 > <br/>一般来说如果代码量较小可放在`/utils`包, 但代码量较大时, 可以考虑再迁移到`/compoent`.
 > <br/>`/utils`通常是无状态的静态函数, 所有参与计算的数据都只能通过参数传递. 
 > <br/>`/component`通常是成员函数, 跟随者所属结构体的生命周期完成特定功能.
+
+> 标准的DDD应当, 创建`/application`实例但用`/interfaces`的接口来接收变量, 以避免耦合. 
+> 
+>如果使用本系统这个过程会更加简单, 首先对外接口由系统生成的`/ctx`包来完成, 而实现类只需要在`/application`包内写上注解即可.
 
 > 
 > 各个领域只能依赖自身包及其子包, 禁止互相直接调用, 这样会造成循环依赖问题.
 > <br/>当需要调用其他领域时, 应当通过`/application`来组织.
 > 
 > 一般来说子领域的调用方式有两种, 一种是通过运行环境对外提供服务, 如web, rpc, cmd等; 另一种是通过源码类库引用来调用子领域.
-> 运行环境方式, 如`/main_domain`, 建议的包组合: `/application`+`/internal`或`/domain`+`/web`+`/rpc`+`/startup`
-> 类库方式, 如`/sub_domain`, 建议的包组合: `/interfaces`+`/internal`或`/domain`
 > 
-> `/internal`和`/domain`两者作用一样, 只需要选择其中之一, 选择谁取决于谁来生成`/ctx`依赖注入包.
+> 运行环境方式, 如`/main_domain`, 建议的包组合: `/application`+`/internal`+`/web`+`/rpc`+`/startup`
+>
+> 类库方式, 如`/sub_domain`, 建议的包组合: `/application`+`/interfaces`+`/internal`
 > 
-> 如果当前模块会执行`go:generate`生成代码, 那么使用`/internal`; 如果当前模块不生成代码, 而是由调用方来生成, 则应当使用`/domain`, 因为生成代码所在包不能访问内部包.
+> 类库方式下, 由于系统会根据注解自动生成接口层, 不再需要`/interfaces`编写接口, 但仍需要`/application`编写注解类让系统知道哪些实例或函数被公开.
 > 
-> 对于web而言`/application`包相当于`@router`注解.
 > 
 > 注意: 并且所有依赖的模块都必须按照DDD来设计, DDD主要针对的是那些有业务含义的模块, 有些无业务含义的公用工具模块按照正常的依赖加载使用即可.
 
