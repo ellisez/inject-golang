@@ -6,7 +6,7 @@ import (
 
 // ConfigureWebApp
 // @webProvide
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @injectParam config Config
 // @static /images /images
 // @static /css /css [Compress,Browse]

@@ -282,7 +282,10 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 			instanceFunc := instance.Func
 
 			var stmts []ast.Stmt
-			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName), instanceFunc, ctx, ctxVar)
+			instanceCallExpr, varDefineStmts := astInstanceCallExpr(astSelectorExpr(instanceFunc.Package, instanceFunc.FuncName), instanceFunc, ctx, ctxVar)
+			if varDefineStmts != nil {
+				stmts = append(stmts, varDefineStmts...)
+			}
 			stmts = append(stmts, &ast.ReturnStmt{
 				Results: []ast.Expr{
 					instanceCallExpr,

@@ -89,10 +89,12 @@ func (s *Server) EmptyListener() {
 
 // TestServer example for inject method with uninjected recv
 // @proxy
+// @import github.com/ellisez/inject-golang/examples/internal/entity
 // @injectParam database Database
 // @injectFunc FindAccountByName
 // !@injectCtx appCtx
-func (s *Server) TestServer( /*appCtx ctx.Ctx, */ FindAccountByName func(string) *entity.Account, database *Database) {
+// @injectCall [ellisAccount] GetEllisAccount
+func (s *Server) TestServer( /*appCtx ctx.Ctx, */ FindAccountByName func(string) *entity.Account, ellisAccount *entity.Account, database *Database) {
 	fmt.Printf("call TestServer: %v, %v\n", s, database)
 	s.AddListener("login", func(data map[string]any) {
 		username := data["username"].(string)

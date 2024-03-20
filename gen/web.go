@@ -226,7 +226,10 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 
 			if instance.FuncName != "" {
 				// [code] host, port, err := {{Package}}.{{FuncName}}(...)
-				instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+				instanceCallExpr, varDefineStmts := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+				if varDefineStmts != nil {
+					stmts = append(stmts, varDefineStmts...)
+				}
 
 				stmts = append(stmts, astDefineStmtMany(
 					[]ast.Expr{

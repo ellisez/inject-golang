@@ -171,3 +171,17 @@ func GetterOf(instance string) string {
 func SetterOf(instance string) string {
 	return "Set" + FirstToUpper(instance)
 }
+
+var varCount int
+var varMap = map[string]string{}
+
+func NextVar(varName string) string {
+	varCount += 1
+	n := fmt.Sprintf("__var%d", varCount)
+	varMap[varName] = n
+	return n
+}
+
+func VarMap(varName string) string {
+	return varMap[varName]
+}

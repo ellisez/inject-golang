@@ -16,7 +16,7 @@ func IsReady() bool {
 // NewConfig example for default singleton
 // @provide Config
 // @order "step 2: Load config"
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 func NewConfig() *vo.Config {
 	fmt.Println("call Config.NewConfig")
 	return &vo.Config{
@@ -28,7 +28,7 @@ func NewConfig() *vo.Config {
 // PrepareDatabase example for explicit singleton
 // @provide Database singleton
 // @order "step 3: Setting Database"
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @import github.com/ellisez/inject-golang/examples/web/handler
 // @handler startup.DatabaseLoaded
 func PrepareDatabase() *vo.Database {
@@ -49,7 +49,7 @@ func DatabaseLoaded() {
 // PrepareServerAlias example for proxy handler
 // @provide ServerAlias _ vo.ServerInterface
 // @order "step 4: Setting Server"
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @injectParam config
 // @injectParam database
 // @injectParam argInt

@@ -7,7 +7,7 @@ import (
 
 // NewEvent example for multiple default
 // @provide Event multiple
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @injectParam Database
 // @injectParam config
 func NewEvent(Database *vo.Database, config *vo.Config) *vo.Event {
@@ -20,7 +20,7 @@ func NewEvent(Database *vo.Database, config *vo.Config) *vo.Event {
 
 // NewListener example for multiple injection
 // @provide Listener multiple
-// @import github.com/ellisez/inject-golang/examples/model
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @import github.com/ellisez/inject-golang/examples/web/handler
 // @handler handler.AfterRouterCreate
 func NewListener() *vo.Listener {

@@ -5,6 +5,7 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
+	"strings"
 )
 
 func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPath string) {
@@ -158,7 +159,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 			paramName := annotateArgs[1]
 			param := utils.FindParam(funcNode, paramName)
 			if param == nil {
-				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
+				utils.Failuref(`%s %s, ParamName "%s" not found`, commonFunc.Loc.String(), comment.Text, paramName)
 			}
 
 			if argsLen >= 3 {
@@ -168,18 +169,45 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				}
 			}
 
-			if argsLen >= 4 {
-				operator := annotateArgs[3]
-				switch operator {
-				case "", "call":
-					param.Operator = operator
-				default:
-					utils.Failuref(`%s %s, Operator "%s" not supported, only ["", "call"] are allowed`, param.Loc.String(), comment.Text, operator)
-				}
-			}
-
 			param.Comment = comment.Text
 			param.Source = "func"
+		case "@injectCall":
+			if argsLen < 2 {
+				utils.Failuref("%s %s, ParamName must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			paramNames := annotateArgs[1]
+			if !strings.HasPrefix(paramNames, "[") || !strings.HasSuffix(paramNames, "]") {
+				utils.Failuref("%s %s, ParamName must be wrapped in []", commonFunc.Loc.String(), comment.Text)
+			}
+
+			if argsLen < 3 {
+				utils.Failuref("%s %s, Instance must be specified", commonFunc.Loc.String(), comment.Text)
+			}
+			instance := annotateArgs[2]
+			call := &model.Call{
+				Instance: instance,
+			}
+
+			paramNames = paramNames[1 : len(paramNames)-1]
+			paramArr := strings.Split(paramNames, ",")
+			for i, paramName := range paramArr {
+				paramName = strings.TrimSpace(paramName)
+				call.Params = append(call.Params, paramName)
+				if paramName != "" && paramName != "_" {
+					param := utils.FindParam(funcNode, paramName)
+					if param == nil {
+						utils.Failuref(`%s %s, ParamName "%s" not found`, commonFunc.Loc.String(), comment.Text, paramName)
+					}
+
+					param.Instance = instance
+					param.Index = i
+
+					param.Comment = comment.Text
+					param.Source = "call"
+				}
+			}
+			call.Comment = comment.Text
+			funcNode.Calls = append(funcNode.Calls, call)
 		case "@injectRecv":
 			if argsLen < 2 {
 				utils.Failuref("%s %s, RecvName must be specified", commonFunc.Loc.String(), comment.Text)

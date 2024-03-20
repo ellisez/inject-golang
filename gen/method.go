@@ -71,9 +71,12 @@ func genMethodAst(ctx *model.Ctx, astFile *ast.File) {
 				recvParam = astField(recvParamVar, instance.Recv.Type)
 			}
 
-			stmts := make([]ast.Stmt, 0)
+			var stmts []ast.Stmt
 
-			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(recvParamVar, instance.FuncName), instance.Func, ctx, ctxVar)
+			instanceCallExpr, varDefineStmts := astInstanceCallExpr(astSelectorExpr(recvParamVar, instance.FuncName), instance.Func, ctx, ctxVar)
+			if varDefineStmts != nil {
+				stmts = append(stmts, varDefineStmts...)
+			}
 			if instance.Results == nil {
 				stmts = append(stmts, &ast.ExprStmt{
 					X: instanceCallExpr,

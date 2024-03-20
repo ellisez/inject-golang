@@ -8,7 +8,7 @@ import (
 
 // ServerAliasLoaded example for injection proxy
 // @proxy
-// @import "github.com/ellisez/inject-golang/examples/model"
+// @import github.com/ellisez/inject-golang/examples/internal/vo
 // @injectParam database Database
 // @injectCtx appCtx
 // @injectParam server ServerAlias cast

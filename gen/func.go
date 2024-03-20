@@ -68,7 +68,10 @@ func genFuncAst(ctx *model.Ctx, astFile *ast.File) {
 		if instance.Recv == nil {
 
 			var stmts []ast.Stmt
-			instanceCallExpr := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+			instanceCallExpr, varDefineStmts := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
+			if varDefineStmts != nil {
+				stmts = append(stmts, varDefineStmts...)
+			}
 			if len(instance.Results) == 0 {
 				stmts = append(stmts, &ast.ExprStmt{
 					X: instanceCallExpr,

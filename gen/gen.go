@@ -328,8 +328,48 @@ func astInstanceProxyParams(instanceFunc *model.Func) []*ast.Field {
 	}
 	return params
 }
-func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) *ast.CallExpr {
 
+func astCallVarDefine(instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) []ast.Stmt {
+	var stmts []ast.Stmt
+	for _, call := range instanceFunc.Calls {
+		var lhs []ast.Expr
+
+		method := ctx.MethodOf(call.Instance)
+		if method == nil {
+			utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), call.Comment, call.Instance)
+		}
+		if method.Type.Results == nil {
+			utils.Failuref("%s %s, @injectCall must have at least one return value.", instanceFunc.Loc.String(), call.Comment)
+		}
+
+		fillLen := len(method.Type.Results.List) - len(call.Params)
+		if fillLen < 0 {
+			utils.Failuref(`%s %s, Params more than returns`, instanceFunc.Loc.String(), call.Comment)
+		}
+
+		for _, paramName := range call.Params {
+			if paramName == "" || paramName == "_" {
+				lhs = append(lhs, ast.NewIdent("_"))
+				continue
+			}
+			varName := utils.NextVar(call.Instance + "." + paramName)
+			lhs = append(lhs, ast.NewIdent(varName))
+		}
+		for i := 0; i < fillLen; i++ {
+			lhs = append(lhs, ast.NewIdent("_"))
+		}
+
+		var argExpr ast.Expr
+		argExpr = astSelectorExpr(ctxVar, call.Instance)
+		argExpr = &ast.CallExpr{
+			Fun: argExpr,
+		}
+		stmts = append(stmts, astDefineStmtMany(lhs, argExpr))
+	}
+	return stmts
+}
+func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) (*ast.CallExpr, []ast.Stmt) {
+	stmts := astCallVarDefine(instanceFunc, ctx, ctxVar)
 	var args []ast.Expr
 	for _, param := range instanceFunc.Params {
 		var argExpr ast.Expr
@@ -350,6 +390,12 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
 			}
 			argExpr = astSelectorExpr(ctxVar, param.Instance)
+		case "call":
+			varName := utils.VarMap(param.Instance + "." + param.Name)
+			if varName == "" {
+				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
+			}
+			argExpr = ast.NewIdent(varName)
 		case "":
 			fallthrough
 		default:
@@ -367,10 +413,6 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 				X:    argExpr,
 				Type: param.Type,
 			}
-		case "call":
-			argExpr = &ast.CallExpr{
-				Fun: argExpr,
-			}
 		}
 		args = append(args, argExpr)
 	}
@@ -379,7 +421,7 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 	return &ast.CallExpr{
 		Fun:  handler,
 		Args: args,
-	}
+	}, stmts
 
 }
 
