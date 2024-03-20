@@ -378,10 +378,15 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
 
 ```
 /main_domain
-├─/ctx                        生成代码,请不要修改
-│  ├─gen_ctx.go           上下文接口
+├─/ctx                          生成代码,请不要修改
+│  ├─gen_ctx.go                 上下文接口
     /application                应用层, 路由注解
-    /internal                   当前领域模型
+    /domain                     当前领域模型, 与/internal二选一, 但他是公开的
+        /entity                 实体数据结构
+        /vo                     值组合结构
+        /repository             数据存储层
+        /service                业务服务层
+    /internal                   当前领域模型, 与/domain二选一, 但外部无法访问
         /entity                 实体数据结构
         /vo                     值组合结构
         /repository             数据存储层
@@ -403,7 +408,12 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
     /interfaces                 对外提供接口层
         /dto                    传输数据结构
         /service                手动服务接口
-    /internal                   当前领域模型
+    /domain                     当前领域模型, 与/internal二选一, 但他是公开的
+        /entity                 实体数据结构
+        /vo                     值组合结构
+        /repository             数据存储层
+        /service                业务服务层
+    /internal                   当前领域模型, 与/domain二选一, 但外部无法访问
         /entity                 实体数据结构
         /vo                     值组合结构
         /repository             数据存储层
@@ -422,8 +432,7 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
 > * `Application`应用层: 对应`/application`包, 它组织多个domain完成业务功能, 应当保持它的代码简洁. 
 > <br/>应当通过依赖注入仅加载所需的数据, 避免与运行环境耦合.
 > * `Domain`领域层: golang使用`go.work`分模块来实现, 每个子领域就是一个子模块, 应根据业务含义命名. 
-> <br/>就单个模块而言, 对应`/internal`内部包, 表示当前业务领域的功能实现. 当项目规模越来越大时, 可以考虑迁移到子领域中.
-> <br/>
+> <br/>就单个模块而言, 对应`/internal`和`domain`, 表示当前业务领域的功能实现. 当项目规模越来越大时, 可以考虑迁移到子领域中.
 > * `Infrastructure`基础建设层: 对应`/component`包, 提供给domain复用的功能. 
 > <br/>一般来说如果代码量较小可放在`/utils`包, 但代码量较大时, 可以考虑再迁移到`/compoent`.
 > <br/>`/utils`通常是无状态的静态函数, 所有参与计算的数据都只能通过参数传递. 
@@ -434,8 +443,12 @@ inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
 > <br/>当需要调用其他领域时, 应当通过`/application`来组织.
 > 
 > 一般来说子领域的调用方式有两种, 一种是通过运行环境对外提供服务, 如web, rpc, cmd等; 另一种是通过源码类库引用来调用子领域.
-> 运行环境方式, 如`/main_domain`, 建议的包组合: `/application`+`/internal`+`/web`+`/rpc`+`/startup`
-> 类库方式, 如`/sub_domain`, 建议的包组合: `/interfaces`+`/internal`
+> 运行环境方式, 如`/main_domain`, 建议的包组合: `/application`+`/internal`或`/domain`+`/web`+`/rpc`+`/startup`
+> 类库方式, 如`/sub_domain`, 建议的包组合: `/interfaces`+`/internal`或`/domain`
+> 
+> `/internal`和`/domain`两者作用一样, 只需要选择其中之一, 选择谁取决于谁来生成`/ctx`依赖注入包.
+> 
+> 如果当前模块会执行`go:generate`生成代码, 那么使用`/internal`; 如果当前模块不生成代码, 而是由调用方来生成, 则应当使用`/domain`, 因为生成代码所在包不能访问内部包.
 > 
 > 对于web而言`/application`包相当于`@router`注解.
 > 
