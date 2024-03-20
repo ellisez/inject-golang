@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 	"github.com/ellisez/inject-golang/examples/ctx"
-	"github.com/ellisez/inject-golang/examples/internal"
+	"github.com/ellisez/inject-golang/examples/internal/vo"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -19,7 +19,7 @@ import (
 // @param queryBool query
 // @param formFloat formData
 func CorsMiddleware(appCtx ctx.Ctx, c *fiber.Ctx,
-	body *internal.Config,
+	body *vo.Config,
 	header string,
 	paramsInt int,
 	queryBool bool,

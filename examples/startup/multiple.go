@@ -2,7 +2,7 @@ package startup
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/examples/internal"
+	"github.com/ellisez/inject-golang/examples/internal/vo"
 )
 
 // NewEvent example for multiple default
@@ -10,9 +10,9 @@ import (
 // @import github.com/ellisez/inject-golang/examples/model
 // @injectParam Database
 // @injectParam config
-func NewEvent(Database *internal.Database, config *internal.Config) *internal.Event {
+func NewEvent(Database *vo.Database, config *vo.Config) *vo.Event {
 	fmt.Println("call Event.NewEvent")
-	return &internal.Event{
+	return &vo.Event{
 		Config:   config,
 		Database: Database,
 	}
@@ -23,9 +23,9 @@ func NewEvent(Database *internal.Database, config *internal.Config) *internal.Ev
 // @import github.com/ellisez/inject-golang/examples/model
 // @import github.com/ellisez/inject-golang/examples/web/handler
 // @handler handler.AfterRouterCreate
-func NewListener() *internal.Listener {
+func NewListener() *vo.Listener {
 	fmt.Println("call Listener.NewListener")
-	return &internal.Listener{
+	return &vo.Listener{
 		Func: func(_ map[string]any) {
 		},
 	}

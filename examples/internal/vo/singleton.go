@@ -2,6 +2,7 @@ package vo
 
 import (
 	"fmt"
+	"github.com/ellisez/inject-golang/examples/internal/entity"
 )
 
 type Config struct {
@@ -91,7 +92,7 @@ func (s *Server) EmptyListener() {
 // @injectParam database Database
 // @injectFunc FindAccountByName
 // !@injectCtx appCtx
-func (s *Server) TestServer( /*appCtx ctx.Ctx, */ FindAccountByName func(string) *Account, database *Database) {
+func (s *Server) TestServer( /*appCtx ctx.Ctx, */ FindAccountByName func(string) *entity.Account, database *Database) {
 	fmt.Printf("call TestServer: %v, %v\n", s, database)
 	s.AddListener("login", func(data map[string]any) {
 		username := data["username"].(string)
