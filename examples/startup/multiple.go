@@ -1,8 +1,8 @@
-package provide
+package startup
 
 import (
 	"fmt"
-	"github.com/ellisez/inject-golang/examples/model"
+	"github.com/ellisez/inject-golang/examples/internal"
 )
 
 // NewEvent example for multiple default
@@ -10,9 +10,9 @@ import (
 // @import github.com/ellisez/inject-golang/examples/model
 // @injectParam Database
 // @injectParam config
-func NewEvent(Database *model.Database, config *model.Config) *model.Event {
+func NewEvent(Database *internal.Database, config *internal.Config) *internal.Event {
 	fmt.Println("call Event.NewEvent")
-	return &model.Event{
+	return &internal.Event{
 		Config:   config,
 		Database: Database,
 	}
@@ -21,11 +21,11 @@ func NewEvent(Database *model.Database, config *model.Config) *model.Event {
 // NewListener example for multiple injection
 // @provide Listener multiple
 // @import github.com/ellisez/inject-golang/examples/model
-// @import github.com/ellisez/inject-golang/examples/handler
+// @import github.com/ellisez/inject-golang/examples/web/handler
 // @handler handler.AfterRouterCreate
-func NewListener() *model.Listener {
+func NewListener() *internal.Listener {
 	fmt.Println("call Listener.NewListener")
-	return &model.Listener{
+	return &internal.Listener{
 		Func: func(_ map[string]any) {
 		},
 	}

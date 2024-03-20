@@ -27,7 +27,7 @@ func genFactoryFile(ctx *model.Ctx, dir string) error {
 }
 
 func genFactoryImportAst(ctx *model.Ctx, astFile *ast.File, filename string) {
-	err := addImport(astFile, ctx, "", path.Join(Mod.Package, GenPackage, "internal"))
+	err := addImport(astFile, ctx, InternalVar, path.Join(Mod.Package, GenPackage, GenInternalPackage))
 	if err != nil {
 		utils.Failuref("%s, %s", filename, err.Error())
 	}
@@ -39,12 +39,12 @@ func genFactoryNewAst(ctx *model.Ctx, astFile *ast.File) {
 		"New",
 		nil,
 		[]*ast.Field{
-			astField("", astStarExpr(astSelectorExpr(GenInternalPackage, CtxType))),
+			astField("", astStarExpr(astSelectorExpr(InternalVar, CtxType))),
 		},
 		[]ast.Stmt{
 			&ast.ReturnStmt{Results: []ast.Expr{
 				&ast.CallExpr{
-					Fun: astSelectorExpr(GenInternalPackage, "New"),
+					Fun: astSelectorExpr(InternalVar, "New"),
 				},
 			}},
 		},

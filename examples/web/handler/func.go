@@ -3,7 +3,7 @@ package handler
 import (
 	"fmt"
 	"github.com/ellisez/inject-golang/examples/ctx"
-	"github.com/ellisez/inject-golang/examples/model"
+	"github.com/ellisez/inject-golang/examples/internal"
 )
 
 // ServerAliasLoaded example for injection proxy
@@ -15,7 +15,7 @@ import (
 // @injectParam isReady _ &
 // @injectParam event
 // @injectParam listener
-func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Database, isReady *bool, event *model.Event, listener *model.Listener) {
+func ServerAliasLoaded(appCtx ctx.Ctx, server *internal.Server, database *internal.Database, isReady *bool, event *internal.Event, listener *internal.Listener) {
 	fmt.Printf("call proxy.WebAppAliasLoaded: %v, %v, %v\n", server, database, isReady)
 	server.Startup()
 	*isReady = true
@@ -29,6 +29,6 @@ func ServerAliasLoaded(appCtx ctx.Ctx, server *model.Server, database *model.Dat
 	})
 }
 
-func AfterRouterCreate(router *model.Listener) {
-	fmt.Printf("call Listener.postConstruct: %v\n", router)
+func AfterRouterCreate() {
+	fmt.Printf("call Listener.postConstruct:\n")
 }

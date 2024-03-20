@@ -374,23 +374,77 @@ func main() {
 >
 
 ### 3.4. 推荐目录结构
+inject-golang使用ctx简化了DDD(Domain Model Driven)目录结构.
+
 ```
-/----
-    /ctx                    生成代码,请不要修改
-        |- gen_ctx.go       上下文接口
-    /model                  定义结构体
-    /provide                实例注解
-    /middleware             web中间件的注解
-    /router                 web路由的注解
-    /controller             web请求的处理函数
-    /service                服务与事务的处理函数
-    /handler                未分类的处理函数
-    |- main.go              启动函数
+/main_domain
+├─/ctx                        生成代码,请不要修改
+│  ├─gen_ctx.go           上下文接口
+    /application                应用层, 路由注解
+    /internal                   当前领域模型
+        /entity                 实体数据结构
+        /vo                     值组合结构
+        /repository             数据存储层
+        /service                业务服务层
+    /startup                    启动
+        |- provide.go           实例注解
+        |- proxy.go             代理函数注解
+    /web                        提供web服务
+        /middleware             中间件的注解
+        /router                 手动路由
+        /handler                手动处理函数
+    /rpc                        提供ppc服务
+    /component                  基础建设层
+    /utils                      工具包
+    |- go.mod                   模块
+    |- go.work                  工程
+    |- main.go                  启动函数
+/sub_domain                     子领域, 根据业务含义命名
+    /interfaces                 对外提供接口层
+        /dto                    传输数据结构
+        /service                手动服务接口
+    /internal                   当前领域模型
+        /entity                 实体数据结构
+        /vo                     值组合结构
+        /repository             数据存储层
+        /service                业务服务层
+    /component                  基础建设层
+    |- go.mod
 ```
 
-> 不推荐`global`目录, 应当使用ctx来完成全局变量访问, 避免代码臃肿.
+
+> DDD四层实现方式: 
+> * `User Interface`用户接口层: 主要是对外提供服务和数据, 包含`/web`, `/rpc`和`/interfaces`包.
+> <br/>其中`/web`, `/rpc`, `/startup`提供的运行环境, 而`/interfaces`则作为外部引入类库使用, 它只提供接口不给予实现.
+> <br/>一般而言运行环境与类库不会同时出现, 如提供微服务调用(http request方式), 就不会提供源码类库引用.
+> <br/>`/interfaces`包只允许依赖自身及其子包(dto, service等), 不允许依赖外部包, 防止循环依赖.
+> <br/>`/interfaces/service`已经被`/ctx`实现了, 无需定义.
+> * `Application`应用层: 对应`/application`包, 它组织多个domain完成业务功能, 应当保持它的代码简洁. 
+> <br/>应当通过依赖注入仅加载所需的数据, 避免与运行环境耦合.
+> * `Domain`领域层: golang使用`go.work`分模块来实现, 每个子领域就是一个子模块, 应根据业务含义命名. 
+> <br/>就单个模块而言, 对应`/internal`内部包, 表示当前业务领域的功能实现. 当项目规模越来越大时, 可以考虑迁移到子领域中.
+> <br/>
+> * `Infrastructure`基础建设层: 对应`/component`包, 提供给domain复用的功能. 
+> <br/>一般来说如果代码量较小可放在`/utils`包, 但代码量较大时, 可以考虑再迁移到`/compoent`.
+> <br/>`/utils`通常是无状态的静态函数, 所有参与计算的数据都只能通过参数传递. 
+> <br/>`/component`通常是成员函数, 跟随者所属结构体的生命周期完成特定功能.
+
 > 
-> 不推荐`main.go`编写大量启动顺序代码, 应当通过实例的`@order`顺序优雅的完成.
+> 各个领域只能依赖自身包及其子包, 禁止互相直接调用, 这样会造成循环依赖问题.
+> <br/>当需要调用其他领域时, 应当通过`/application`来组织.
+> 
+> 一般来说子领域的调用方式有两种, 一种是通过运行环境对外提供服务, 如web, rpc, cmd等; 另一种是通过源码类库引用来调用子领域.
+> 运行环境方式, 如`/main_domain`, 建议的包组合: `/application`+`/internal`+`/web`+`/rpc`+`/startup`
+> 类库方式, 如`/sub_domain`, 建议的包组合: `/interfaces`+`/internal`
+> 
+> 对于web而言`/application`包相当于`@router`注解.
+> 
+> 注意: 并且所有依赖的模块都必须按照DDD来设计, DDD主要针对的是那些有业务含义的模块, 有些无业务含义的公用工具模块按照正常的依赖加载使用即可.
+
+> DDD分层的好处:  
+> 1. 变更运行环境成本降低: 由于应用层没有运行环境绑定, 所以当变更运行环境时, 只需要更改`User Interface`层即可.
+> <br>如: 已经运行web环境上的程序, 现在需要同时也能运行在rpc服务, 这时需要另写一份rpc解析参数与web参数相当的`User Interface`代码即可.
+> 2. `Domain`领域层的复用: 由于领域层是能独立完成业务功能的, 所以Domain层可以拷贝或引用到别的项目中, 然后由项目应用层与旧逻辑组织到一起使用.
 
 ## 4. 使用规范
 

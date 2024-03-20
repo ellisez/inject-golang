@@ -1,4 +1,4 @@
-package model
+package vo
 
 type Event struct {
 	Config *Config
