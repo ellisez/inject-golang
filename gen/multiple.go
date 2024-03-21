@@ -45,7 +45,7 @@ func genMultipleImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 	for i := 0; i < ctx.MultipleInstance.Len(); i++ {
 		instance := ctx.MultipleInstance.IndexOf(i)
 		for _, importInfo := range instance.Imports {
-			importName := importInfo.Name
+			importName := importInfo.Alias
 			if importName == "_" {
 				importName = ""
 			}

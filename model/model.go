@@ -9,8 +9,9 @@ type Module struct {
 }
 
 type Import struct {
-	Name string
-	Path string
+	Alias   string
+	Package string
+	Path    string
 }
 
 type CommonFunc struct {

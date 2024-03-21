@@ -10,6 +10,7 @@ type Extra struct {
 	Imports      []*ast.ImportSpec
 	Methods      map[string]*ast.FuncDecl
 	InjectCtxMap map[string][]*Field
+	ImportMap    map[string]string
 }
 
 type Key struct {
@@ -39,6 +40,7 @@ func NewCtx() *Ctx {
 		Extra: &Extra{
 			Methods:      map[string]*ast.FuncDecl{},
 			InjectCtxMap: map[string][]*Field{},
+			ImportMap:    map[string]string{},
 		},
 	}
 }

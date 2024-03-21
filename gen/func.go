@@ -44,7 +44,7 @@ func genFuncImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 		instance := ctx.FuncInstance.IndexOf(i)
 		if instance.Recv == nil {
 			for _, importInfo := range instance.Imports {
-				importName := importInfo.Name
+				importName := importInfo.Alias
 				if importName == "_" {
 					importName = ""
 				}

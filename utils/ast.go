@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
+	"go/token"
 	"regexp"
 	"strings"
 )
@@ -102,118 +103,157 @@ func TypeToAst(typeString string) (typeExpr ast.Expr) {
 	return typeExpr
 }
 
-func AccessType(astType ast.Expr, definePackage string, accessPackage string) ast.Expr {
-	if definePackage == accessPackage {
-		return TypeWithNoPackage(astType, definePackage)
-	} else {
-		return TypeWithPackage(astType, definePackage)
-	}
+func TypeForChangePackage(astType ast.Expr, currentImport *model.Import, currentImports []*ast.ImportSpec, changeImport *model.Import, changeImports []*model.Import) (ast.Expr, []*model.Import) {
+	var imports []*model.Import
 
-}
-func selectorTypeWithNoPackage(selectorExpr *ast.SelectorExpr, packageName string) ast.Expr {
-	switch selectorExpr.X.(type) {
-	case *ast.SelectorExpr:
-		subSelectorExpr := selectorExpr.X.(*ast.SelectorExpr)
-		newSelectorExpr := *subSelectorExpr
-		selectorExpr.X = selectorTypeWithNoPackage(&newSelectorExpr, packageName)
-		return &newSelectorExpr
-	case *ast.Ident:
-		ident := selectorExpr.X.(*ast.Ident).String()
-		if ident == packageName {
-			return selectorExpr.Sel
-		}
+	if currentImport.Alias == changeImport.Alias && currentImport.Path == changeImport.Path {
+		return astType, nil
 	}
-	return selectorExpr
-}
-func TypeWithNoPackage(astType ast.Expr, packageName string) ast.Expr {
 	switch astType.(type) {
-	case *ast.SelectorExpr:
+	case *ast.SelectorExpr: // ?.yyy
 		selectorExpr := astType.(*ast.SelectorExpr)
-		return selectorTypeWithNoPackage(selectorExpr, packageName)
-	case *ast.Ident:
-		return astType
-	case *ast.StarExpr:
-		starExpr := astType.(*ast.StarExpr)
-		starExpr.X = TypeWithNoPackage(starExpr.X, packageName)
-		return starExpr
-	case *ast.ChanType:
-		chanType := astType.(*ast.ChanType)
-		chanType.Value = TypeWithNoPackage(chanType.Value, packageName)
-		return chanType
-	case *ast.FuncType:
-		funcType := astType.(*ast.FuncType)
-		newFuncType := *funcType
-		if newFuncType.Params != nil {
-			var params []*ast.Field
-			for _, param := range newFuncType.Params.List {
-				newParam := *param
-				newParam.Type = TypeWithNoPackage(param.Type, packageName)
-				params = append(params, &newParam)
+		ident, ok := selectorExpr.X.(*ast.Ident)
+		if ok {
+			var matchImport *model.Import
+			var matchRelName string
+			for _, astImport := range currentImports {
+				name := ""
+				if astImport.Name != nil {
+					name = astImport.Name.String()
+				}
+				matchRelName = RelPackageNameOfAst(astImport)
+				if matchRelName == ident.String() {
+					matchImport = &model.Import{
+						Alias:   name,
+						Package: matchRelName,
+						Path:    ImportPathOf(astImport),
+					}
+					break
+				}
 			}
-			newFuncType.Params = &ast.FieldList{List: params}
-		}
-		if newFuncType.Results != nil {
-			var results []*ast.Field
-			for _, result := range newFuncType.Results.List {
-				newParam := *result
-				newParam.Type = TypeWithNoPackage(result.Type, packageName)
-				results = append(results, &newParam)
+			if matchImport == nil {
+				Failuref(`%s, Missing package "%s"`, currentImport.Path, ident.String())
 			}
-			newFuncType.Results = &ast.FieldList{List: results}
+			for _, importNode := range changeImports {
+				if importNode.Path == matchImport.Path {
+					if importNode.Alias != matchImport.Alias {
+						return &ast.SelectorExpr{
+							X:   ast.NewIdent(importNode.Alias),
+							Sel: selectorExpr.Sel,
+						}, imports
+					} else {
+						return selectorExpr, imports
+					}
+				}
+			}
+			imports = append(imports, matchImport)
+			return selectorExpr, imports
 		}
-		return &newFuncType
-	}
-	return astType
-}
-
-func TypeWithPackage(astType ast.Expr, packageName string) ast.Expr {
-	switch astType.(type) {
-	case *ast.SelectorExpr:
-		return astType
-	case *ast.Ident:
+		newX, newImports := TypeForChangePackage(selectorExpr.X, currentImport, currentImports, changeImport, changeImports)
+		if newX != selectorExpr.X {
+			selectorExpr = &ast.SelectorExpr{
+				X:   newX,
+				Sel: selectorExpr.Sel,
+			}
+		}
+		imports = append(imports, newImports...)
+		return selectorExpr, imports
+	case *ast.Ident: // xxx
 		ident := astType.(*ast.Ident)
-		if IsFirstUpper(ident.String()) {
-			return &ast.SelectorExpr{
-				X:   &ast.Ident{Name: packageName},
-				Sel: ident,
-			}
-		} else {
-			return ident
+		if IsBasicType(ident.String()) {
+			return ident, imports
 		}
-	case *ast.StarExpr:
+		return &ast.SelectorExpr{
+			X:   ast.NewIdent(currentImport.Package),
+			Sel: ident,
+		}, imports
+	case *ast.StarExpr: // *?
 		starExpr := astType.(*ast.StarExpr)
-		newStarExpr := *starExpr
-		newStarExpr.X = TypeWithPackage(newStarExpr.X, packageName)
-		return &newStarExpr
-	case *ast.ChanType:
-		chanType := astType.(*ast.ChanType)
-		newChanType := *chanType
-		newChanType.Value = TypeWithPackage(newChanType.Value, packageName)
-		return &newChanType
-	case *ast.FuncType:
+		newX, newImports := TypeForChangePackage(starExpr.X, currentImport, currentImports, changeImport, changeImports)
+		if newX != starExpr.X {
+			starExpr = &ast.StarExpr{
+				X: newX,
+			}
+		}
+		imports = append(imports, newImports...)
+		return starExpr, imports
+	case *ast.ArrayType: // []?
+		arrayType := astType.(*ast.ArrayType)
+		newElt, newImports := TypeForChangePackage(arrayType.Elt, currentImport, currentImports, changeImport, changeImports)
+		if newElt != arrayType.Elt {
+			arrayType = &ast.ArrayType{
+				Elt: newElt,
+			}
+		}
+		imports = append(imports, newImports...)
+		return arrayType, imports
+	case *ast.MapType: // map[?]?
+		mapType := astType.(*ast.MapType)
+
+		hasChange := false
+		newMapType := &ast.MapType{}
+		newKey, newKeyImports := TypeForChangePackage(mapType.Key, currentImport, currentImports, changeImport, changeImports)
+		if newKey != mapType.Key {
+			hasChange = true
+		}
+		imports = append(imports, newKeyImports...)
+		newMapType.Key = newKey
+
+		newValue, newValueImports := TypeForChangePackage(mapType.Value, currentImport, currentImports, changeImport, changeImports)
+		if newValue != mapType.Value {
+			hasChange = true
+		}
+		imports = append(imports, newValueImports...)
+		newMapType.Value = newValue
+
+		if hasChange {
+			return newMapType, imports
+		}
+		return mapType, imports
+	case *ast.FuncType: // func(p ?) (r ?)
 		funcType := astType.(*ast.FuncType)
-		newFuncType := *funcType
-		if newFuncType.Params != nil {
-			var params []*ast.Field
-			for _, param := range newFuncType.Params.List {
-				newParam := *param
-				newParam.Type = TypeWithPackage(param.Type, packageName)
-				params = append(params, &newParam)
-			}
-			newFuncType.Params = &ast.FieldList{List: params}
+
+		hasChange := false
+		newFuncType := &ast.FuncType{
+			TypeParams: funcType.TypeParams,
 		}
-		if newFuncType.Results != nil {
-			var results []*ast.Field
-			for _, result := range newFuncType.Results.List {
-				newParam := *result
-				newParam.Type = TypeWithPackage(result.Type, packageName)
-				results = append(results, &newParam)
+		if funcType.Params != nil {
+			newFuncType.Params = &ast.FieldList{}
+			for _, field := range funcType.Params.List {
+				newFieldType, newFieldImports := TypeForChangePackage(field.Type, currentImport, currentImports, changeImport, changeImports)
+				if newFieldType != field.Type {
+					hasChange = true
+				}
+				newFuncType.Params.List = append(newFuncType.Params.List, &ast.Field{
+					Names: field.Names,
+					Type:  newFieldType,
+				})
+				imports = append(imports, newFieldImports...)
 			}
-			newFuncType.Results = &ast.FieldList{List: results}
+
 		}
-		return &newFuncType
+		if funcType.Results != nil {
+			newFuncType.Results = &ast.FieldList{}
+			for _, field := range funcType.Results.List {
+				newFieldType, newFieldImports := TypeForChangePackage(field.Type, currentImport, currentImports, changeImport, changeImports)
+				if newFieldType != field.Type {
+					hasChange = true
+				}
+				newFuncType.Results.List = append(newFuncType.Results.List, &ast.Field{
+					Names: field.Names,
+					Type:  newFieldType,
+				})
+				imports = append(imports, newFieldImports...)
+			}
+
+		}
+
+		if hasChange {
+			return newFuncType, imports
+		}
+		return funcType, imports
 	}
-	return astType
+	return nil, nil
 }
 
 func FieldName(field *model.Field) string {
@@ -239,28 +279,23 @@ func FindParam(funcInfo *model.Func, fieldName string) *model.Field {
 	}
 	return nil
 }
-func ToFile(field *ast.Field, definePackage string, accessPackage string) *model.Field {
+func ToFile(field *ast.Field, currentImport *model.Import, currentImports []*ast.ImportSpec, changeImport *model.Import, changeImports []*model.Import) (*model.Field, []*model.Import) {
 	var fieldName string
 	if field.Names != nil {
 		fieldName = field.Names[0].String()
 	}
-	t := AccessType(field.Type, definePackage, accessPackage)
+	//t := AccessType(field.Type, currentPackage, accessPackage, astImports)
+	t, imports := TypeForChangePackage(field.Type, currentImport, currentImports, changeImport, changeImports)
 	f := &model.Field{
-		Package: definePackage,
+		Package: currentImport.Package,
 		Name:    fieldName,
 		Type:    t,
 	}
 	f.Instance = FirstToUpper(FieldName(f))
-	return f
+	return f, imports
 }
 
 func IsBasicType(typeStr string) bool {
-	if strings.HasPrefix(typeStr, "*") {
-		return false
-	}
-	if strings.Contains(typeStr, ".") {
-		return false
-	}
 	if IsFirstUpper(typeStr) {
 		return false
 	}
@@ -299,7 +334,7 @@ func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath st
 
 		if importPath == aImportPath {
 			if relImport != relAImport {
-				return nil, fmt.Errorf(`@import "%s" aliases "%s" and "%s" conflict`, importPath, aImportName, importName)
+				return nil, fmt.Errorf(`@import "%s" aliases "%s" conflicts with "%s"`, importPath, aImportName, importName)
 			}
 			astImport = aImport
 			break
@@ -311,10 +346,13 @@ func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath st
 	}
 	if astImport == nil {
 		astImport = &ast.ImportSpec{
-			Name: &ast.Ident{Name: importName},
 			Path: &ast.BasicLit{
+				Kind:  token.STRING,
 				Value: importPathValue,
 			},
+		}
+		if importName != "" {
+			astImport.Name = &ast.Ident{Name: importName}
 		}
 
 		return append(imports, astImport), nil

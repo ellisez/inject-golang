@@ -52,7 +52,7 @@ func genSingletonImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) 
 		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
 		if webApplication == nil {
 			for _, importNode := range instance.Imports {
-				importName := importNode.Name
+				importName := importNode.Alias
 				if importName == "_" {
 					importName = ""
 				}

@@ -63,7 +63,7 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
 		if webApplication != nil {
 			for _, importInfo := range instance.Imports {
-				importName := importInfo.Name
+				importName := importInfo.Alias
 				if importName == "_" {
 					importName = ""
 				}
@@ -75,7 +75,7 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
 			for _, middleware := range webApplication.Middlewares {
 				for _, importInfo := range middleware.Imports {
-					importName := importInfo.Name
+					importName := importInfo.Alias
 					if importName == "_" {
 						importName = ""
 					}
@@ -88,7 +88,7 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 
 			for _, router := range webApplication.Routers {
 				for _, importInfo := range router.Imports {
-					importName := importInfo.Name
+					importName := importInfo.Alias
 					if importName == "_" {
 						importName = ""
 					}

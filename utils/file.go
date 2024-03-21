@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/ellisez/inject-golang/global"
+	"github.com/ellisez/inject-golang/model"
+	"go/ast"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -138,4 +140,26 @@ func GetPackageNameFromImport(importPath string) (string, bool) {
 		return preDir, true
 	}
 	return baseName, false
+}
+
+func ImportPathOf(astImport *ast.ImportSpec) string {
+	importPath := astImport.Path.Value
+	return importPath[1 : len(importPath)-1]
+}
+
+func RelPackageNameOfAst(astImport *ast.ImportSpec) string {
+	importPath := ImportPathOf(astImport)
+	if astImport.Name == nil {
+		name, _ := GetPackageNameFromImport(importPath)
+		return name
+	}
+	return astImport.Name.String()
+}
+
+func RelPackageNameOf(importNode *model.Import) string {
+	if importNode.Alias == "" {
+		name, _ := GetPackageNameFromImport(importNode.Path)
+		return name
+	}
+	return importNode.Alias
 }

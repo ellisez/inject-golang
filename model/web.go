@@ -69,8 +69,8 @@ func NewWebProvide() *Provide {
 		}}
 	provide.Imports = []*Import{
 		{
-			Name: "",
-			Path: "github.com/gofiber/fiber/v2",
+			Alias: "",
+			Path:  "github.com/gofiber/fiber/v2",
 		},
 	}
 	provide.Constructor = &ast.CallExpr{

@@ -89,7 +89,7 @@ func (s *Server) EmptyListener() {
 
 // TestServer example for inject method with uninjected recv
 // @proxy
-// @import github.com/ellisez/inject-golang/examples/internal/entity
+// @import github.com/ellisez/inject-golang/examples/internal/entity en
 // @injectParam database Database
 // @injectFunc FindAccountByName
 // !@injectCtx appCtx

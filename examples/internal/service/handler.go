@@ -9,7 +9,7 @@ import (
 // FindAccountByName
 // @proxy
 // @import github.com/ellisez/inject-golang/examples/internal/vo
-// @import github.com/ellisez/inject-golang/examples/internal/entity
+// @import github.com/ellisez/inject-golang/examples/internal/entity en
 // @injectParam database
 func FindAccountByName(database *vo.Database, name string) *entity.Account {
 	if name == "ellis" {
@@ -21,7 +21,7 @@ func FindAccountByName(database *vo.Database, name string) *entity.Account {
 // GetEllisAccount
 // @proxy
 // @import github.com/ellisez/inject-golang/examples/internal/vo
-// @import github.com/ellisez/inject-golang/examples/internal/entity
+// @import github.com/ellisez/inject-golang/examples/internal/entity en
 // @injectParam database
 func GetEllisAccount(database *vo.Database) (*entity.Account, error) {
 	return repository.EllisAccount(), nil

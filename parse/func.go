@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPath string) {
+func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, currentImport *model.Import, currentImports []*ast.ImportSpec) {
 	if funcDecl.Doc == nil {
 		return
 	}
@@ -18,7 +18,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 	// main annotations
 	var comments []*model.Comment
 	var imports []*model.Import
-	packageAlias := packageName
+
 	mode := "" // ""|@proxy|@provide|@webProvide|@middleware|@router
 	for _, comment := range funcDecl.Doc.List {
 		annotateArgs := annotateParse(comment.Text)
@@ -41,7 +41,6 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 			})
 		case "@import":
 			importInfo := &model.Import{}
-			imports = append(imports, importInfo)
 
 			if argsLen < 2 {
 				utils.Failuref("%s %s, Path must be specified", loc.String(), comment.Text)
@@ -52,12 +51,25 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				if importName == "." {
 					utils.Failuref("%s %s, Cannot support DotImport", loc.String(), comment.Text)
 				}
-				if importName != "" {
-					importInfo.Name = importName
+				if importName == "" {
+					importInfo.Package, _ = utils.GetPackageNameFromImport(importInfo.Path)
+				} else {
+					importInfo.Alias = importName
+					importInfo.Package = importName
 				}
 			}
-			if importInfo.Path == importPath && (importInfo.Name != "" && importInfo.Name != "_") {
-				packageAlias = importInfo.Name
+
+			importName, has := p.Ctx.ImportMap[importInfo.Path]
+			if !has {
+				p.Ctx.ImportMap[importInfo.Path] = importInfo.Alias
+			} else if importName != importInfo.Alias {
+				utils.Failuref(`%s %s, Alias conflicts with "%s"`, loc.String(), comment.Text, importName)
+			}
+
+			if importInfo.Path == currentImport.Path {
+				currentImport.Alias = importInfo.Alias
+			} else {
+				imports = append(imports, importInfo)
 			}
 		default:
 			comments = append(comments, &model.Comment{
@@ -70,33 +82,35 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 		return
 	}
 
-	// default import if unset
-	if packageAlias == packageName {
-		imports = append(imports, &model.Import{Path: importPath})
+	targetImport := &model.Import{
+		Package: GenPackage,
+		Path:    Mod.Package + "/" + GenPackage,
 	}
 
 	/// parsing
 	funcName := funcDecl.Name.String()
 
 	funcNode := &model.Func{
-		Package:  packageAlias,
+		Package:  currentImport.Package,
 		FuncName: funcName,
 	}
 	commonFunc := model.NewCommonFunc()
-	commonFunc.Imports = imports
+	commonFunc.Imports = append([]*model.Import{currentImport}, imports...)
 	commonFunc.Func = funcNode
 	astRecs := funcDecl.Recv
 
 	if astRecs != nil {
 		astRec := astRecs.List[0]
-		rec := utils.ToFile(astRec, packageAlias, GenPackage)
+		rec, recImports := utils.ToFile(astRec, currentImport, currentImports, targetImport, imports)
+		commonFunc.Imports = append(commonFunc.Imports, recImports...)
 		rec.Loc = p.Ctx.FileSet.Position(astRecs.Pos())
 		funcNode.Recv = rec
 	}
 
 	if funcDecl.Type.Params != nil {
 		for _, astParam := range funcDecl.Type.Params.List {
-			param := utils.ToFile(astParam, funcNode.Package, GenPackage)
+			param, paramImports := utils.ToFile(astParam, currentImport, currentImports, targetImport, imports)
+			commonFunc.Imports = append(commonFunc.Imports, paramImports...)
 			param.Loc = p.Ctx.FileSet.Position(astParam.Pos())
 			funcNode.Params = append(funcNode.Params, param)
 		}
@@ -106,7 +120,8 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 
 	if funcDecl.Type.Results != nil {
 		for _, asrResult := range funcDecl.Type.Results.List {
-			result := utils.ToFile(asrResult, packageAlias, GenPackage)
+			result, resultImports := utils.ToFile(asrResult, currentImport, currentImports, targetImport, imports)
+			commonFunc.Imports = append(commonFunc.Imports, resultImports...)
 			result.Loc = p.Ctx.FileSet.Position(asrResult.Pos())
 			funcNode.Results = append(funcNode.Results, result)
 		}
@@ -236,7 +251,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, packageName string, importPat
 				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 			}
 
-			p.Ctx.InjectCtxMap[importPath] = append(p.Ctx.InjectCtxMap[importPath], param)
+			p.Ctx.InjectCtxMap[currentImport.Path] = append(p.Ctx.InjectCtxMap[currentImport.Path], param)
 			param.Comment = comment.Text
 			param.Source = "ctx"
 		default:
