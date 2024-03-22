@@ -306,15 +306,9 @@ func IsBasicAstType(typeExpr ast.Expr) bool {
 }
 
 func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath string) ([]*ast.ImportSpec, error) {
-	relImport := importName
-	if relImport == "" || relImport == "_" {
-		relImport, _ = GetPackageNameFromImport(importPath)
-	}
-	importPathValue := fmt.Sprintf(`"%s"`, importPath)
 	var astImport *ast.ImportSpec
 	for _, aImport := range imports {
-		aImportPath := aImport.Path.Value
-		aImportPath = aImportPath[1 : len(aImportPath)-1]
+		aImportPath := StringLit(aImport.Path)
 		aImportName := ""
 		if aImport.Name != nil {
 			aImportName = aImport.Name.String()
@@ -325,22 +319,15 @@ func AddUniqueImport(imports []*ast.ImportSpec, importName string, importPath st
 		}
 
 		if importPath == aImportPath {
-			if relImport != relAImport {
-				return nil, fmt.Errorf(`@import "%s" aliases "%s" conflicts with "%s"`, importPath, aImportName, importName)
-			}
 			astImport = aImport
 			break
-		} else {
-			if relImport == relAImport {
-				return nil, fmt.Errorf(`@import %s "%s" conflicts with @import %s "%s", try to change alias`, importPath, importName, aImportPath, importName)
-			}
 		}
 	}
 	if astImport == nil {
 		astImport = &ast.ImportSpec{
 			Path: &ast.BasicLit{
 				Kind:  token.STRING,
-				Value: importPathValue,
+				Value: fmt.Sprintf(`"%s"`, importPath),
 			},
 		}
 		if importName != "" {

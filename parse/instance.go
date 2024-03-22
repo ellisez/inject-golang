@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -90,7 +91,7 @@ func addInstance(ctx *model.Ctx, provide *model.Provide) {
 			if !instance.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, ImportAliasMap[provide.Package].Path, provide.FuncName)
 			ctx.SingletonInstance.Replace(provide)
 		} else {
 			ctx.SingletonInstance.Add(provide)
@@ -101,7 +102,7 @@ func addInstance(ctx *model.Ctx, provide *model.Provide) {
 			if !instance.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, ImportAliasMap[provide.Package].Path, provide.FuncName)
 			ctx.MultipleInstance.Replace(provide)
 			return
 		} else {

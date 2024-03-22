@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -39,7 +40,7 @@ func addProxy(ctx *model.Ctx, proxy *model.Proxy) {
 		if !instance.Override {
 			utils.Failuref(`%s %s, Proxy "%s" Duplicate declaration`, proxy.Loc.String(), proxy.Comment, proxy.Instance)
 		}
-		fmt.Printf(`Proxy "%s" is Overrided by %s.%s`+"\n", proxy.Instance, proxy.Package, proxy.FuncName)
+		fmt.Printf(`Proxy "%s" is Overrided by %s.%s`+"\n", proxy.Instance, ImportAliasMap[proxy.Package].Path, proxy.FuncName)
 		ctx.FuncInstance.Replace(proxy)
 	} else {
 		ctx.FuncInstance.Add(proxy)

@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -69,7 +70,7 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 			if !old.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, router.Loc.String(), router.Comment, router.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", router.Instance, router.Package, router.FuncName)
+			fmt.Printf(`Router "%s" is Overrided by %s.%s`+"\n", router.Instance, ImportAliasMap[router.Package].Path, router.FuncName)
 		}
 		webApplication.Routers[router.Instance] = router
 	} else {

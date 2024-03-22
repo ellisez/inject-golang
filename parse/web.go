@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -87,7 +88,7 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 			if !instance.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, provide.Loc.String(), provide.Comment, provide.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", provide.Instance, provide.Package, provide.FuncName)
+			fmt.Printf(`Web "%s" is Overrided by %s.%s`+"\n", provide.Instance, ImportAliasMap[provide.Package].Path, provide.FuncName)
 		}
 		instance.Comment = provide.Comment
 		instance.Imports = append(instance.Imports, provide.Imports...)

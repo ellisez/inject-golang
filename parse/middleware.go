@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
@@ -56,7 +57,7 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 			if !old.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, middleware.Loc.String(), middleware.Comment, middleware.Instance)
 			}
-			fmt.Printf(`Instance "%s" is Overrided by %s.%s`+"\n", middleware.Instance, middleware.Package, middleware.FuncName)
+			fmt.Printf(`Middleware "%s" is Overrided by %s.%s`+"\n", middleware.Instance, ImportAliasMap[middleware.Package].Path, middleware.FuncName)
 		}
 		webApplication.Middlewares[middleware.Instance] = middleware
 	} else {
