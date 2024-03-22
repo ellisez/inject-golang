@@ -39,4 +39,8 @@ var (
 	CacheModMap = make(map[string]*model.Module)
 
 	Mod *model.Module
+
+	CtxFieldMap    = map[string][]*model.Field{}
+	ImportAliasMap = map[string]*model.Import{}
+	ImportPathMap  = map[string]*model.Import{}
 )

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	. "github.com/ellisez/inject-golang/global"
 	"github.com/ellisez/inject-golang/model"
 	"go/ast"
 	"go/token"
@@ -117,33 +118,24 @@ func TypeForChangePackage(astType ast.Expr, currentImport *model.Import, current
 			var matchImport *model.Import
 			var matchRelName string
 			for _, astImport := range currentImports {
-				name := ""
-				if astImport.Name != nil {
-					name = astImport.Name.String()
-				}
 				matchRelName = RelPackageNameOfAst(astImport)
 				if matchRelName == ident.String() {
-					matchImport = &model.Import{
-						Alias:   name,
-						Package: matchRelName,
-						Path:    ImportPathOf(astImport),
-					}
+					matchImport = UseImport(ImportPathOf(astImport))
 					break
 				}
 			}
 			if matchImport == nil {
 				Failuref(`%s, Missing package "%s"`, currentImport.Path, ident.String())
 			}
+			if matchRelName != matchImport.Package {
+				selectorExpr = &ast.SelectorExpr{
+					X:   ast.NewIdent(matchImport.Package),
+					Sel: selectorExpr.Sel,
+				}
+			}
 			for _, importNode := range changeImports {
 				if importNode.Path == matchImport.Path {
-					if importNode.Alias != matchImport.Alias {
-						return &ast.SelectorExpr{
-							X:   ast.NewIdent(importNode.Alias),
-							Sel: selectorExpr.Sel,
-						}, imports
-					} else {
-						return selectorExpr, imports
-					}
+					return selectorExpr, imports
 				}
 			}
 			imports = append(imports, matchImport)
@@ -364,4 +356,42 @@ func StringLit(lit *ast.BasicLit) string {
 	return strings.TrimFunc(lit.Value, func(r rune) bool {
 		return r == '"' || r == '`'
 	})
+}
+
+func HasImport(imports []*model.Import, importPath string) bool {
+	for _, m := range imports {
+		if m.Path == importPath {
+			return true
+		}
+	}
+	return false
+}
+
+func UseImport(importPath string) *model.Import {
+	hasImport, has := ImportPathMap[importPath]
+	if has {
+		return hasImport
+	}
+	defaultPackage, _ := GetPackageNameFromImport(importPath)
+	pkgName := defaultPackage
+	count := 0
+	for {
+		hasImport, has = ImportAliasMap[pkgName]
+		if !has {
+			break
+		}
+		count += 1
+		pkgName = fmt.Sprintf("%s%d", defaultPackage, count)
+	}
+
+	importNode := &model.Import{
+		Package: pkgName,
+		Path:    importPath,
+	}
+	if count != 0 {
+		importNode.Alias = pkgName
+	}
+	ImportPathMap[importPath] = importNode
+	ImportAliasMap[pkgName] = importNode
+	return importNode
 }

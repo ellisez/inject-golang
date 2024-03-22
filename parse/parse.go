@@ -197,10 +197,7 @@ func (p *Parser) DoParse(filename string) error {
 			switch decl.(type) {
 			case *ast.FuncDecl:
 				funcDecl := decl.(*ast.FuncDecl)
-				p.FuncParse(funcDecl, &model.Import{
-					Package: packageName,
-					Path:    importPath,
-				}, astFile.Imports)
+				p.FuncParse(funcDecl, utils.UseImport(importPath), astFile.Imports)
 
 			}
 		}

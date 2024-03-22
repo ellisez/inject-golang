@@ -6,11 +6,9 @@ import (
 )
 
 type Extra struct {
-	Doc          []*ast.Comment
-	Imports      []*ast.ImportSpec
-	Methods      map[string]*ast.FuncDecl
-	InjectCtxMap map[string][]*Field
-	ImportMap    map[string]string
+	Doc     []*ast.Comment
+	Imports []*ast.ImportSpec
+	Methods map[string]*ast.FuncDecl
 }
 
 type Key struct {
@@ -38,9 +36,7 @@ func NewCtx() *Ctx {
 		MultipleInstance:  newCtxMultipleInstance(),
 		FuncInstance:      newCtxFuncInstance(),
 		Extra: &Extra{
-			Methods:      map[string]*ast.FuncDecl{},
-			InjectCtxMap: map[string][]*Field{},
-			ImportMap:    map[string]string{},
+			Methods: map[string]*ast.FuncDecl{},
 		},
 	}
 }

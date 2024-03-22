@@ -152,7 +152,7 @@ func unusedImports(astFile *ast.File) {
 
 func circularDependency(astFile *ast.File, ctx *model.Ctx) {
 	for _, spec := range astFile.Imports {
-		for key, ctxFields := range ctx.InjectCtxMap {
+		for key, ctxFields := range CtxFieldMap {
 			if StringLit(spec.Path) == key {
 				var fails []string
 				for _, ctxField := range ctxFields {

@@ -40,36 +40,14 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, currentImport *model.Import, 
 				Args: annotateArgs,
 			})
 		case "@import":
-			importInfo := &model.Import{}
-
 			if argsLen < 2 {
 				utils.Failuref("%s %s, Path must be specified", loc.String(), comment.Text)
 			}
-			importInfo.Path = annotateArgs[1]
-			if argsLen >= 3 {
-				importName := annotateArgs[2]
-				if importName == "." {
-					utils.Failuref("%s %s, Cannot support DotImport", loc.String(), comment.Text)
-				}
-				if importName == "" {
-					importInfo.Package, _ = utils.GetPackageNameFromImport(importInfo.Path)
-				} else {
-					importInfo.Alias = importName
-					importInfo.Package = importName
-				}
-			}
+			importPath := annotateArgs[1]
 
-			importName, has := p.Ctx.ImportMap[importInfo.Path]
-			if !has {
-				p.Ctx.ImportMap[importInfo.Path] = importInfo.Alias
-			} else if importName != importInfo.Alias {
-				utils.Failuref(`%s %s, Alias conflicts with "%s"`, loc.String(), comment.Text, importName)
-			}
-
-			if importInfo.Path == currentImport.Path {
-				currentImport.Alias = importInfo.Alias
-			} else {
-				imports = append(imports, importInfo)
+			if !utils.HasImport(imports, importPath) {
+				importNode := utils.UseImport(importPath)
+				imports = append(imports, importNode)
 			}
 		default:
 			comments = append(comments, &model.Comment{
@@ -251,7 +229,7 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, currentImport *model.Import, 
 				utils.Failuref("%s %s, ParamName not found", commonFunc.Loc.String(), comment.Text)
 			}
 
-			p.Ctx.InjectCtxMap[currentImport.Path] = append(p.Ctx.InjectCtxMap[currentImport.Path], param)
+			CtxFieldMap[currentImport.Path] = append(CtxFieldMap[currentImport.Path], param)
 			param.Comment = comment.Text
 			param.Source = "ctx"
 		default:

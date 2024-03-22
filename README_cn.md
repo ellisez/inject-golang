@@ -68,7 +68,7 @@ inject-glang --clean
 ```
 // @proxy <代理方法名，默认同方法名>
 // @override
-// @import *<模块加载路径，必填> <模块名>
+// @import *<模块加载路径，必填>
 // @injectParam *<参数名，必填> <实例名，默认同参数名> <运算, 默认""|&|*|cast>
 // @injectRecv *<参数名，必填> <实例名，默认同参数名>
 // @injectCtx *<参数名, 必填>
@@ -101,7 +101,7 @@ inject-glang --clean
 // @provide <实例名，默认同返回类型> <singleton默认|multiple|argument> <实例type, 默认同返回类型>
 // @override
 // @order <创建顺序，数字或字符串>
-// @import *<模块加载路径，必填> <模块名>
+// @import *<模块加载路径，必填>
 // @injectParam *<参数名，必填> <实例名，默认同参数名> <指针运算, 默认""|&|*>
 // @injectCtx *<参数名, 必填>
 // @injectFunc *<参数名, 必填> <实例名，默认同参数名>
