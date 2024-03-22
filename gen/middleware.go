@@ -45,7 +45,7 @@ func genMiddlewareAst(ctx *model.Ctx, astFile *ast.File) {
 					astField("err", ast.NewIdent("error")),
 				}}
 				funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
-					Text: fmt.Sprintf("// Generate by annotations from %s.%s", instance.Package, instance.FuncName),
+					Text: fmt.Sprintf("// Generate by annotations from %s.%s", ImportAliasMap[instance.Package].Path, instance.FuncName),
 				}}}
 				addDecl(astFile, funcDecl)
 				ctx.Methods[funcDecl.Name.String()] = funcDecl

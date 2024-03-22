@@ -120,7 +120,7 @@ func genSingletonGetterAndSetterAst(ctx *model.Ctx, astFile *ast.File) {
 		if instanceFunc.Package == "" {
 			doc = "// Generate by system"
 		} else {
-			doc = fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName)
+			doc = fmt.Sprintf("// Generate by annotations from %s.%s", ImportAliasMap[instanceFunc.Package].Path, instanceFunc.FuncName)
 		}
 
 		getterDecl := astCtxGetter(
@@ -298,7 +298,7 @@ func genSingletonNewAst(ctx *model.Ctx, astFile *ast.File) {
 				List: stmts,
 			}
 			funcDecl.Doc = &ast.CommentGroup{List: []*ast.Comment{{
-				Text: fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName),
+				Text: fmt.Sprintf("// Generate by annotations from %s.%s", ImportAliasMap[instanceFunc.Package].Path, instanceFunc.FuncName),
 			}}}
 			addDecl(astFile, funcDecl)
 			ctx.Methods[funcDecl.Name.String()] = funcDecl

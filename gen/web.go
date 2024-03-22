@@ -268,7 +268,7 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 
 			doc := "// Generate by system"
 			if instanceFunc.FuncName != "" {
-				doc = fmt.Sprintf("// Generate by annotations from %s.%s", instanceFunc.Package, instanceFunc.FuncName)
+				doc = fmt.Sprintf("// Generate by annotations from %s.%s", ImportAliasMap[instanceFunc.Package].Path, instanceFunc.FuncName)
 			}
 
 			proxyFuncDecl := astFuncDecl(
