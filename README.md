@@ -55,10 +55,10 @@ go generate -run inject-golang
 inject-glang --clean
 ```
 
-## 2. Annotate
+## 2. Annotation
 
 ### 2.1. Disable Annotations
-Use `//@` Adding an exclamation mark at the beginning, which means adding an exclamation mark before the annotation, will not be recognized or parsed by the system.
+Use `// @` Adding an exclamation mark at the beginning, which means adding an exclamation mark before the annotation, will not be recognized or parsed by the system.
 ```go
 // !@proxy
 ```
@@ -73,7 +73,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 // @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
 // @injectRecv *<ParamName, required> <Instance，default paramName>
 // @injectCtx *<ParamName, required>
-// @injectFunc *<ParamName, required> <Instance，default paramName> <operator, ""|call>
+// @injectFunc *<ParamName, required> <Instance，default paramName>
+// @injectCall [*<ParamName, required>, ...] <Instance, required>
 ```
 
 > `@proxy ` causes the system to generate a proxy function with the same name as the original function by default.
@@ -88,6 +89,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 > `@injectCtx` is used to inject the container object itself;
 >
 > `@injectFunc` is used to inject parameters of function types;
+> 
+> `@injectCall` is used to inject the result of a function call;
 > 
 > `@injectParam` supports type conversion, where `&` represents the address of the value, `*` represents the value corresponding to the address, `cast` represents strong type conversion, and the default value is `""` indicating no conversion.
 
@@ -104,7 +107,8 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 // @import *<Path, required> <Alias>
 // @injectParam *<ParamName, required> <Instance，default paramName> <operator, ""|&|*|cast>
 // @injectCtx *<ParamName, required>
-// @injectFunc *<ParamName, required> <Instance，default paramName> <operator, ""|call>
+// @injectFunc *<ParamName, required> <Instance，default paramName>
+// @injectCall [*<ParamName, required>, ...] <Instance, required>
 // @handler *<called after creation, required>
 ```
 
@@ -128,7 +132,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 >
 
 
-### 2.4. WebApp Annotates (web server provided)
+### 2.4. WebApp Annotations (provide the web server)
 ```
 // @webProvide <instance，default WebApp>
 // @static *<Path, required> *<Dirname, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
@@ -145,7 +149,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 > `@static` is used to configure static resource files, such as PNG, CSS, JS, HTML, etc
 
 
-### 2.5. Router Annotates (like swag)
+### 2.5. Router Annotations (refer to swag annotation)
 ```
 // @route *<Path, required> [Method: get|post]
 // @webApp <WebApp，default WebApp>
@@ -184,7 +188,7 @@ Use `//@` Adding an exclamation mark at the beginning, which means adding an exc
 >
 > <b>Note: `@middleware` requires that each parameter must be configured with dependency injection</b>
 
-## 3. Generated code
+## 3. Generated the code
 
 ### 3.1. Create an instance
 Annotations on Construct Functions
@@ -382,28 +386,89 @@ func main() {
 > For more tips on using webCtx, you can read ` * fiber Ctx ` related documents.
 >
 
-### 3.4. Directory structure
-```
-/----
-    /ctx                    Generate code, please do not modify it
-        |- gen_ctx.go       ctx interface
-    /model                  Defining Structures
-    /provide                Instance annotations
-    /middleware             Web middleware annotations
-    /router                 Web router annotations
-    /controller             Processing functions for web requests
-    /service                Processing functions for services and transactions
-    /handler                Unclassified processing function
-    |- main.go              Startup function
+## 4. Directory structure
+inject-golang simplifies the DDD (Domain Model Driven) directory structure using ctx.
+
+```yaml
+/main_domain                #Main domain
+# Golang Standard Package
+  /pkg                      #Binary packages, .a/.so/.dll
+  /bin                      #Runable commands, .bat/.sh/.exe
+  /vendor                   #External dependency packages, automatically generated, should not be included in the source code.
+  /third_party              #Modifications to third-party packages
+# DDD Layering
+  # User Interfaces Layer
+  /ctx                      #Code generation, providing external interface access
+  /interfaces               #Provide external data structures
+  # Application Layer
+  /application              #Application layer, external interface actual entry point, only combines existing services without specific implementation.
+    /startup                #Externally accessible startup items
+    /controller             #Externally accessible request items
+    /service                #Externally accessible service items
+    ...
+  # Current domain model
+  /internal                 
+    /entity                 #Entity data structure
+    /vo                     #Composite data structure
+    /service                #Business Service Function
+    /repository             #Data access function
+  /component                #Infrastructure layer, cache/file/network, etc
+# Runtime Environment
+  /conf                     #Config file
+  /web                      #Web server
+    /handler                #Manual routing processing function, not recommended
+    /router                 #Manual routing configuration, not recommended
+    /middleware             #Middleware functions, interceptors/filters, etc
+  /startup                  #Arrange startup items
+    /config                 #Configure startup items
+    /db                     #Database startup items
+    /web                    #Web server startup items
+    ...
+  /rpc                      #rpc Server
+  /utils                    #Utilities
+  /mian.go                  #Program Entry Function
+/sub_domain                 #Subdomain, consistent with the directory structure of the main domain
 ```
 
-> The `global` directory is not recommended, and ctx should be used to access global variables to avoid code bloating.
+> There are two ways to provide access to the outside world: service mode and class library mode
+> * The service method, like microservices, requires starting and installing routing, and then calling the service by initiating a request;
+> * The class library method is introduced as source code and called;
 >
-> It is not recommended to write a large amount of startup sequence code for `main.go`. Instead, it should be completed elegantly through the `@order` sequence of the instance
+> Generally, only one of the two is selected and will not appear simultaneously.
 
-## 4.Usage specifications
+> `/sub_domain` multi domain model is implemented through`go.work`,  and each subdomain has a directory structure similar to that of `/mian_domain`.
+>
+> If the subdomain is loaded as a class library, then packages related to the runtime environment are not necessary.
 
-### 4.1 Package Name Specification
+> If strict DDD layering is followed, the parts of the `Runtime Environment` package that provide calls such as `/handler`,`/router`, and `/middleware` should belong to the `Infrastructure Layer`,
+> The packages used to build the runtime environment, such as `/startup`, should belong to the `User Interfaces Layer`.
+> But because the `Runtime Environment` does not have reusability and there is no need to increase directory hierarchy, it is placed at the root directory of the domain.
+
+> The class library approach should only `import` these three packages `/interfaces`, `/application`, and `/ctx`, while the rest of the packages should be considered as internal implementation details and should not be provided externally.
+
+> Although the system will automatically generate external access, it is inevitable to provide annotations and data structures to inform the system of the rules for generating code.
+> The data structure in the interface should be provided in `/interfaces`, and annotations should be provided in `/application`.
+>
+> According to the idea of DDD, `/application` should be as thin as possible, so it is only responsible for organizing calls to various business implementations, rather than directly implementing business code.
+
+> The `go:generate inject golang` command can specify multiple directories, but the final generated code will only be in the `/ctx ` of the current directory.
+> The purpose of doing this is to facilitate the integration of sub package annotations, and annotations can also be overwritten by `@override`.
+
+> So under the subdomain model library approach, there are two implementation methods: one is the `single directory mode`, where each subdomain generates its own `/ctx` package; Another approach is the `multi directory mode`, where all subdomains are aggregated into the parent domain to generate a `/ctx` package.
+>
+> Because the annotated code will be accessed by the generated '/ctx', in order to better isolate internal implementation from external access, the following regulations are made:
+> * In the `single directory mode`, annotations can be directly marked on the specific implementation function, and external access will only be to the public interface of the `/ctx` package, while internal implementation will not access it;
+> * In the `multi directory mode`, annotations must be placed in the `/application` package and transferred to the specific implementation code of other packages. Annotations cannot be added to the implementation code;
+
+> Reusability of DDD layering:
+> 1. Reducing the cost of changing the operating environment: As `/application` only involves assembly and transfer without specific implementation, it is independent of the operating environment. 
+> When adding or changing the operating environment, only the format of the `/application` call parameters needs to be met, and the original code can still be reused.
+> <br/>For example, '/application' defines the 'login()' login function, which requires parameter usernames and passwords. Although it is a web environment, an rpc service, or other service, parsing parameter usernames and passwords may vary, but after parsing, 'login()' will be called.
+> 2. `Domain layer` reuse: Since the domain layer can independently complete business functions, it can be copied or referenced to other projects in order to combine more complex business functions
+
+## 5.Usage specifications
+
+### 5.1 Package Name Specification
 
 > To improve the readability of the code, please remember to keep the package name the same as the directory name except for special types of packages, such as version packages and application packages.
 
@@ -416,7 +481,7 @@ The following is the naming convention for special type packages:
 <br/>Golang stipulates that main cannot be imported, so even if global variables are defined in the main package, it cannot be accessed by other packages;
 <br/>Although the application package cannot be imported, the system still read the annotations inside the package;
 
-### 4.2 Circular dependency problem
+### 5.2 Circular dependency problem
 
 Golang prohibits two packages from importing each other. 
 
@@ -437,7 +502,7 @@ The specific actions are as follows:
 >
 > Value injection includes `@injectParam` and `@injectRecv`, while function injection includes `@injectFunc`.
 
-### 4.3. Clear Annotate Override
+### 5.3. Clear Annotate Override
 In the cross module engineering of `go.work`, many times the instances and proxy functions generated by annotations defined by submodules are not compatible with the main module. 
 
 The traditional approach can only be to create new instances and proxy functions, or to expand the code of submodules.
