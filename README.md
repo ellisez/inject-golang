@@ -151,7 +151,7 @@ Use `// @` Adding an exclamation mark at the beginning, which means adding an ex
 
 ### 2.5. Router Annotations (refer to swag annotation)
 ```
-// @route *<Path, required> [Method: get|post]
+// @route *<Path, required> [Method: get|head|post|put|patch|delete|connect|options|trace]
 // @webApp <WebApp，default WebApp>
 // @injectCtx *<ParamName, required>
 // @produce <Response Format: json | x-www-form-urlencoded | xml | plain | html | mpfd | json-api | json-stream | octet-stream | png | jpeg | gif>

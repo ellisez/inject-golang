@@ -28,7 +28,7 @@ func NewMiddleware() *Middleware {
 
 type Router struct {
 	*Middleware
-	Methods []string // 请求方式get|post|put|patch
+	Methods []string // 请求方式get|head|post|put|patch|delete|connect|options|trace
 }
 
 func NewRouter() *Router {

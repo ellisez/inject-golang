@@ -145,7 +145,7 @@ inject-glang --clean
 
 ### 2.5. 路由方法上的注解（参照swag注解）：
 ```
-// @router *<Path必填> [Method: get|post]
+// @router *<Path必填> [Method: get|head|post|put|patch|delete|connect|options|trace]
 // @webApp <WebApp，默认名为WebApp>
 // @injectWebCtx *<参数名, 必填>
 // @produce <返回格式: json | x-www-form-urlencoded | xml | plain | html | mpfd | json-api | json-stream | octet-stream | png | jpeg | gif>
