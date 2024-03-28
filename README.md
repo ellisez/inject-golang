@@ -158,7 +158,7 @@ Use `// @` Adding an exclamation mark at the beginning, which means adding an ex
 // @param *<ParamName, required> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
 ```
 
-> `@router` will cause the system to generate a proxy function with the same name as the function to complete parameter parsing and injection, which can also be changed through `@proxy`;
+> `@router` will cause the system to generate a proxy function with the same name as the function to complete parameter parsing and injection;
 >
 > `@webApp` is used to associate webApp instances. WebApp instance is provided by `@webProvide` and the default instance name is "WebApp";
 >
@@ -184,7 +184,7 @@ Use `// @` Adding an exclamation mark at the beginning, which means adding an ex
 // @param *<ParamName, required> <type:query|path|header|body|formData> <DataType> <IsRequired> <Description>
 ```
 
-> `@middleware` will cause the system to generate a proxy function with the same name as the function to complete parameter parsing and injection, which can also be changed through `@proxy`;
+> `@middleware` will cause the system to generate a proxy function with the same name as the function to complete parameter parsing and injection;
 >
 > <b>Note: `@middleware` requires that each parameter must be configured with dependency injection</b>
 

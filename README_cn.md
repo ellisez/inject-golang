@@ -152,7 +152,7 @@ inject-glang --clean
 // @param *<参数名，必填> *<取值类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-> `@router`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入, 也可以通过`@proxy`更改.
+> `@router`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入.
 > 
 > `@webApp`用于关联webApp实例, webApp由`@webProvide`提供, 默认实例名为"WebApp".
 > 
@@ -177,7 +177,7 @@ inject-glang --clean
 // @param *<参数名，必填> *<参数类型，必填:query|path|header|body|formData> <接收类型> <必填与否> <参数说明>
 ```
 
-> `@middleware`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入, 也可以通过`@proxy`更改.
+> `@middleware`会让系统生成一个与函数同名的代理函数, 以完成参数的解析和注入.
 >
 > <b>注意: `@middleware`要求每个参数必须都被配置依赖注入</b>
 
