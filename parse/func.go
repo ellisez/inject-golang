@@ -232,6 +232,15 @@ func (p *Parser) FuncParse(funcDecl *ast.FuncDecl, currentImport *model.Import, 
 			CtxFieldMap[currentImport.Path] = append(CtxFieldMap[currentImport.Path], param)
 			param.Comment = comment.Text
 			param.Source = "ctx"
+		case "@order":
+			if argsLen >= 2 {
+				order := annotateArgs[1]
+				if order != "" && order != "_" {
+					commonFunc.Order = strings.TrimFunc(order, func(r rune) bool {
+						return r == '"' || r == '`'
+					})
+				}
+			}
 		default:
 			remainComments = append(remainComments, comment)
 		}

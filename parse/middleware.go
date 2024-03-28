@@ -52,22 +52,22 @@ func (p *Parser) MiddlewareParse(funcDecl *ast.FuncDecl, commonFunc *model.Commo
 		if webApplication == nil {
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), middleware.Comment, instance.Comment)
 		}
-		old, ok := webApplication.Middlewares[middleware.Instance]
-		if ok {
+		old := webApplication.GetMiddleware(middleware.Instance)
+		if old != nil {
 			if !old.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, middleware.Loc.String(), middleware.Comment, middleware.Instance)
 			}
 			fmt.Printf(`Middleware "%s" is Overrided by %s.%s`+"\n", middleware.Instance, ImportAliasMap[middleware.Package].Path, middleware.FuncName)
+			webApplication.ReplaceMiddleware(middleware)
+		} else {
+			webApplication.AddMiddleware(middleware)
 		}
-		webApplication.Middlewares[middleware.Instance] = middleware
 	} else {
 		newProvide := model.NewWebProvide()
 		newProvide.Instance = middleware.WebApp
 
 		newWebApplication := model.NewWebApplication()
-		newWebApplication.Middlewares = map[string]*model.Middleware{
-			middleware.Path: middleware,
-		}
+		newWebApplication.AddMiddleware(middleware)
 
 		p.Ctx.SingletonInstance.AddWeb(newProvide, newWebApplication)
 	}

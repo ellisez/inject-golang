@@ -7,6 +7,7 @@ import (
 
 // LoginController
 // @router /api/login [post]
+// @order "2st login router"
 // @import github.com/ellisez/inject-golang/examples/model
 // @param username query string true 用户名
 // @param password query string true 密码

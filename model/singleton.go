@@ -52,9 +52,6 @@ func (s *SingletonInstance) AddWeb(provide *Provide, webApplication *WebApplicat
 
 }
 func (s *SingletonInstance) Delete(key string) {
-	if !s.Contains(key) {
-		return
-	}
 	var hitKey *Key
 	for i, k := range s.keys {
 		if k.Instance == key {
@@ -63,16 +60,17 @@ func (s *SingletonInstance) Delete(key string) {
 			break
 		}
 	}
-	switch hitKey.Type {
-	case "singleton":
-		delete(s.provideMap, key)
-	case "argument":
-		delete(s.argumentMap, key)
-	case "web":
-		delete(s.webMap, key)
-		delete(s.webApplicationMap, key)
+	if hitKey != nil {
+		switch hitKey.Type {
+		case "singleton":
+			delete(s.provideMap, key)
+		case "argument":
+			delete(s.argumentMap, key)
+		case "web":
+			delete(s.webMap, key)
+			delete(s.webApplicationMap, key)
+		}
 	}
-
 }
 
 func (s *SingletonInstance) Contains(key string) bool {
@@ -203,6 +201,9 @@ func (s *SingletonInstance) Less(x int, y int) bool {
 	orderB := b.Order
 	if orderA != "" && orderB == "" {
 		return true
+	}
+	if orderA == "" && orderB != "" {
+		return false
 	}
 	return orderA < orderB
 }

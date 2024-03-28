@@ -65,22 +65,22 @@ func (p *Parser) RouterParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFun
 		if webApplication == nil {
 			utils.Failuref(`%s %s, Conflict with "%s"`, commonFunc.Loc.String(), router.Comment, instance.Comment)
 		}
-		old, ok := webApplication.Routers[router.Instance]
-		if ok {
+		old := webApplication.GetRouter(router.Instance)
+		if old != nil {
 			if !old.Override {
 				utils.Failuref(`%s %s, Instance "%s" Duplicate declaration`, router.Loc.String(), router.Comment, router.Instance)
 			}
 			fmt.Printf(`Router "%s" is Overrided by %s.%s`+"\n", router.Instance, ImportAliasMap[router.Package].Path, router.FuncName)
+			webApplication.ReplaceRouter(router)
+		} else {
+			webApplication.AddRouter(router)
 		}
-		webApplication.Routers[router.Instance] = router
 	} else {
 		newProvide := model.NewWebProvide()
 		newProvide.Instance = router.WebApp
 
 		newWebApplication := model.NewWebApplication()
-		newWebApplication.Routers = map[string]*model.Router{
-			router.Path: router,
-		}
+		newWebApplication.AddRouter(router)
 
 		p.Ctx.SingletonInstance.AddWeb(newProvide, newWebApplication)
 	}

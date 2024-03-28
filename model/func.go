@@ -86,13 +86,22 @@ func (f *FuncInstance) Get(key string) *Proxy {
 
 func (f *FuncInstance) Replace(data *Proxy) bool {
 	key := data.Instance
-	if !f.Contains(key) {
-		f.Add(data)
+	k := f.KeyOf(key)
+	if k == nil {
 		return false
 	}
+	switch k.Type {
+	case "func":
+		delete(f.funcMap, key)
+	case "method":
+		delete(f.methodMap, key)
+	}
+	k.Order = data.Order
 	if data.Recv == nil {
+		k.Type = "func"
 		f.funcMap[key] = data
 	} else {
+		k.Type = "method"
 		f.methodMap[key] = data
 	}
 	return true
@@ -100,6 +109,14 @@ func (f *FuncInstance) Replace(data *Proxy) bool {
 func (f *FuncInstance) IndexOf(index int) *Proxy {
 	key := f.keys[index]
 	return f.Get(key.Instance)
+}
+func (f *FuncInstance) KeyOf(key string) *Key {
+	for _, k := range f.keys {
+		if k.Instance == key {
+			return k
+		}
+	}
+	return nil
 }
 
 func (f *FuncInstance) FuncLen() int {
@@ -127,6 +144,9 @@ func (f *FuncInstance) Less(x int, y int) bool {
 	orderB := b.Order
 	if orderA != "" && orderB == "" {
 		return true
+	}
+	if orderA == "" && orderB != "" {
+		return false
 	}
 	return orderA < orderB
 }

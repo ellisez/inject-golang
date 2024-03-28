@@ -10,6 +10,7 @@ import (
 
 // CorsMiddleware
 // @middleware /api
+// @order "1st cors"
 // @import github.com/ellisez/inject-golang/examples/internal/vo
 // @injectWebCtx c
 // @injectCtx appCtx

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 )
 
@@ -62,6 +63,8 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
 		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
 		if webApplication != nil {
+			sort.Sort(webApplication)
+
 			for _, importInfo := range instance.Imports {
 				importName := importInfo.Alias
 				if importName == "_" {
@@ -73,21 +76,16 @@ func genWebImportsAst(ctx *model.Ctx, astFile *ast.File, filename string) {
 				}
 			}
 
-			for _, middleware := range webApplication.Middlewares {
-				for _, importInfo := range middleware.Imports {
-					importName := importInfo.Alias
-					if importName == "_" {
-						importName = ""
-					}
-					err := addImport(astFile, ctx, importName, importInfo.Path)
-					if err != nil {
-						utils.Failuref("%s, %s", filename, err.Error())
-					}
+			for j := 0; j < webApplication.Len(); j++ {
+				key := webApplication.IndexOf(j)
+				var imports []*model.Import
+				switch key.Type {
+				case "middleware":
+					imports = webApplication.GetMiddleware(key.Instance).Imports
+				case "router":
+					imports = webApplication.GetRouter(key.Instance).Imports
 				}
-			}
-
-			for _, router := range webApplication.Routers {
-				for _, importInfo := range router.Imports {
+				for _, importInfo := range imports {
 					importName := importInfo.Alias
 					if importName == "_" {
 						importName = ""
@@ -122,6 +120,88 @@ func errorReturnStmts() *ast.IfStmt {
 func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 	ctxVar := utils.FirstToLower(CtxType)
 
+	stmtOfMiddleware := func(middleware *model.Middleware, webExpr ast.Expr, stmts []ast.Stmt) []ast.Stmt {
+		// [code] ctx.{{instance}}.Group({{Path}}, {{Proxy}})
+		stmts = append(stmts, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: astSelectorExprRecur(
+					webExpr,
+					"Group",
+				),
+				Args: []ast.Expr{
+					astStringExpr(middleware.Path),
+					astSelectorExpr(ctxVar, middleware.FuncName),
+				},
+			},
+		})
+		return stmts
+	}
+
+	stmtOfRouter := func(router *model.Router, webExpr ast.Expr, stmts []ast.Stmt) []ast.Stmt {
+		for _, method := range router.Methods {
+			// [code] ctx.{{instance}}.{{Method}}({{Path}}, {{Proxy}})
+			stmts = append(stmts, &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: astSelectorExprRecur(
+						webExpr,
+						method,
+					),
+					Args: []ast.Expr{
+						astStringExpr(router.Path),
+						astSelectorExpr(ctxVar, router.FuncName),
+					},
+				},
+			})
+		}
+		return stmts
+	}
+
+	stmtOfResource := func(resource *model.WebResource, webExpr ast.Expr, stmts []ast.Stmt) []ast.Stmt {
+		// [code] ctx.{{instance}}.Static({{Path}}, {{Path}}, {{...}})
+		args := []ast.Expr{
+			astStringExpr(resource.Path),
+			astStringExpr(resource.Dirname),
+		}
+		if len(resource.Features) > 0 ||
+			resource.Index != "" ||
+			resource.MaxAge != 0 {
+			var eltExpr []ast.Expr
+			for _, feature := range resource.Features {
+				eltExpr = append(eltExpr, &ast.KeyValueExpr{
+					Key:   ast.NewIdent(feature),
+					Value: ast.NewIdent("true"),
+				})
+			}
+			if resource.Index != "" {
+				eltExpr = append(eltExpr, &ast.KeyValueExpr{
+					Key:   ast.NewIdent("Index"),
+					Value: astStringExpr(resource.Index),
+				})
+			}
+			if resource.MaxAge != 0 {
+				eltExpr = append(eltExpr, &ast.KeyValueExpr{
+					Key:   ast.NewIdent("MaxAge"),
+					Value: astIntExpr(strconv.Itoa(resource.MaxAge)),
+				})
+			}
+			args = append(args, astDeclareExpr(
+				astSelectorExpr("fiber", "Static"),
+				eltExpr,
+			))
+		}
+
+		stmts = append(stmts, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: astSelectorExprRecur(
+					webExpr,
+					"Static",
+				),
+				Args: args,
+			},
+		})
+		return stmts
+	}
+
 	for i := 0; i < ctx.SingletonInstance.Len(); i++ {
 		instance, webApplication := ctx.SingletonInstance.IndexOf(i)
 		if webApplication != nil {
@@ -145,82 +225,18 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 
 			var stmts []ast.Stmt
 
-			for _, resource := range webApplication.Resources {
-				// [code] ctx.{{instance}}.Static({{Path}}, {{Path}}, {{...}})
-				args := []ast.Expr{
-					astStringExpr(resource.Path),
-					astStringExpr(resource.Dirname),
-				}
-				if len(resource.Features) > 0 ||
-					resource.Index != "" ||
-					resource.MaxAge != 0 {
-					var eltExpr []ast.Expr
-					for _, feature := range resource.Features {
-						eltExpr = append(eltExpr, &ast.KeyValueExpr{
-							Key:   ast.NewIdent(feature),
-							Value: ast.NewIdent("true"),
-						})
-					}
-					if resource.Index != "" {
-						eltExpr = append(eltExpr, &ast.KeyValueExpr{
-							Key:   ast.NewIdent("Index"),
-							Value: astStringExpr(resource.Index),
-						})
-					}
-					if resource.MaxAge != 0 {
-						eltExpr = append(eltExpr, &ast.KeyValueExpr{
-							Key:   ast.NewIdent("MaxAge"),
-							Value: astIntExpr(strconv.Itoa(resource.MaxAge)),
-						})
-					}
-					args = append(args, astDeclareExpr(
-						astSelectorExpr("fiber", "Static"),
-						eltExpr,
-					))
-				}
-
-				stmts = append(stmts, &ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: astSelectorExprRecur(
-							webExpr,
-							"Static",
-						),
-						Args: args,
-					},
-				})
-			}
-
-			for _, middleware := range webApplication.Middlewares {
-				// [code] ctx.{{instance}}.Group({{Path}}, {{Proxy}})
-				stmts = append(stmts, &ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: astSelectorExprRecur(
-							webExpr,
-							"Group",
-						),
-						Args: []ast.Expr{
-							astStringExpr(middleware.Path),
-							astSelectorExpr(ctxVar, middleware.FuncName),
-						},
-					},
-				})
-			}
-
-			for _, router := range webApplication.Routers {
-				for _, method := range router.Methods {
-					// [code] ctx.{{instance}}.{{Method}}({{Path}}, {{Proxy}})
-					stmts = append(stmts, &ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: astSelectorExprRecur(
-								webExpr,
-								method,
-							),
-							Args: []ast.Expr{
-								astStringExpr(router.Path),
-								astSelectorExpr(ctxVar, router.FuncName),
-							},
-						},
-					})
+			for j := 0; j < webApplication.Len(); j++ {
+				key := webApplication.IndexOf(j)
+				switch key.Type {
+				case "middleware":
+					middleware := webApplication.GetMiddleware(key.Instance)
+					stmts = stmtOfMiddleware(middleware, webExpr, stmts)
+				case "router":
+					router := webApplication.GetRouter(key.Instance)
+					stmts = stmtOfRouter(router, webExpr, stmts)
+				case "resource":
+					resource := webApplication.GetResource(key.Instance)
+					stmts = stmtOfResource(resource, webExpr, stmts)
 				}
 			}
 

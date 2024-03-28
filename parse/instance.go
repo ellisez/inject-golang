@@ -6,7 +6,6 @@ import (
 	"github.com/ellisez/inject-golang/model"
 	"github.com/ellisez/inject-golang/utils"
 	"go/ast"
-	"strings"
 )
 
 func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, comments []*model.Comment) {
@@ -55,15 +54,6 @@ func (p *Parser) InstanceParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonF
 			}
 
 			instanceNode.Comment = comment.Text
-		case "@order":
-			if argsLen >= 2 {
-				order := args[1]
-				if order != "" && order != "_" {
-					instanceNode.Order = strings.TrimFunc(order, func(r rune) bool {
-						return r == '"' || r == '`'
-					})
-				}
-			}
 		case "@handler":
 			if argsLen < 2 {
 				utils.Failuref(`%s %s, Handler must be specified`, commonFunc.Loc.String(), instanceNode.Comment)

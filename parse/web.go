@@ -52,7 +52,7 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 				Path:    path,
 				Dirname: dirname,
 			}
-			webApp.Resources[resource.Path] = resource
+			webApp.AddResource(resource)
 
 			if argsLen >= 4 {
 				features := args[3]
@@ -93,7 +93,7 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 		instance.Comment = provide.Comment
 		instance.Imports = append(instance.Imports, provide.Imports...)
 		instance.Func = provide.Func
-		webApplication.Resources = webApp.Resources
+		webApplication.Merge(webApp)
 	} else {
 		p.Ctx.SingletonInstance.AddWeb(provide, webApp)
 	}
