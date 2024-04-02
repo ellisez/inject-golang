@@ -213,10 +213,18 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 
 			var proxyParams []*ast.Field
 			if instanceFunc.FuncName == "" {
-				// [code] host string, port uint,
-				proxyParams = []*ast.Field{
-					astField("host", ast.NewIdent("string")),
-					astField("port", ast.NewIdent("uint")),
+				if webApplication.IsTls {
+					// [code] addr string, certFile string, keyFile string,
+					proxyParams = []*ast.Field{
+						astField("addr", ast.NewIdent("string")),
+						astField("certFile", ast.NewIdent("string")),
+						astField("keyFile", ast.NewIdent("string")),
+					}
+				} else {
+					// [code] addr string,
+					proxyParams = []*ast.Field{
+						astField("addr", ast.NewIdent("string")),
+					}
 				}
 			} else {
 				// [code] {{ParamInstance}} {{ParamType}},
@@ -241,46 +249,71 @@ func genWebAppStartupAst(ctx *model.Ctx, astFile *ast.File) {
 			}
 
 			if instance.FuncName != "" {
-				// [code] host, port, err := {{Package}}.{{FuncName}}(...)
 				instanceCallExpr, varDefineStmts := astInstanceCallExpr(astSelectorExpr(instance.Package, instance.FuncName), instance.Func, ctx, ctxVar)
 				if varDefineStmts != nil {
 					stmts = append(stmts, varDefineStmts...)
 				}
 
-				stmts = append(stmts, astDefineStmtMany(
-					[]ast.Expr{
-						ast.NewIdent("host"),
-						ast.NewIdent("port"),
-						ast.NewIdent("err"),
-					},
-					instanceCallExpr,
-				))
+				if webApplication.IsTls {
+					// [code] addr, certFile, keyFile, err := {{Package}}.{{FuncName}}(...)
+					stmts = append(stmts, astDefineStmtMany(
+						[]ast.Expr{
+							ast.NewIdent("addr"),
+							ast.NewIdent("certFile"),
+							ast.NewIdent("keyFile"),
+							ast.NewIdent("err"),
+						},
+						instanceCallExpr,
+					))
+				} else {
+					// [code] addr, err := {{Package}}.{{FuncName}}(...)
+					stmts = append(stmts, astDefineStmtMany(
+						[]ast.Expr{
+							ast.NewIdent("addr"),
+							ast.NewIdent("err"),
+						},
+						instanceCallExpr,
+					))
+				}
 
 				stmts = append(stmts, errorReturnStmts())
 			}
 
-			stmts = append(stmts, &ast.ReturnStmt{
-				Results: []ast.Expr{
-					&ast.CallExpr{
-						Fun: astSelectorExprRecur(
-							&ast.CallExpr{
-								Fun: astSelectorExpr(ctxVar, instanceName),
-							},
-							"Listen",
-						),
-						Args: []ast.Expr{
-							&ast.CallExpr{
-								Fun: astSelectorExpr("fmt", "Sprintf"),
-								Args: []ast.Expr{
-									astStringExpr("%s:%d"),
-									ast.NewIdent("host"),
-									ast.NewIdent("port"),
+			if webApplication.IsTls {
+				stmts = append(stmts, &ast.ReturnStmt{
+					Results: []ast.Expr{
+						&ast.CallExpr{
+							Fun: astSelectorExprRecur(
+								&ast.CallExpr{
+									Fun: astSelectorExpr(ctxVar, instanceName),
 								},
+								"ListenTLS",
+							),
+							Args: []ast.Expr{
+								ast.NewIdent("addr"),
+								ast.NewIdent("certFile"),
+								ast.NewIdent("keyFile"),
 							},
 						},
 					},
-				},
-			})
+				})
+			} else {
+				stmts = append(stmts, &ast.ReturnStmt{
+					Results: []ast.Expr{
+						&ast.CallExpr{
+							Fun: astSelectorExprRecur(
+								&ast.CallExpr{
+									Fun: astSelectorExpr(ctxVar, instanceName),
+								},
+								"Listen",
+							),
+							Args: []ast.Expr{
+								ast.NewIdent("addr"),
+							},
+						},
+					},
+				})
+			}
 
 			doc := "// Generate by system"
 			if instanceFunc.FuncName != "" {
@@ -371,10 +404,9 @@ func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model
 	if bodyParam != nil {
 		bodyAstType := bodyParam.Type
 		paramVar := utils.FirstToLower(bodyParam.Instance)
-		switch bodyAstType.(type) {
+		switch bodyType := bodyAstType.(type) {
 		case *ast.ArrayType:
-			byteArr := bodyAstType.(*ast.ArrayType)
-			if byteArr.Elt.(*ast.Ident).String() == "byte" {
+			if bodyType.Elt.(*ast.Ident).String() == "byte" {
 				return []ast.Stmt{
 					astDefineStmt(
 						ast.NewIdent(paramVar),
@@ -388,7 +420,7 @@ func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model
 				}
 			}
 		case *ast.Ident:
-			typeIdent := bodyAstType.(*ast.Ident).String()
+			typeIdent := bodyType.String()
 			if typeIdent == "string" {
 				return []ast.Stmt{
 					astDefineStmt(
@@ -415,9 +447,9 @@ func genWebHeaderParams(headerParams []*model.Field, packageName string, funcNod
 		stmts := make([]ast.Stmt, 0)
 		for _, param := range headerParams {
 			paramType := param.Type
-			switch paramType.(type) {
+			switch caseType := paramType.(type) {
 			case *ast.Ident:
-				typeStr := paramType.(*ast.Ident).String()
+				typeStr := caseType.String()
 				switch typeStr {
 				case "string":
 					stmts = append(stmts, defineParamStmt("Header", param))
@@ -448,9 +480,9 @@ func genWebQueryParams(queryParams []*model.Field, packageName string, funcNode 
 		stmts := make([]ast.Stmt, 0)
 		for _, param := range queryParams {
 			paramType := param.Type
-			switch paramType.(type) {
+			switch caseType := paramType.(type) {
 			case *ast.Ident:
-				typeStr := paramType.(*ast.Ident).String()
+				typeStr := caseType.String()
 				switch typeStr {
 				case "string":
 					stmts = append(stmts, defineParamStmt("Query", param))
@@ -515,9 +547,9 @@ func genWebFormParams(formParams []*model.Field, packageName string, funcNode *m
 		stmts := make([]ast.Stmt, 0)
 		for _, param := range formParams {
 			paramType := param.Type
-			switch paramType.(type) {
+			switch caseType := paramType.(type) {
 			case *ast.Ident:
-				typeStr := paramType.(*ast.Ident).String()
+				typeStr := caseType.String()
 				switch typeStr {
 				case "string":
 					stmts = append(stmts, defineParamStmt("FormString", param))

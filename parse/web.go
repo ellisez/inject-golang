@@ -18,7 +18,6 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 
 	commonFunc.Loc = p.Ctx.FileSet.Position(funcDecl.Pos())
 
-	webValidate(provide)
 	for _, comment := range comments {
 		args := comment.Args
 		argsLen := len(args)
@@ -35,6 +34,19 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 						utils.Failuref(`%s %s, Instance "%s" must be capitalized with the first letter`, commonFunc.Loc.String(), provide.Comment, instance)
 					}
 					provide.Instance = instance
+				}
+			}
+			if argsLen >= 3 {
+				tls := args[2]
+				if tls != "" && tls != "_" {
+					switch tls {
+					case "http":
+						webApp.IsTls = false
+					case "tls":
+						webApp.IsTls = true
+					default:
+						utils.Failuref(`%s %s, "%s" protocol not supported`, commonFunc.Loc.String(), provide.Comment, tls)
+					}
 				}
 			}
 			provide.Comment = comment.Text
@@ -79,6 +91,8 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 		}
 	}
 
+	webValidate(provide, webApp.IsTls)
+
 	instance, webApplication := p.Ctx.SingletonOf(provide.Instance)
 	if instance != nil {
 		if webApplication == nil {
@@ -99,32 +113,62 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 	}
 }
 
-func webValidate(provide *model.Provide) {
-	if len(provide.Results) != 3 {
-		utils.Failuref(`%s %s, Illegal webProvide function, returns [host, port, err]`, provide.Loc.String(), provide.Comment)
-	}
-	host, ok := provide.Results[0].Type.(*ast.Ident)
-	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
-	}
-	if host.String() != "string" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
-	}
+func webValidate(provide *model.Provide, tls bool) {
+	resultLen := len(provide.Results)
+	if tls {
+		if resultLen != 4 {
+			utils.Failuref(`%s %s, Illegal webProvide function, returns [addr, certFile, keyFile, err]`, provide.Loc.String(), provide.Comment)
+		}
+		addr, ok := provide.Results[0].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+		if addr.String() != "string" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
 
-	port, ok := provide.Results[1].Type.(*ast.Ident)
-	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, provide.Loc.String(), provide.Comment)
-	}
-	if port.String() != "uint" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "uint"`, provide.Loc.String(), provide.Comment)
-	}
+		certFile, ok := provide.Results[1].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+		if certFile.String() != "string" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
 
-	err, ok := provide.Results[2].Type.(*ast.Ident)
-	if !ok {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, provide.Loc.String(), provide.Comment)
-	}
-	if err.String() != "error" {
-		utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "error"`, provide.Loc.String(), provide.Comment)
+		keyFile, ok := provide.Results[2].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+		if keyFile.String() != "string" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 3st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+
+		err, ok := provide.Results[3].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 4st returns is not "error"`, provide.Loc.String(), provide.Comment)
+		}
+		if err.String() != "error" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 4st returns is not "error"`, provide.Loc.String(), provide.Comment)
+		}
+	} else {
+		if resultLen != 2 {
+			utils.Failuref(`%s %s, Illegal webProvide function, returns [addr, err]`, provide.Loc.String(), provide.Comment)
+		}
+		addr, ok := provide.Results[0].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+		if addr.String() != "string" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 1st returns is not "string"`, provide.Loc.String(), provide.Comment)
+		}
+
+		err, ok := provide.Results[1].Type.(*ast.Ident)
+		if !ok {
+			utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "error"`, provide.Loc.String(), provide.Comment)
+		}
+		if err.String() != "error" {
+			utils.Failuref(`%s %s, Illegal webProvide function, 2st returns is not "error"`, provide.Loc.String(), provide.Comment)
+		}
 	}
 
 }

@@ -12,23 +12,19 @@ import (
 
 func TypeToString(astType ast.Expr) string {
 	var str string
-	switch astType.(type) {
+	switch caseType := astType.(type) {
 	case *ast.Ident:
-		str = astType.(*ast.Ident).String()
+		str = caseType.String()
 	case *ast.StarExpr:
-		starExpr := astType.(*ast.StarExpr)
-		str = "*" + TypeToString(starExpr.X)
+		str = "*" + TypeToString(caseType.X)
 	case *ast.SelectorExpr:
-		selectorExpr := astType.(*ast.SelectorExpr)
-		str = TypeToString(selectorExpr.X) + "." + selectorExpr.Sel.String()
+		str = TypeToString(caseType.X) + "." + caseType.Sel.String()
 	case *ast.ChanType:
-		chanType := astType.(*ast.ChanType)
-		str = "chan " + TypeToString(chanType.Value)
+		str = "chan " + TypeToString(caseType.Value)
 	case *ast.FuncType:
-		funcType := astType.(*ast.FuncType)
 		params := ""
-		if funcType.Params != nil {
-			for i, field := range funcType.Params.List {
+		if caseType.Params != nil {
+			for i, field := range caseType.Params.List {
 				if i > 0 {
 					params += ","
 				}
@@ -42,9 +38,9 @@ func TypeToString(astType ast.Expr) string {
 			}
 		}
 		results := ""
-		if funcType.Results != nil {
-			rl := len(funcType.Results.List)
-			for i, field := range funcType.Results.List {
+		if caseType.Results != nil {
+			rl := len(caseType.Results.List)
+			for i, field := range caseType.Results.List {
 				if i > 0 {
 					results += ","
 				}

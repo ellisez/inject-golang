@@ -129,7 +129,7 @@ inject-glang --clean
 
 ### 2.4. WebApp注解 (提供了web服务器)
 ```
-// @webProvide <instance，默认名为WebApp>
+// @webProvide <instance，默认名为WebApp> <protocol: http默认 | tls>
 // @static *<访问路径，必填> *<匹配目录，必填> [特征: Compress|Download|Browse] <目录的Index文件> <过期时间MaxAge>
 ```
 
@@ -139,7 +139,7 @@ inject-glang --clean
 > 
 > web应用的启动函数, 格式为`instance + "Startup""`, 默认为`WebAppStartup`.
 > 
-> `@webProvide`所标记的原函数必须返回`host`,`port`,`err`三个参数.
+> `@webProvide`所标记的原函数的对格式有一定要求, http协议返回(`addr`,`err`)两个参数, tls协议则(`addr`, `certFile`, `keyFile`, `err`).
 > 
 > `@static`用于配置静态资源文件, 如png,css,js,html等
 
@@ -258,11 +258,11 @@ func (ctx *Ctx) ServerAliasLoaded() {
 // @static /images /images
 // @static /css /css [Compress,Browse]
 // @static /js /js [Compress,Download,Browse] index.html 86400
-func ConfigureWebApp(config *model.Config, defaultPort uint) (string, uint, error) {
+func ConfigureWebApp(config *model.Config, defaultPort uint) (string, error) {
     if config.Port == 0 {
         defaultPort = config.Port
     }
-    return config.Host, defaultPort, nil
+    return fmt.Sprintf("%s:%d", config.Host, defaultPort), nil
 }
 
 // CorsMiddleware

@@ -194,10 +194,9 @@ func (p *Parser) DoParse(filename string) error {
 		decls := astFile.Decls
 
 		for _, decl := range decls {
-			switch decl.(type) {
+			switch caseDecl := decl.(type) {
 			case *ast.FuncDecl:
-				funcDecl := decl.(*ast.FuncDecl)
-				p.FuncParse(funcDecl, utils.UseImport(importPath), astFile.Imports)
+				p.FuncParse(caseDecl, utils.UseImport(importPath), astFile.Imports)
 
 			}
 		}

@@ -439,11 +439,11 @@ func addImport(astFile *ast.File, ctx *model.Ctx, importName string, importPath 
 }
 
 func astTypeToDeclare(typeExpr ast.Expr) ast.Expr {
-	switch typeExpr.(type) {
+	switch caseType := typeExpr.(type) {
 	case *ast.StarExpr:
-		return astDeclareRef(typeExpr.(*ast.StarExpr).X, nil)
+		return astDeclareRef(caseType.X, nil)
 	case *ast.Ident:
-		if utils.IsFirstLower(typeExpr.(*ast.Ident).String()) {
+		if utils.IsFirstLower(caseType.String()) {
 			return nil
 		}
 	}

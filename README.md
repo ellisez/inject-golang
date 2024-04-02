@@ -134,7 +134,7 @@ Use `// @` Adding an exclamation mark at the beginning, which means adding an ex
 
 ### 2.4. WebApp Annotations (provide the web server)
 ```
-// @webProvide <instance，default WebApp>
+// @webProvide <instance，default WebApp> <protocol: http default | tls>
 // @static *<Path, required> *<Dirname, required> [Features: Compress|Download|Browse] <Index> <MaxAge>
 ```
 
@@ -144,7 +144,7 @@ Use `// @` Adding an exclamation mark at the beginning, which means adding an ex
 >
 > The startup function for web applications, in the format of `instance + Startup`, defaults to `WebAppStartup`.
 > 
-> The original function marked by `@webProvide` must return three parameters: `host`, `port`, and `err`.
+> The original function marked by `webProvide` has certain formatting requirements. The HTTP protocol returns two parameters (`addr`, `err`), while the tls protocol returns (`addr`, `certFile`, `keyFile`, `err`).
 > 
 > `@static` is used to configure static resource files, such as PNG, CSS, JS, HTML, etc
 
@@ -266,11 +266,11 @@ Annotation configuration
 // @static /images /images
 // @static /css /css [Compress,Browse]
 // @static /js /js [Compress,Download,Browse] index.html 86400
-func ConfigureWebApp(config *model.Config, defaultPort uint) (string, uint, error) {
+func ConfigureWebApp(config *model.Config, defaultPort uint) (string, error) {
     if config.Port == 0 {
         defaultPort = config.Port
     }
-    return config.Host, defaultPort, nil
+    return fmt.Sprintf("%s:%d", config.Host, defaultPort), nil
 }
 
 // CorsMiddleware

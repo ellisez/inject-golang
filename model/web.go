@@ -51,6 +51,7 @@ type WebApplication struct {
 	resources   map[string]*WebResource // 静态资源
 	middlewares map[string]*Middleware  // 组内中间件
 	routers     map[string]*Router      // 组内路由
+	IsTls       bool
 }
 
 func NewWebApplication() *WebApplication {
@@ -248,6 +249,7 @@ func (w *WebApplication) Merge(other *WebApplication) {
 			w.AddRouter(router)
 		}
 	}
+	w.IsTls = other.IsTls
 }
 
 func (w *WebApplication) MiddlewareLen() int {
