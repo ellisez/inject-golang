@@ -104,10 +104,9 @@ func (p *Parser) WebParse(funcDecl *ast.FuncDecl, commonFunc *model.CommonFunc, 
 			}
 			fmt.Printf(`Web "%s" is Overrided by %s.%s`+"\n", provide.Instance, ImportAliasMap[provide.Package].Path, provide.FuncName)
 		}
-		instance.Comment = provide.Comment
-		instance.Imports = append(instance.Imports, provide.Imports...)
-		instance.Func = provide.Func
+
 		webApplication.Merge(webApp)
+		p.Ctx.SingletonInstance.ReplaceWeb(provide, webApplication)
 	} else {
 		p.Ctx.SingletonInstance.AddWeb(provide, webApp)
 	}
