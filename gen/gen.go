@@ -334,17 +334,30 @@ func astCallVarDefine(instanceFunc *model.Func, ctx *model.Ctx, ctxVar string) [
 	for _, call := range instanceFunc.Calls {
 		var lhs []ast.Expr
 
-		method := ctx.MethodOf(call.Instance)
-		if method == nil {
-			utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), call.Comment, call.Instance)
-		}
-		if method.Type.Results == nil {
-			utils.Failuref("%s %s, @injectCall must have at least one return value.", instanceFunc.Loc.String(), call.Comment)
-		}
+		fillLen := 0
+		proxy := ctx.FuncOf(call.Instance)
+		if proxy == nil {
+			method := ctx.MethodOf(call.Instance)
+			if method == nil {
+				utils.Failuref(`%s %s, Instance "%s" is not found`, instanceFunc.Loc.String(), call.Comment, call.Instance)
+			}
+			if method.Type.Results == nil {
+				utils.Failuref("%s %s, @injectCall must have at least one return value.", instanceFunc.Loc.String(), call.Comment)
+			}
 
-		fillLen := len(method.Type.Results.List) - len(call.Params)
-		if fillLen < 0 {
-			utils.Failuref(`%s %s, Params more than returns`, instanceFunc.Loc.String(), call.Comment)
+			fillLen = len(method.Type.Results.List) - len(call.Params)
+			if fillLen < 0 {
+				utils.Failuref(`%s %s, Params more than returns`, instanceFunc.Loc.String(), call.Comment)
+			}
+		} else {
+			if proxy.Results == nil {
+				utils.Failuref("%s %s, @injectCall must have at least one return value.", instanceFunc.Loc.String(), call.Comment)
+			}
+
+			fillLen = len(proxy.Results) - len(call.Params)
+			if fillLen < 0 {
+				utils.Failuref(`%s %s, Params more than returns`, instanceFunc.Loc.String(), call.Comment)
+			}
 		}
 
 		for _, paramName := range call.Params {
@@ -385,9 +398,12 @@ func astInstanceCallExpr(handler ast.Expr, instanceFunc *model.Func, ctx *model.
 			}
 			argExpr = astNewInstance(paramInstance, ctxVar)
 		case "func":
-			method := ctx.MethodOf(param.Instance)
-			if method == nil {
-				utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
+			proxy := ctx.FuncOf(param.Instance)
+			if proxy == nil {
+				method := ctx.MethodOf(param.Instance)
+				if method == nil {
+					utils.Failuref(`%s %s, Instance "%s" is not found`, param.Loc.String(), param.Comment, param.Instance)
+				}
 			}
 			argExpr = astSelectorExpr(ctxVar, param.Instance)
 		case "call":
