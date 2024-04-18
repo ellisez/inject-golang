@@ -378,10 +378,10 @@ func defineParamWithError(convFunc string, param *model.Field) []ast.Stmt {
 func defineParamByParser(convFunc string, param *model.Field, packageName string) []ast.Stmt {
 	paramVar := utils.FirstToLower(param.Instance)
 	return []ast.Stmt{
-		// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
+		// [code] {{ParamInstance}} := {{Package}}.{{ParamType}}{}
 		astDefineStmt(
 			ast.NewIdent(paramVar),
-			astDeclareRef(
+			astDeclareExpr(
 				param.Type,
 				nil,
 			),
@@ -393,7 +393,10 @@ func defineParamByParser(convFunc string, param *model.Field, packageName string
 				Fun: astSelectorExpr("utils", convFunc),
 				Args: []ast.Expr{
 					ast.NewIdent("webCtx"),
-					ast.NewIdent(paramVar),
+					&ast.UnaryExpr{
+						Op: token.AND,
+						X:  ast.NewIdent(paramVar),
+					},
 				},
 			},
 		),
@@ -406,7 +409,8 @@ func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model
 		paramVar := utils.FirstToLower(bodyParam.Instance)
 		switch bodyType := bodyAstType.(type) {
 		case *ast.ArrayType:
-			if bodyType.Elt.(*ast.Ident).String() == "byte" {
+			elt, ok := bodyType.Elt.(*ast.Ident)
+			if ok && elt.String() == "byte" {
 				return []ast.Stmt{
 					astDefineStmt(
 						ast.NewIdent(paramVar),
