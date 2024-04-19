@@ -377,30 +377,79 @@ func defineParamWithError(convFunc string, param *model.Field) []ast.Stmt {
 
 func defineParamByParser(convFunc string, param *model.Field, packageName string) []ast.Stmt {
 	paramVar := utils.FirstToLower(param.Instance)
-	return []ast.Stmt{
-		// [code] {{ParamInstance}} := {{Package}}.{{ParamType}}{}
-		astDefineStmt(
-			ast.NewIdent(paramVar),
-			astDeclareExpr(
-				param.Type,
-				nil,
+	switch bodyType := param.Type.(type) {
+	case *ast.ArrayType:
+		return []ast.Stmt{
+			// [code] {{ParamInstance}} := []{{Package}}.{{ParamType}}{}
+			astDefineStmt(
+				ast.NewIdent(paramVar),
+				astDeclareExpr(
+					bodyType,
+					nil,
+				),
 			),
-		),
-		// [code] err := utils.{{ParamSource}}Parser(webCtx, {{ParamInstance}})
-		astAssignStmt(
-			ast.NewIdent("err"),
-			&ast.CallExpr{
-				Fun: astSelectorExpr("utils", convFunc),
-				Args: []ast.Expr{
-					ast.NewIdent("webCtx"),
-					&ast.UnaryExpr{
-						Op: token.AND,
-						X:  ast.NewIdent(paramVar),
+			// [code] err := utils.{{ParamSource}}Parser(webCtx, &{{ParamInstance}})
+			astAssignStmt(
+				ast.NewIdent("err"),
+				&ast.CallExpr{
+					Fun: astSelectorExpr("utils", convFunc),
+					Args: []ast.Expr{
+						ast.NewIdent("webCtx"),
+						&ast.UnaryExpr{
+							Op: token.AND,
+							X:  ast.NewIdent(paramVar),
+						},
 					},
 				},
-			},
-		),
-		errorReturnStmts(),
+			),
+			errorReturnStmts(),
+		}
+	case *ast.StarExpr:
+		return []ast.Stmt{
+			// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
+			astDefineStmt(
+				ast.NewIdent(paramVar),
+				astDeclareRef(
+					bodyType.X,
+					nil,
+				),
+			),
+			// [code] err := utils.{{ParamSource}}Parser(webCtx, {{ParamInstance}})
+			astAssignStmt(
+				ast.NewIdent("err"),
+				&ast.CallExpr{
+					Fun: astSelectorExpr("utils", convFunc),
+					Args: []ast.Expr{
+						ast.NewIdent("webCtx"),
+						ast.NewIdent(paramVar),
+					},
+				},
+			),
+			errorReturnStmts(),
+		}
+	default:
+		return []ast.Stmt{
+			// [code] {{ParamInstance}} := &{{Package}}.{{ParamType}}{}
+			astDefineStmt(
+				ast.NewIdent(paramVar),
+				astDeclareRef(
+					bodyType,
+					nil,
+				),
+			),
+			// [code] err := utils.{{ParamSource}}Parser(webCtx, {{ParamInstance}})
+			astAssignStmt(
+				ast.NewIdent("err"),
+				&ast.CallExpr{
+					Fun: astSelectorExpr("utils", convFunc),
+					Args: []ast.Expr{
+						ast.NewIdent("webCtx"),
+						ast.NewIdent(paramVar),
+					},
+				},
+			),
+			errorReturnStmts(),
+		}
 	}
 }
 func genWebBodyParam(bodyParam *model.Field, packageName string, funcNode *model.Func) []ast.Stmt {
